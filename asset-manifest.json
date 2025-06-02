@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/train-revenue-calculator/static/css/main.e6c13ad2.css",
+    "main.js": "/train-revenue-calculator/static/js/main.ab205bdd.js",
+    "static/js/453.5a43a5eb.chunk.js": "/train-revenue-calculator/static/js/453.5a43a5eb.chunk.js",
+    "index.html": "/train-revenue-calculator/index.html",
+    "main.e6c13ad2.css.map": "/train-revenue-calculator/static/css/main.e6c13ad2.css.map",
+    "main.ab205bdd.js.map": "/train-revenue-calculator/static/js/main.ab205bdd.js.map",
+    "453.5a43a5eb.chunk.js.map": "/train-revenue-calculator/static/js/453.5a43a5eb.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.ab205bdd.js"
+  ]
+}
