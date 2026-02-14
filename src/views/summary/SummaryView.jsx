@@ -1,0 +1,133 @@
+import React from 'react';
+import { calculateCompanyTotalORRevenue, calculateDividend } from '../../lib/calc';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import SectionHeader from '../../components/ui/SectionHeader';
+
+const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
+  const setupSteps = [
+    { label: 'プレイヤー追加', done: players.length > 0 },
+    { label: '企業追加', done: companies.length > 0 },
+  ];
+
+  const playerDividends = players.map((player) => {
+    let totalDividendFromAllORs = 0;
+    companies.forEach((company) => {
+      const companyTotalRevenueAcrossORs = calculateCompanyTotalORRevenue(
+        company.orRevenues,
+        numORs
+      );
+
+      const holding = (company.stockHoldings || []).find((sh) => sh.playerId === player.id);
+      if (holding && holding.percentage > 0) {
+        totalDividendFromAllORs += calculateDividend(
+          companyTotalRevenueAcrossORs,
+          holding.percentage
+        );
+      }
+    });
+    return { ...player, totalDividend: totalDividendFromAllORs };
+  });
+
+  const sortedPlayerDividends = [...playerDividends].sort(
+    (a, b) => b.totalDividend - a.totalDividend
+  );
+
+  const companySummaries = companies
+    .map((company) => {
+      const totalRevenueAcrossORs = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
+      const orDetails = (company.orRevenues || [])
+        .slice(0, numORs)
+        .map((or, idx) => `OR${idx + 1}: ${or.revenue || 0}`)
+        .join(', ');
+      return {
+        ...company,
+        totalRevenueAcrossORs,
+        orDetails,
+      };
+    })
+    .sort((a, b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs);
+
+  if (players.length === 0 && companies.length === 0) {
+    return (
+      <div className="max-w-lg mx-auto p-4 sm:p-6">
+        <Card className="border-brand-soft text-center">
+          <SectionHeader size="section" as="h3" className="mb-4 text-indigo-700">
+            はじめに
+          </SectionHeader>
+          <p className="text-base text-text-secondary mb-6">
+            ゲームを開始するには、まず「全般管理」タブでプレイヤーと企業を登録してください。
+          </p>
+          <ul className="mb-6 space-y-2 text-left">
+            {setupSteps.map((step) => (
+              <li
+                key={step.label}
+                className="flex items-center justify-between rounded-md bg-surface-muted px-3 py-2"
+              >
+                <span className="text-sm text-text-primary">{step.label}</span>
+                <span
+                  className={`text-ui-xs font-semibold ${step.done ? 'text-status-success' : 'text-text-muted'}`}
+                >
+                  {step.done ? '完了' : '未完了'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Button onClick={onNavigateToManagement} size="lg">
+            セットアップを始める
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <SectionHeader size="page" className="mb-8 text-center text-slate-700">
+        サマリー (全 {numORs} OR合計)
+      </SectionHeader>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card>
+          <SectionHeader size="section" as="h3" className="mb-4 text-teal-700">
+            プレイヤー別総配当
+          </SectionHeader>
+          {players.length === 0 && <p className="text-gray-500 italic">プレイヤーがいません。</p>}
+          <ul className="space-y-3">
+            {sortedPlayerDividends.map((player) => (
+              <li
+                key={player.id}
+                className="flex justify-between items-center p-3 bg-teal-50 rounded-md shadow-sm"
+              >
+                <span className="font-medium text-teal-800">{player.name}</span>
+                <span className="font-semibold text-teal-600 text-lg">{player.totalDividend}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card>
+          <SectionHeader size="section" as="h3" className="mb-4 text-sky-700">
+            企業別総収益
+          </SectionHeader>
+          {companies.length === 0 && <p className="text-gray-500 italic">企業がありません。</p>}
+          <ul className="space-y-3">
+            {companySummaries.map((company) => (
+              <li key={company.id} className="p-3 bg-sky-50 rounded-md shadow-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-sky-800">{company.name}</span>
+                  <span className="font-semibold text-sky-600 text-lg">
+                    {company.totalRevenueAcrossORs}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{company.orDetails}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default SummaryView;
