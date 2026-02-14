@@ -13,18 +13,25 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "lint": "eslint src --ext .js",
-    "lint:fix": "eslint src --ext .js --fix",
-    "format": "prettier --write \"src/**/*.{js,css}\"",
-    "format:check": "prettier --check \"src/**/*.{js,css}\"",
-    "hooks:install": "sh scripts/setup-githooks.sh"
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"package.json\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"package.json\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\"",
+    "prepare": "husky",
+    "lint-staged": "lint-staged"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "autoprefixer": "^10.4.21",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "postcss": "^8.5.4",
+    "prettier": "^3.6.2",
     "tailwindcss": "^3.4.17",
     "vite": "^7.3.1"
   },
@@ -38,6 +45,25 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "prettier"
+    ],
+    "plugins": [
+      "jsx-a11y"
+    ]
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx,css}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
     ]
   }
 }
