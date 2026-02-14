@@ -5,9 +5,7 @@ import {
   calculateCompanyTotalORRevenue,
   calculateDividend,
 } from './lib/calc';
-
-// ローカルストレージのキー
-const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
+import { load as loadAppState, save as saveAppState } from './storage/appStorage';
 
 // Default company colors for quick add
 const defaultCompanyColors = [
@@ -830,6 +828,13 @@ function App() {
   useEffect(() => {
     const loadData = () => {
       try {
+        const loadedState = loadAppState();
+        if (loadedState) {
+          dispatch({
+            type: 'APP_LOAD',
+            payload: loadedState,
+          });
+          if ((loadedState.players || []).length === 0 && (loadedState.companies || []).length === 0) {
         const savedData = localStorage.getItem(APP_STORAGE_KEY);
         if (savedData) {
           const parsed = JSON.parse(savedData);
@@ -861,16 +866,13 @@ function App() {
 
   // データの保存
   const saveData = useCallback(() => {
-    const dataToSave = {
-      players,
-      companies,
-      selectedCompanyId,
-      numORs,
-      lastUpdated: new Date().toISOString()
-    };
-    
     try {
-      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(dataToSave));
+      saveAppState({
+        players,
+        companies,
+        selectedCompanyId,
+        numORs,
+      });
     } catch (error) {
       console.error('データ保存エラー:', error);
       setModalMessage('データの保存に失敗しました。');
