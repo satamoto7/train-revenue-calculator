@@ -4,11 +4,11 @@ import '@testing-library/jest-dom';
 import App from './App';
 
 // crypto.randomUUID のポリフィル（Jest環境用）
-if (!globalThis.crypto?.randomUUID) {
+if (!window.crypto?.randomUUID) {
   let counter = 0;
-  Object.defineProperty(globalThis, 'crypto', {
+  Object.defineProperty(window, 'crypto', {
     value: {
-      ...globalThis.crypto,
+      ...window.crypto,
       randomUUID: () => `test-uuid-${++counter}`,
     },
   });
@@ -151,10 +151,8 @@ describe('アクセシビリティ', () => {
 
     // プレイヤーを削除してモーダルを表示
     const deleteButtons = screen.getAllByTitle(/を削除/);
-    if (deleteButtons.length > 0) {
-      await user.click(deleteButtons[0]);
-      const dialog = screen.queryByRole('dialog');
-      expect(dialog).toBeInTheDocument();
-    }
+    await user.click(deleteButtons[0]);
+    const dialog = screen.queryByRole('dialog');
+    expect(dialog).toBeInTheDocument();
   });
 });

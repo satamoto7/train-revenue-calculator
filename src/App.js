@@ -835,19 +835,6 @@ function App() {
             payload: loadedState,
           });
           if ((loadedState.players || []).length === 0 && (loadedState.companies || []).length === 0) {
-        const savedData = localStorage.getItem(APP_STORAGE_KEY);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          dispatch({
-            type: 'APP_LOAD',
-            payload: {
-              players: parsed.players || [],
-              companies: parsed.companies || [],
-              selectedCompanyId: parsed.selectedCompanyId || null,
-              numORs: parsed.numORs || 2,
-            },
-          });
-          if ((parsed.players || []).length === 0 && (parsed.companies || []).length === 0) {
             dispatch({ type: 'VIEW_SET', payload: 'management' });
           }
         } else {
