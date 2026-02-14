@@ -6,6 +6,11 @@ import {
   calculateDividend,
 } from './lib/calc';
 import { load as loadAppState, save as saveAppState } from './storage/appStorage';
+import Button from './components/ui/Button';
+import Card from './components/ui/Card';
+import Input from './components/ui/Input';
+import Modal from './components/ui/Modal';
+import SectionHeader from './components/ui/SectionHeader';
 
 // Default company colors for quick add
 const defaultCompanyColors = [
@@ -74,54 +79,6 @@ function appReducer(state, action) {
 
 // --- Helper Components ---
 
-const Modal = ({
-  message,
-  onClose,
-  showConfirm = false,
-  onConfirm,
-  confirmText = 'OK',
-  cancelText = 'キャンセル',
-  children,
-}) => {
-  if (!message && !children) return null;
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={message ? 'modal-message' : undefined}
-    >
-      <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        {message && (
-          <p
-            id="modal-message"
-            className="mb-6 text-lg text-gray-700 whitespace-pre-wrap text-center"
-          >
-            {message}
-          </p>
-        )}
-        {children}
-        <div className="flex justify-center gap-4 mt-6">
-          {showConfirm && (
-            <button
-              onClick={onConfirm}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out"
-            >
-              {confirmText}
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className={`${showConfirm ? 'bg-gray-300 hover:bg-gray-400 text-gray-800' : 'bg-blue-600 hover:bg-blue-700 text-white'} font-semibold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out`}
-          >
-            {showConfirm ? cancelText : '閉じる'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertStopBefore }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(stop.toString());
@@ -148,11 +105,11 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
   if (isEditing) {
     return (
       <div className="flex items-center gap-1 p-1 bg-yellow-100 rounded">
-        <input
+        <Input
           type="number"
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          className="w-20 sm:w-16 p-1 border border-yellow-400 rounded text-sm"
+          className="w-20 sm:w-16 border-yellow-400 p-1"
           aria-label="収益値を編集"
           autoFocus
           onBlur={handleUpdate}
@@ -164,7 +121,7 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
             }
           }}
         />
-        <button onClick={handleUpdate} className="p-1 bg-green-500 text-white rounded text-xs">
+        <button onClick={handleUpdate} className="rounded bg-green-500 p-1 text-xs text-white">
           ✓
         </button>
         <button
@@ -257,13 +214,13 @@ const RevenueInput = ({ onAddStop }) => {
         ))}
       </div>
       <div className="flex items-center gap-1">
-        <input
+        <Input
           type="number"
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           placeholder="カスタム値"
           aria-label="カスタム収益値"
-          className="flex-grow p-1.5 border border-gray-300 rounded-md shadow-sm text-sm"
+          className="flex-grow"
         />
         <button
           onClick={handleAddCustom}
@@ -404,7 +361,7 @@ const PercentageInputControl = ({ label, value, onChange }) => {
         >
           -10
         </button>
-        <input
+        <Input
           type="number"
           min="0"
           max="100"
@@ -413,7 +370,7 @@ const PercentageInputControl = ({ label, value, onChange }) => {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           aria-label={`${label}の保有割合`}
-          className="p-2 border border-gray-300 rounded-md shadow-sm w-20 sm:w-16 text-center text-sm"
+          className="w-20 text-center sm:w-16"
         />
         <button
           onClick={() => adjustValue(10)}
@@ -433,17 +390,29 @@ const PercentageInputControl = ({ label, value, onChange }) => {
   );
 };
 
-const NavButton = ({ viewName, currentView, setCurrentView, children }) => (
-  <button
-    onClick={() => setCurrentView(viewName)}
-    className={`py-2 px-4 rounded-t-lg font-medium ${currentView === viewName ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
-  >
-    {children}
-  </button>
-);
+const NavButton = ({ viewName, currentView, setCurrentView, children }) => {
+  const isActive = currentView === viewName;
+  return (
+    <button
+      onClick={() => setCurrentView(viewName)}
+      className={`flex min-w-[130px] flex-col items-center rounded-t-lg px-4 py-2 font-medium ${
+        isActive
+          ? 'bg-brand-primary text-white shadow-ui'
+          : 'bg-surface-muted text-text-primary hover:bg-slate-300'
+      }`}
+    >
+      <span>{children}</span>
+    </button>
+  );
+};
 
 // --- View Components ---
 const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
+  const setupSteps = [
+    { label: 'プレイヤー追加', done: players.length > 0 },
+    { label: '企業追加', done: companies.length > 0 },
+  ];
+
   const playerDividends = players.map((player) => {
     let totalDividendFromAllORs = 0;
     companies.forEach((company) => {
@@ -485,31 +454,47 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
   if (players.length === 0 && companies.length === 0) {
     return (
       <div className="max-w-lg mx-auto p-4 sm:p-6">
-        <div className="p-8 bg-white rounded-xl shadow-lg border border-indigo-200 text-center">
-          <h3 className="text-2xl font-semibold text-indigo-700 mb-4">はじめに</h3>
-          <p className="text-gray-600 mb-6">
+        <Card className="border-brand-soft text-center">
+          <SectionHeader size="section" as="h3" className="mb-4 text-indigo-700">
+            はじめに
+          </SectionHeader>
+          <p className="text-base text-text-secondary mb-6">
             ゲームを開始するには、まず「全般管理」タブでプレイヤーと企業を登録してください。
           </p>
-          <button
-            onClick={onNavigateToManagement}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out"
-          >
+          <ul className="mb-6 space-y-2 text-left">
+            {setupSteps.map((step) => (
+              <li
+                key={step.label}
+                className="flex items-center justify-between rounded-md bg-surface-muted px-3 py-2"
+              >
+                <span className="text-sm text-text-primary">{step.label}</span>
+                <span
+                  className={`text-ui-xs font-semibold ${step.done ? 'text-status-success' : 'text-text-muted'}`}
+                >
+                  {step.done ? '完了' : '未完了'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Button onClick={onNavigateToManagement} size="lg">
             セットアップを始める
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      <h2 className="text-3xl font-bold text-center text-slate-700 mb-8">
+      <SectionHeader size="page" className="mb-8 text-center text-slate-700">
         サマリー (全 {numORs} OR合計)
-      </h2>
+      </SectionHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h3 className="text-2xl font-semibold text-teal-700 mb-4">プレイヤー別総配当</h3>
+        <Card>
+          <SectionHeader size="section" as="h3" className="mb-4 text-teal-700">
+            プレイヤー別総配当
+          </SectionHeader>
           {players.length === 0 && <p className="text-gray-500 italic">プレイヤーがいません。</p>}
           <ul className="space-y-3">
             {sortedPlayerDividends.map((player) => (
@@ -522,10 +507,12 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
 
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <h3 className="text-2xl font-semibold text-sky-700 mb-4">企業別総収益</h3>
+        <Card>
+          <SectionHeader size="section" as="h3" className="mb-4 text-sky-700">
+            企業別総収益
+          </SectionHeader>
           {companies.length === 0 && <p className="text-gray-500 italic">企業がありません。</p>}
           <ul className="space-y-3">
             {companySummaries.map((company) => (
@@ -540,7 +527,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
     </div>
   );
@@ -583,10 +570,14 @@ const ManagementView = ({
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      <h2 className="text-3xl font-bold text-center text-slate-700 mb-8">全般管理</h2>
+      <SectionHeader size="page" className="mb-8 text-center text-slate-700">
+        全般管理
+      </SectionHeader>
 
       <div className="mb-8 p-4 sm:p-6 bg-yellow-50 rounded-xl shadow-md border border-yellow-200">
-        <h3 className="text-2xl font-semibold text-yellow-700 mb-4">ゲーム設定</h3>
+        <SectionHeader size="section" as="h3" className="mb-4 text-yellow-700">
+          ゲーム設定
+        </SectionHeader>
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
           <label htmlFor="numORs" className="font-medium text-gray-700">
             運営ラウンド(OR)の数:
@@ -613,7 +604,9 @@ const ManagementView = ({
       </div>
 
       <div className="mb-8 p-4 sm:p-6 bg-teal-50 rounded-xl shadow-md border border-teal-200">
-        <h3 className="text-2xl font-semibold text-teal-700 mb-4">プレイヤー管理</h3>
+        <SectionHeader size="section" as="h3" className="mb-4 text-teal-700">
+          プレイヤー管理
+        </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
           <div>
             <label
@@ -655,11 +648,11 @@ const ManagementView = ({
                 >
                   {editingPlayerId === player.id ? (
                     <div className="flex items-center gap-1">
-                      <input
+                      <Input
                         type="text"
                         value={editingPlayerNameInput}
                         onChange={(e) => setEditingPlayerNameInput(e.target.value)}
-                        className="p-1.5 border border-indigo-300 rounded-md text-sm w-32"
+                        className="w-32 border-indigo-300"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') confirmEditPlayerName();
@@ -708,7 +701,9 @@ const ManagementView = ({
       </div>
 
       <div className="p-4 sm:p-6 bg-sky-50 rounded-xl shadow-md border border-sky-200">
-        <h3 className="text-2xl font-semibold text-sky-700 mb-4">企業管理</h3>
+        <SectionHeader size="section" as="h3" className="mb-4 text-sky-700">
+          企業管理
+        </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
           <div>
             <label
@@ -823,7 +818,9 @@ const CompanyDetailView = ({
   if (!selectedCompany) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <h2 className="text-3xl font-bold text-slate-700 mb-8">企業詳細</h2>
+        <SectionHeader size="page" className="mb-8 text-slate-700">
+          企業詳細
+        </SectionHeader>
         <p className="text-gray-600 text-lg">
           企業が選択されていません。管理画面で企業を選択するか、新しい企業を追加してください。
         </p>
@@ -914,11 +911,11 @@ const CompanyDetailView = ({
           <div>
             {editingCompanyName ? (
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   type="text"
                   value={newCompanyNameInput}
                   onChange={(e) => setNewCompanyNameInput(e.target.value)}
-                  className="p-2 border border-indigo-300 rounded-md text-2xl font-semibold"
+                  className="border-indigo-300 text-2xl font-semibold"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && confirmEditCompanyName()}
                 />
