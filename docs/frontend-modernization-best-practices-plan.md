@@ -191,3 +191,4 @@ React アプリの保守性・拡張性・品質を中長期で高めるため�
 - 互換性影響がある変更（永続化形式、切り捨てルール変更など）は、必ず本ドキュメントと `PLAN.md` に追記する。
 - `players` / `companies` / `selectedCompanyId` / `numORs` / `currentView` を `useReducer` で一元管理し、OR配列長調整は reducer (`OR_SET_NUM`) で実施する構成へ移行。
 - 永続化境界を `src/storage/appStorage.js` に分離し、保存時に `schemaVersion: 1` を付与。起動時は `load()` 内で常に `migrate()` を経由。
+- ESLint/Prettier 設定を追加し、`npm run lint` / `npm run format:check` を品質ゲート化。pre-commit は `.githooks/pre-commit` + `npm run hooks:install` で有効化。

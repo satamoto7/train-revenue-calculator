@@ -41,7 +41,19 @@ describe('アプリ初期表示', () => {
   test('データがある場合はサマリー画面が初期表示される', () => {
     const initialData = {
       players: [{ id: 'p1', name: 'テスト' }],
-      companies: [{ id: 'c1', name: 'テスト企業', trains: [], stockHoldings: [], orRevenues: [{ orNum: 1, revenue: 0 }, { orNum: 2, revenue: 0 }], treasuryStockPercentage: 0 }],
+      companies: [
+        {
+          id: 'c1',
+          name: 'テスト企業',
+          trains: [],
+          stockHoldings: [],
+          orRevenues: [
+            { orNum: 1, revenue: 0 },
+            { orNum: 2, revenue: 0 },
+          ],
+          treasuryStockPercentage: 0,
+        },
+      ],
       selectedCompanyId: null,
       numORs: 2,
     };
@@ -57,7 +69,19 @@ describe('画面遷移', () => {
     // Start from summary view with pre-seeded data
     const initialData = {
       players: [{ id: 'p1', name: 'テスト' }],
-      companies: [{ id: 'c1', name: 'テスト企業', trains: [], stockHoldings: [], orRevenues: [{ orNum: 1, revenue: 0 }, { orNum: 2, revenue: 0 }], treasuryStockPercentage: 0 }],
+      companies: [
+        {
+          id: 'c1',
+          name: 'テスト企業',
+          trains: [],
+          stockHoldings: [],
+          orRevenues: [
+            { orNum: 1, revenue: 0 },
+            { orNum: 2, revenue: 0 },
+          ],
+          treasuryStockPercentage: 0,
+        },
+      ],
       selectedCompanyId: null,
       numORs: 2,
     };
@@ -79,7 +103,11 @@ describe('画面遷移', () => {
     const nav = screen.getByRole('navigation');
     await user.click(within(nav).getByText('企業詳細'));
 
-    expect(screen.getByText('企業が選択されていません。管理画面で企業を選択するか、新しい企業を追加してください。')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '企業が選択されていません。管理画面で企業を選択するか、新しい企業を追加してください。'
+      )
+    ).toBeInTheDocument();
   });
 });
 
