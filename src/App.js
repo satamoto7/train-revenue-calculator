@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  calculateTrainRevenue,
+  calculateCompanyTrainRevenue,
+  calculateCompanyTotalORRevenue,
+  calculateDividend,
+} from './lib/calc';
 
 // ローカルストレージのキー
 const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
@@ -213,7 +219,7 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
       </div>
 
       <div className="mb-4 text-lg font-bold text-gray-800">
-        計算中の列車収益: <span className="text-green-600">{train.stops.reduce((sum, s) => sum + s, 0)}</span>
+        計算中の列車収益: <span className="text-green-600">{calculateTrainRevenue(train.stops)}</span>
       </div>
       <button onClick={() => onClearTrain(train.id)} className="mt-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-md text-sm">この列車の経路をクリア</button>
     </div>
@@ -292,13 +298,11 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
     const playerDividends = players.map(player => {
         let totalDividendFromAllORs = 0;
         companies.forEach(company => {
-            const companyTotalRevenueAcrossORs = (company.orRevenues || [])
-                .slice(0, numORs) 
-                .reduce((sum, or) => sum + (or.revenue || 0), 0);
+            const companyTotalRevenueAcrossORs = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
             
             const holding = (company.stockHoldings || []).find(sh => sh.playerId === player.id);
             if (holding && holding.percentage > 0) {
-                totalDividendFromAllORs += Math.floor(companyTotalRevenueAcrossORs * (holding.percentage / 100));
+                totalDividendFromAllORs += calculateDividend(companyTotalRevenueAcrossORs, holding.percentage);
             }
         });
         return { ...player, totalDividend: totalDividendFromAllORs };
@@ -307,9 +311,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
     const sortedPlayerDividends = [...playerDividends].sort((a, b) => b.totalDividend - a.totalDividend);
 
     const companySummaries = companies.map(company => {
-        const totalRevenueAcrossORs = (company.orRevenues || [])
-            .slice(0, numORs)
-            .reduce((sum, or) => sum + (or.revenue || 0), 0);
+        const totalRevenueAcrossORs = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
         const orDetails = (company.orRevenues || []).slice(0, numORs).map((or, idx) => `OR${idx+1}: ${or.revenue || 0}`).join(', ');
         return {
             ...company,
@@ -542,8 +544,8 @@ const CompanyDetailView = ({
         );
     }
     
-    const currentTrainCalculationRevenue = (selectedCompany.trains || []).reduce((sum, train) => sum + train.stops.reduce((s, stop) => s + stop, 0), 0);
-    const totalORRevenueForCompany = (selectedCompany.orRevenues || []).slice(0, numORs).reduce((sum, or) => sum + (or.revenue || 0), 0);
+    const currentTrainCalculationRevenue = calculateCompanyTrainRevenue(selectedCompany.trains);
+    const totalORRevenueForCompany = calculateCompanyTotalORRevenue(selectedCompany.orRevenues, numORs);
 
     return (
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
@@ -704,7 +706,7 @@ const CompanyDetailView = ({
                                 {(selectedCompany.stockHoldings || []).filter(sh => sh.percentage > 0).map(sh => {
                                     const player = players.find(p => p.id === sh.playerId);
                                     if (!player) return null;
-                                    const dividend = Math.floor(totalORRevenueForCompany * (sh.percentage / 100));
+                                    const dividend = calculateDividend(totalORRevenueForCompany, sh.percentage);
                                     return (
                                         <li key={sh.playerId} className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
                                             <span className="font-medium text-gray-700">{player.name} ({sh.percentage}%):</span>
@@ -716,7 +718,7 @@ const CompanyDetailView = ({
                                     <li className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
                                         <span className="font-medium text-gray-700">自社株 ({selectedCompany.treasuryStockPercentage}%):</span>
                                         <span className="font-semibold text-green-600">
-                                            {Math.floor(totalORRevenueForCompany * ((selectedCompany.treasuryStockPercentage || 0) / 100))}
+                                            {calculateDividend(totalORRevenueForCompany, selectedCompany.treasuryStockPercentage || 0)}
                                         </span>
                                     </li>
                                 )}

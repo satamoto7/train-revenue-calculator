@@ -151,3 +151,23 @@ React アプリの保守性・拡張性・品質を中長期で高めるため�
 - UIは共通コンポーネント経由で実装され、スタイル直書きが限定されている。
 - Vite移行後も GitHub Pages で安定デプロイできる。
 
+
+
+---
+
+## 9. 実施ログ（進捗管理）
+
+> 後続作業での取りこぼし防止のため、各フェーズの実施状況をここに記録する。
+
+- [x] **Phase 1-1** 計算ロジックの純関数切り出し（`src/lib/calc.js` 作成）
+- [x] **Phase 1-2** calcユニットテスト追加（`src/lib/calc.test.js`）
+- [ ] **Phase 2-3** `useReducer` 化
+- [ ] **Phase 2-4** 永続化層の分離 + `schemaVersion` 導入
+- [ ] **Phase 3-5** ESLint/Prettier と pre-commit 整備
+- [ ] **Phase 3-6** CRA → Vite 移行（Pages設定・CI更新を含む）
+- [ ] **Phase 4-7** UI/デザイン見直し計画 1〜5 の残タスク完了
+- [ ] **Phase 4-8** 主要操作のE2Eまたは統合テストで回帰防止
+
+### メモ
+- calc層は UI から分離済み。以後の計算変更は `src/lib/calc.js` と `src/lib/calc.test.js` を同時更新する。
+- 互換性影響がある変更（永続化形式、切り捨てルール変更など）は、必ず本ドキュメントと `PLAN.md` に追記する。
