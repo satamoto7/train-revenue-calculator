@@ -1213,7 +1213,10 @@ function App() {
             type: 'APP_LOAD',
             payload: loadedState,
           });
-          if ((loadedState.players || []).length === 0 && (loadedState.companies || []).length === 0) {
+          if (
+            (loadedState.players || []).length === 0 &&
+            (loadedState.companies || []).length === 0
+          ) {
             dispatch({ type: 'VIEW_SET', payload: 'management' });
           }
         } else {

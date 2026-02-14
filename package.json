@@ -5,18 +5,19 @@
   "homepage": "https://satamoto7.github.io/train-revenue-calculator",
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
+    "react-dom": "^18.2.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint \"src/**/*.{js,jsx}\"",
     "lint:fix": "npm run lint -- --fix",
-    "format": "prettier --write \"package.json\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\"",
-    "format:check": "prettier --check \"package.json\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\"",
+    "format": "prettier --write \"package.json\" \"README.md\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\" \".eslintrc.cjs\"",
+    "format:check": "prettier --check \"package.json\" \"README.md\" \"PLAN.md\" \"docs/frontend-modernization-best-practices-plan.md\" \".prettierrc.json\" \".eslintrc.cjs\"",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },
@@ -33,29 +34,12 @@
     "postcss": "^8.5.4",
     "prettier": "^3.6.2",
     "tailwindcss": "^3.4.17",
-    "vite": "^7.3.1"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest",
-      "prettier"
-    ],
-    "plugins": [
-      "jsx-a11y"
-    ]
+    "vite": "^7.3.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "vitest": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0"
   },
   "lint-staged": {
     "src/**/*.{js,jsx,css}": [
