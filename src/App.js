@@ -13,9 +13,9 @@ const defaultCompanyColors = [
 const Modal = ({ message, onClose, showConfirm = false, onConfirm, confirmText = "OK", cancelText = "キャンセル", children }) => {
   if (!message && !children) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby={message ? "modal-message" : undefined}>
       <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md">
-        {message && <p className="mb-6 text-lg text-gray-700 whitespace-pre-wrap text-center">{message}</p>}
+        {message && <p id="modal-message" className="mb-6 text-lg text-gray-700 whitespace-pre-wrap text-center">{message}</p>}
         {children}
         <div className="flex justify-center gap-4 mt-6">
           {showConfirm && (
@@ -65,13 +65,14 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
     if (isEditing) {
         return (
             <div className="flex items-center gap-1 p-1 bg-yellow-100 rounded">
-                <input 
-                    type="number" 
-                    value={editValue} 
-                    onChange={(e) => setEditValue(e.target.value)} 
+                <input
+                    type="number"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
                     className="w-16 p-1 border border-yellow-400 rounded text-sm"
+                    aria-label="収益値を編集"
                     autoFocus
-                    onBlur={handleUpdate} 
+                    onBlur={handleUpdate}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') handleUpdate();
                         if (e.key === 'Escape') {
@@ -88,15 +89,15 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
 
     return (
         <div className="flex items-center gap-0.5 group">
-            <button onClick={() => onInsertStopBefore(index)} className="p-0.5 text-blue-500 hover:bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs">⊕</button>
-            <div className="relative p-1.5 bg-slate-200 rounded text-sm text-slate-700 cursor-pointer hover:bg-slate-300" onClick={() => setIsEditing(true)}>
+            <button onClick={() => onInsertStopBefore(index)} className="p-0.5 text-blue-500 hover:bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}の前に挿入`}>⊕</button>
+            <button type="button" className="relative p-1.5 bg-slate-200 rounded text-sm text-slate-700 cursor-pointer hover:bg-slate-300 text-left" onClick={() => setIsEditing(true)} aria-label={`収益地点 ${stop} を編集`}>
                 {stop}
-                <div className="absolute -top-3 -right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); quickChange(10);}} className="px-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500">+</button>
-                    <button onClick={(e) => { e.stopPropagation(); quickChange(-10);}} className="px-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500">-</button>
-                </div>
-            </div>
-            <button onClick={() => onDeleteStop(index)} className="p-0.5 text-red-500 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs">⊖</button>
+                <span className="absolute -top-3 -right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); quickChange(10);}} className="px-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500" aria-label={`${stop} を +10`}>+</button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); quickChange(-10);}} className="px-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500" aria-label={`${stop} を -10`}>-</button>
+                </span>
+            </button>
+            <button onClick={() => onDeleteStop(index)} className="p-0.5 text-red-500 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}を削除`}>⊖</button>
         </div>
     );
 };
@@ -135,6 +136,7 @@ const RevenueInput = ({ onAddStop }) => {
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           placeholder="カスタム値"
+          aria-label="カスタム収益値"
           className="flex-grow p-1.5 border border-gray-300 rounded-md shadow-sm text-xs"
         />
         <button
@@ -267,6 +269,7 @@ const PercentageInputControl = ({ label, value, onChange }) => {
           onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          aria-label={`${label}の保有割合`}
           className="p-2 border border-gray-300 rounded-md shadow-sm w-16 text-center text-sm"
         />
         <button onClick={() => adjustValue(10)} className="p-1.5 bg-slate-300 hover:bg-slate-400 rounded text-xs font-mono">+10</button>
@@ -277,6 +280,10 @@ const PercentageInputControl = ({ label, value, onChange }) => {
   );
 };
 
+
+const NavButton = ({ viewName, currentView, setCurrentView, children }) => (
+  <button onClick={() => setCurrentView(viewName)} className={`py-2 px-4 rounded-t-lg font-medium ${currentView === viewName ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>{children}</button>
+);
 
 // --- View Components ---
 const SummaryView = ({ players, companies, numORs }) => {
@@ -422,7 +429,7 @@ const ManagementView = ({
                         <div className="flex flex-wrap gap-2">
                             {players.map(player => (
                                 <div key={player.id} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-md shadow-sm border border-gray-200">
-                                    <span onClick={() => startEditPlayerName(player)} className="text-gray-800 cursor-pointer hover:text-blue-600">{player.name}</span>
+                                    <button type="button" onClick={() => startEditPlayerName(player)} className="text-gray-800 cursor-pointer hover:text-blue-600 bg-transparent border-none p-0 font-inherit text-inherit" aria-label={`プレイヤー「${player.name}」の名前を編集`}>{player.name}</button>
                                     <button onClick={() => handleDeletePlayer(player.id)} title={`プレイヤー「${player.name}」を削除`} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>
@@ -898,10 +905,6 @@ function App() {
     );
   }
   
-  const NavButton = ({ viewName, currentView, setCurrentView, children }) => (
-    <button onClick={() => setCurrentView(viewName)} className={`py-2 px-4 rounded-t-lg font-medium ${currentView === viewName ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>{children}</button>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-sky-100 p-4 sm:p-8 font-sans">
       <Modal 
