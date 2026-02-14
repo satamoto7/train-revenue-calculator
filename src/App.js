@@ -90,13 +90,15 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
     return (
         <div className="flex items-center gap-0.5 group">
             <button onClick={() => onInsertStopBefore(index)} className="p-0.5 text-blue-500 hover:bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}の前に挿入`}>⊕</button>
-            <button type="button" className="relative p-1.5 bg-slate-200 rounded text-sm text-slate-700 cursor-pointer hover:bg-slate-300 text-left" onClick={() => setIsEditing(true)} aria-label={`収益地点 ${stop} を編集`}>
-                {stop}
-                <span className="absolute -top-3 -right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); quickChange(10);}} className="px-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500" aria-label={`${stop} を +10`}>+</button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); quickChange(-10);}} className="px-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500" aria-label={`${stop} を -10`}>-</button>
-                </span>
-            </button>
+            <div className="relative">
+                <button type="button" className="p-1.5 bg-slate-200 rounded text-sm text-slate-700 cursor-pointer hover:bg-slate-300 text-left" onClick={() => setIsEditing(true)} aria-label={`収益地点 ${stop} を編集`}>
+                    {stop}
+                </button>
+                <div className="absolute -top-3 -right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button type="button" onClick={() => quickChange(10)} className="px-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500" aria-label={`${stop} を +10`}>+</button>
+                    <button type="button" onClick={() => quickChange(-10)} className="px-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500" aria-label={`${stop} を -10`}>-</button>
+                </div>
+            </div>
             <button onClick={() => onDeleteStop(index)} className="p-0.5 text-red-500 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}を削除`}>⊖</button>
         </div>
     );
