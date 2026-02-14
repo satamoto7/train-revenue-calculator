@@ -120,6 +120,7 @@ describe('localStorage永続化', () => {
     const savedData = JSON.parse(localStorage.getItem('trainRevenue_18xx_data'));
     expect(savedData).toBeTruthy();
     expect(savedData.players).toHaveLength(2);
+    expect(savedData.schemaVersion).toBe(1);
   });
 
   test('localStorageからデータが復元される', async () => {

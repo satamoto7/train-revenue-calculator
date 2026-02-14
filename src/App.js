@@ -1,18 +1,66 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useReducer } from 'react';
 import {
   calculateTrainRevenue,
   calculateCompanyTrainRevenue,
   calculateCompanyTotalORRevenue,
   calculateDividend,
 } from './lib/calc';
-
-// ローカルストレージのキー
-const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
+import { load as loadAppState, save as saveAppState } from './storage/appStorage';
 
 // Default company colors for quick add
 const defaultCompanyColors = [
   "赤", "青", "緑", "黄", "黒", "白", "橙", "紫", "桃", "茶", "空", "灰"
 ];
+
+const initialAppState = {
+  players: [],
+  companies: [],
+  selectedCompanyId: null,
+  numORs: 2,
+  currentView: 'summary',
+};
+
+const buildORRevenues = (numORs, currentOrRevenues = []) => (
+  Array.from({ length: numORs }, (_, idx) => {
+    const orNum = idx + 1;
+    const existing = currentOrRevenues.find((or) => or.orNum === orNum);
+    return existing || { orNum, revenue: 0 };
+  })
+);
+
+function appReducer(state, action) {
+  switch (action.type) {
+    case 'PLAYER_SET_ALL':
+      return { ...state, players: action.payload };
+    case 'COMPANY_SET_ALL':
+      return { ...state, companies: action.payload };
+    case 'COMPANY_SELECT':
+      return { ...state, selectedCompanyId: action.payload };
+    case 'OR_SET_NUM': {
+      const numORs = action.payload;
+      const companies = state.companies.map((company) => ({
+        ...company,
+        orRevenues: buildORRevenues(numORs, company.orRevenues || []),
+      }));
+      return { ...state, numORs, companies };
+    }
+    case 'VIEW_SET':
+      return { ...state, currentView: action.payload };
+    case 'APP_LOAD': {
+      const next = action.payload;
+      return {
+        ...state,
+        players: next.players || [],
+        companies: next.companies || [],
+        selectedCompanyId: next.selectedCompanyId || null,
+        numORs: next.numORs || 2,
+        currentView: next.currentView || state.currentView,
+      };
+    }
+    default:
+      return state;
+  }
+}
 
 // --- Helper Components ---
 
@@ -734,32 +782,63 @@ const CompanyDetailView = ({
 
 // Main App Component
 function App() {
-  const [players, setPlayers] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
-  const [numORs, setNumORs] = useState(2);
+  const [appState, dispatch] = useReducer(appReducer, initialAppState);
   const [isLoading, setIsLoading] = useState(true);
   const [modalMessage, setModalMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState(null);
   const [modalContent, setModalContent] = useState(null);
-  const [currentView, setCurrentView] = useState('summary');
+  const { players, companies, selectedCompanyId, numORs, currentView } = appState;
+
+  const setPlayers = useCallback((nextValue) => {
+    dispatch({
+      type: 'PLAYER_SET_ALL',
+      payload: typeof nextValue === 'function' ? nextValue(appState.players) : nextValue,
+    });
+  }, [appState.players]);
+
+  const setCompanies = useCallback((nextValue) => {
+    dispatch({
+      type: 'COMPANY_SET_ALL',
+      payload: typeof nextValue === 'function' ? nextValue(appState.companies) : nextValue,
+    });
+  }, [appState.companies]);
+
+  const setSelectedCompanyId = useCallback((nextValue) => {
+    dispatch({
+      type: 'COMPANY_SELECT',
+      payload: typeof nextValue === 'function' ? nextValue(appState.selectedCompanyId) : nextValue,
+    });
+  }, [appState.selectedCompanyId]);
+
+  const setCurrentView = useCallback((nextValue) => {
+    dispatch({
+      type: 'VIEW_SET',
+      payload: typeof nextValue === 'function' ? nextValue(appState.currentView) : nextValue,
+    });
+  }, [appState.currentView]);
+
+  const setNumORs = useCallback((nextValue) => {
+    dispatch({
+      type: 'OR_SET_NUM',
+      payload: typeof nextValue === 'function' ? nextValue(appState.numORs) : nextValue,
+    });
+  }, [appState.numORs]);
 
   // データの読み込み
   useEffect(() => {
     const loadData = () => {
       try {
-        const savedData = localStorage.getItem(APP_STORAGE_KEY);
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          setPlayers(parsed.players || []);
-          setCompanies(parsed.companies || []);
-          setSelectedCompanyId(parsed.selectedCompanyId || null);
-          setNumORs(parsed.numORs || 2);
-          if ((parsed.players || []).length === 0 && (parsed.companies || []).length === 0) {
-            setCurrentView('management');
+        const loadedState = loadAppState();
+        if (loadedState) {
+          dispatch({
+            type: 'APP_LOAD',
+            payload: loadedState,
+          });
+          if ((loadedState.players || []).length === 0 && (loadedState.companies || []).length === 0) {
+            dispatch({ type: 'VIEW_SET', payload: 'management' });
           }
         } else {
-          setCurrentView('management');
+          dispatch({ type: 'VIEW_SET', payload: 'management' });
         }
       } catch (error) {
         console.error('データ読み込みエラー:', error);
@@ -774,16 +853,13 @@ function App() {
 
   // データの保存
   const saveData = useCallback(() => {
-    const dataToSave = {
-      players,
-      companies,
-      selectedCompanyId,
-      numORs,
-      lastUpdated: new Date().toISOString()
-    };
-    
     try {
-      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(dataToSave));
+      saveAppState({
+        players,
+        companies,
+        selectedCompanyId,
+        numORs,
+      });
     } catch (error) {
       console.error('データ保存エラー:', error);
       setModalMessage('データの保存に失敗しました。');
@@ -1023,19 +1099,7 @@ function App() {
           handleSelectCompany={handleSelectCompany} 
           selectedCompanyId={selectedCompanyId} 
           numORs={numORs} 
-          setNumORs={(newNumORs) => {
-            const adjustedCompanies = companies.map(c => {
-              const currentOrRevenues = c.orRevenues || [];
-              const updatedOrRevenues = Array(newNumORs).fill(null).map((_, idx) => {
-                const orNumToFind = idx + 1;
-                const existing = currentOrRevenues.find(or => or.orNum === orNumToFind);
-                return existing || { orNum: orNumToFind, revenue: 0 };
-              });
-              return { ...c, orRevenues: updatedOrRevenues };
-            });
-            setNumORs(newNumORs);
-            setCompanies(adjustedCompanies);
-          }}
+          setNumORs={setNumORs}
           handleResetAllORRevenues={handleResetAllORRevenues}
         />
       )}
