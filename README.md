@@ -68,3 +68,19 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## GitHub Actions での GitHub Pages デプロイ（actions/deploy-pages）
+
+このリポジトリは、`gh-pages` ブランチへ push する方式から、GitHub公式の `actions/deploy-pages` 方式へ移行済みです。
+
+- デプロイワークフロー: `.github/workflows/deploy-pages.yml`
+- 実行内容: `npm ci` → `npm run build` → `upload-pages-artifact` → `deploy-pages`
+- トリガー: `main` への push / `workflow_dispatch`
+
+必要なリポジトリ設定は 1 点のみです。
+
+1. **Settings > Pages** の Build and deployment で Source を **GitHub Actions** に変更
+
+`homepage`（`package.json`）はリポジトリ名配下配信のためそのまま維持しています。
+
+> 補足: React Router を使う構成へ変更した場合は 404 対策（`404.html` や rewrite）も別途検討してください。

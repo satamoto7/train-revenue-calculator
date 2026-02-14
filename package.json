@@ -12,16 +12,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "eject": "react-scripts eject"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "autoprefixer": "^10.4.21",
-    "gh-pages": "^5.0.0",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17"
   },
