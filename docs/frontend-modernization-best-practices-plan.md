@@ -161,9 +161,9 @@ React アプリの保守性・拡張性・品質を中長期で高めるため�
 
 - [x] **Phase 1-1** 計算ロジックの純関数切り出し（`src/lib/calc.js` 作成）
 - [x] **Phase 1-2** calcユニットテスト追加（`src/lib/calc.test.js`）
-- [ ] **Phase 2-3** `useReducer` 化
-- [ ] **Phase 2-4** 永続化層の分離 + `schemaVersion` 導入
-- [ ] **Phase 3-5** ESLint/Prettier と pre-commit 整備
+- [x] **Phase 2-3** `useReducer` 化（`src/App.js` の主要画面状態を reducer へ統合）
+- [x] **Phase 2-4** 永続化層の分離 + `schemaVersion` 導入（`src/storage/appStorage.js` を追加し `load/save/migrate` を導入）
+- [x] **Phase 3-5** ESLint/Prettier と pre-commit 整備（ESLint/Prettier設定 + `.githooks/pre-commit` を追加）
 - [ ] **Phase 3-6** CRA → Vite 移行（Pages設定・CI更新を含む）
 - [ ] **Phase 4-7** UI/デザイン見直し計画 1〜5 の残タスク完了
 - [ ] **Phase 4-8** 主要操作のE2Eまたは統合テストで回帰防止
@@ -171,3 +171,6 @@ React アプリの保守性・拡張性・品質を中長期で高めるため�
 ### メモ
 - calc層は UI から分離済み。以後の計算変更は `src/lib/calc.js` と `src/lib/calc.test.js` を同時更新する。
 - 互換性影響がある変更（永続化形式、切り捨てルール変更など）は、必ず本ドキュメントと `PLAN.md` に追記する。
+- `players` / `companies` / `selectedCompanyId` / `numORs` / `currentView` を `useReducer` で一元管理し、OR配列長調整は reducer (`OR_SET_NUM`) で実施する構成へ移行。
+- 永続化境界を `src/storage/appStorage.js` に分離し、保存時に `schemaVersion: 1` を付与。起動時は `load()` 内で常に `migrate()` を経由。
+- ESLint/Prettier 設定を追加し、`npm run lint` / `npm run format:check` を品質ゲート化。pre-commit は `.githooks/pre-commit` + `npm run hooks:install` で有効化。
