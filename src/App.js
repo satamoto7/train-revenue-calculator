@@ -69,7 +69,7 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
                     type="number"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className="w-16 p-1 border border-yellow-400 rounded text-sm"
+                    className="w-20 sm:w-16 p-1 border border-yellow-400 rounded text-sm"
                     aria-label="収益値を編集"
                     autoFocus
                     onBlur={handleUpdate}
@@ -89,17 +89,17 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
 
     return (
         <div className="flex items-center gap-0.5 group">
-            <button onClick={() => onInsertStopBefore(index)} className="p-0.5 text-blue-500 hover:bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}の前に挿入`}>⊕</button>
+            <button onClick={() => onInsertStopBefore(index)} className="p-2 sm:p-1 text-blue-600 bg-blue-100 border border-blue-300 hover:bg-blue-200 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity text-xs font-bold" aria-label={`地点${index}の前に挿入`}>+</button>
             <div className="relative">
                 <button type="button" className="p-1.5 bg-slate-200 rounded text-sm text-slate-700 cursor-pointer hover:bg-slate-300 text-left" onClick={() => setIsEditing(true)} aria-label={`収益地点 ${stop} を編集`}>
                     {stop}
                 </button>
-                <div className="absolute -top-3 -right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                    <button type="button" onClick={() => quickChange(10)} className="px-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500" aria-label={`${stop} を +10`}>+</button>
-                    <button type="button" onClick={() => quickChange(-10)} className="px-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500" aria-label={`${stop} を -10`}>-</button>
+                <div className="absolute -top-3 -right-2 flex gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+                    <button type="button" onClick={() => quickChange(10)} className="px-2 py-1 bg-green-400 text-white rounded-full text-xs shadow hover:bg-green-500" aria-label={`${stop} を +10`}>+</button>
+                    <button type="button" onClick={() => quickChange(-10)} className="px-2 py-1 bg-red-400 text-white rounded-full text-xs shadow hover:bg-red-500" aria-label={`${stop} を -10`}>-</button>
                 </div>
             </div>
-            <button onClick={() => onDeleteStop(index)} className="p-0.5 text-red-500 hover:bg-red-100 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs" aria-label={`地点${index}を削除`}>⊖</button>
+            <button onClick={() => onDeleteStop(index)} className="p-2 sm:p-1 text-red-600 bg-red-100 border border-red-300 hover:bg-red-200 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity text-xs font-bold" aria-label={`地点${index}を削除`}>&times;</button>
         </div>
     );
 };
@@ -120,13 +120,13 @@ const RevenueInput = ({ onAddStop }) => {
 
   return (
     <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-      <p className="text-xs font-medium text-gray-700 mb-1.5">新しい収益地点を末尾に追加:</p>
-      <div className="grid grid-cols-5 gap-1 mb-2">
+      <p className="text-sm font-medium text-gray-700 mb-1.5">新しい収益地点を末尾に追加:</p>
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-1 mb-2">
         {revenueValues.map((value) => (
           <button
             key={value}
             onClick={() => onAddStop(value)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-2 rounded text-xs shadow"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 sm:py-1 sm:px-2 rounded text-sm sm:text-xs shadow"
           >
             {value}
           </button>
@@ -139,11 +139,11 @@ const RevenueInput = ({ onAddStop }) => {
           onChange={(e) => setCustomValue(e.target.value)}
           placeholder="カスタム値"
           aria-label="カスタム収益値"
-          className="flex-grow p-1.5 border border-gray-300 rounded-md shadow-sm text-xs"
+          className="flex-grow p-1.5 border border-gray-300 rounded-md shadow-sm text-sm"
         />
         <button
           onClick={handleAddCustom}
-          className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-1.5 px-3 rounded text-xs shadow"
+          className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-1.5 px-3 rounded text-sm shadow"
         >
           追加
         </button>
@@ -154,7 +154,7 @@ const RevenueInput = ({ onAddStop }) => {
 
 
 const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTrain }) => {
-    const [showRevenueInput, setShowRevenueInput] = useState(false);
+    const [showRevenueInput, setShowRevenueInput] = useState(train.stops.length === 0);
 
     const handleAddStopToEnd = (value) => {
         const newStops = [...train.stops, value];
@@ -262,7 +262,7 @@ const PercentageInputControl = ({ label, value, onChange }) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-md shadow-sm">
       <span className="font-medium text-gray-700 w-full sm:w-auto sm:min-w-[80px]">{label}:</span>
       <div className="flex items-center gap-1.5 w-full sm:w-auto">
-        <button onClick={() => adjustValue(-10)} className="p-1.5 bg-slate-300 hover:bg-slate-400 rounded text-xs font-mono">-10</button>
+        <button onClick={() => adjustValue(-10)} className="p-1.5 bg-slate-300 hover:bg-slate-400 rounded text-sm font-mono">-10</button>
         <input
           type="number"
           min="0"
@@ -272,9 +272,9 @@ const PercentageInputControl = ({ label, value, onChange }) => {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           aria-label={`${label}の保有割合`}
-          className="p-2 border border-gray-300 rounded-md shadow-sm w-16 text-center text-sm"
+          className="p-2 border border-gray-300 rounded-md shadow-sm w-20 sm:w-16 text-center text-sm"
         />
-        <button onClick={() => adjustValue(10)} className="p-1.5 bg-slate-300 hover:bg-slate-400 rounded text-xs font-mono">+10</button>
+        <button onClick={() => adjustValue(10)} className="p-1.5 bg-slate-300 hover:bg-slate-400 rounded text-sm font-mono">+10</button>
         <button onClick={() => quickSetValue(50)} className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs">50%</button>
         <span className="text-gray-600 text-sm">%</span>
       </div>
@@ -288,7 +288,7 @@ const NavButton = ({ viewName, currentView, setCurrentView, children }) => (
 );
 
 // --- View Components ---
-const SummaryView = ({ players, companies, numORs }) => {
+const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
     const playerDividends = players.map(player => {
         let totalDividendFromAllORs = 0;
         companies.forEach(company => {
@@ -318,10 +318,29 @@ const SummaryView = ({ players, companies, numORs }) => {
         };
     }).sort((a,b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs);
 
+    if (players.length === 0 && companies.length === 0) {
+        return (
+            <div className="max-w-lg mx-auto p-4 sm:p-6">
+                <div className="p-8 bg-white rounded-xl shadow-lg border border-indigo-200 text-center">
+                    <h3 className="text-2xl font-semibold text-indigo-700 mb-4">はじめに</h3>
+                    <p className="text-gray-600 mb-6">
+                        ゲームを開始するには、まず「全般管理」タブでプレイヤーと企業を登録してください。
+                    </p>
+                    <button
+                        onClick={onNavigateToManagement}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out"
+                    >
+                        セットアップを始める
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
             <h2 className="text-3xl font-bold text-center text-slate-700 mb-8">サマリー (全 {numORs} OR合計)</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
                     <h3 className="text-2xl font-semibold text-teal-700 mb-4">プレイヤー別総配当</h3>
@@ -346,7 +365,7 @@ const SummaryView = ({ players, companies, numORs }) => {
                                     <span className="font-medium text-sky-800">{company.name}</span>
                                     <span className="font-semibold text-sky-600 text-lg">{company.totalRevenueAcrossORs}</span>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">{company.orDetails}</p>
+                                <p className="text-sm text-gray-500 mt-1">{company.orDetails}</p>
                             </li>
                         ))}
                     </ul>
@@ -364,18 +383,22 @@ const ManagementView = ({
 }) => {
     const [numPlayersToAdd, setNumPlayersToAdd] = useState(2);
     const [numCompaniesToAdd, setNumCompaniesToAdd] = useState(4);
-    const [editingPlayer, setEditingPlayer] = useState(null); 
+    const [editingPlayerId, setEditingPlayerId] = useState(null);
     const [editingPlayerNameInput, setEditingPlayerNameInput] = useState("");
-    
+
     const startEditPlayerName = (player) => {
-        setEditingPlayer(player);
+        setEditingPlayerId(player.id);
         setEditingPlayerNameInput(player.name);
     };
-    const confirmEditPlayerNameModal = () => {
-        if (editingPlayer && editingPlayerNameInput.trim()) {
-            handleEditPlayerName(editingPlayer.id, editingPlayerNameInput.trim());
+    const confirmEditPlayerName = () => {
+        if (editingPlayerId && editingPlayerNameInput.trim()) {
+            handleEditPlayerName(editingPlayerId, editingPlayerNameInput.trim());
         }
-        setEditingPlayer(null);
+        setEditingPlayerId(null);
+        setEditingPlayerNameInput("");
+    };
+    const cancelEditPlayerName = () => {
+        setEditingPlayerId(null);
         setEditingPlayerNameInput("");
     };
 
@@ -383,25 +406,6 @@ const ManagementView = ({
     return (
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
             <h2 className="text-3xl font-bold text-center text-slate-700 mb-8">全般管理</h2>
-             {editingPlayer && (
-                <Modal 
-                    message={`プレイヤー名編集: ${editingPlayer.name}`} 
-                    onClose={() => { setEditingPlayer(null); setEditingPlayerNameInput(""); }}
-                >
-                    <input
-                        type="text"
-                        value={editingPlayerNameInput}
-                        onChange={(e) => setEditingPlayerNameInput(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') confirmEditPlayerNameModal();
-                            if (e.key === 'Escape') { setEditingPlayer(null); setEditingPlayerNameInput("");}
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded-md shadow-sm mt-2"
-                        autoFocus
-                    />
-                     <button onClick={confirmEditPlayerNameModal} className="mt-2 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md w-full">保存</button>
-                </Modal>
-            )}
 
             <div className="mb-8 p-4 sm:p-6 bg-yellow-50 rounded-xl shadow-md border border-yellow-200">
                 <h3 className="text-2xl font-semibold text-yellow-700 mb-4">ゲーム設定</h3>
@@ -431,10 +435,29 @@ const ManagementView = ({
                         <div className="flex flex-wrap gap-2">
                             {players.map(player => (
                                 <div key={player.id} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-md shadow-sm border border-gray-200">
-                                    <button type="button" onClick={() => startEditPlayerName(player)} className="text-gray-800 cursor-pointer hover:text-blue-600 bg-transparent border-none p-0 font-inherit text-inherit" aria-label={`プレイヤー「${player.name}」の名前を編集`}>{player.name}</button>
-                                    <button onClick={() => handleDeletePlayer(player.id)} title={`プレイヤー「${player.name}」を削除`} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
+                                    {editingPlayerId === player.id ? (
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="text"
+                                                value={editingPlayerNameInput}
+                                                onChange={(e) => setEditingPlayerNameInput(e.target.value)}
+                                                className="p-1.5 border border-indigo-300 rounded-md text-sm w-32"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') confirmEditPlayerName();
+                                                    if (e.key === 'Escape') cancelEditPlayerName();
+                                                }}
+                                                onBlur={confirmEditPlayerName}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <button type="button" onClick={() => startEditPlayerName(player)} className="text-gray-800 cursor-pointer hover:text-blue-600 bg-transparent border-none p-0 font-inherit text-inherit" aria-label={`プレイヤー「${player.name}」の名前を編集`}>{player.name}</button>
+                                            <button onClick={() => handleDeletePlayer(player.id)} title={`プレイヤー「${player.name}」を削除`} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-md">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -483,6 +506,9 @@ const CompanyDetailView = ({
 }) => {
     const [editingCompanyName, setEditingCompanyName] = useState(false);
     const [newCompanyNameInput, setNewCompanyNameInput] = useState("");
+    const [showTrains, setShowTrains] = useState(true);
+    const [showStockHoldings, setShowStockHoldings] = useState(false);
+    const [showDividends, setShowDividends] = useState(false);
 
     useEffect(() => {
         if (selectedCompany) {
@@ -521,17 +547,50 @@ const CompanyDetailView = ({
 
     return (
         <div className="max-w-4xl mx-auto p-4 sm:p-6">
-            <div className="mb-6 flex flex-wrap justify-center gap-2">
-                {companies.map(c => (
-                    <button 
-                        key={c.id} 
-                        onClick={() => handleSelectCompany(c.id)}
-                        className={`py-1.5 px-3 rounded-md text-xs sm:text-sm font-medium transition-colors ${selectedCompany.id === c.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
-                    >
-                        {c.name}
-                    </button>
-                ))}
+            <div className="mb-4 flex flex-wrap justify-center gap-2">
+                {companies.map(c => {
+                    const hasRevenue = (c.orRevenues || []).some(or => (or.revenue || 0) > 0);
+                    let pillClass;
+                    if (selectedCompany.id === c.id) {
+                        pillClass = 'bg-indigo-600 text-white shadow-md';
+                    } else if (hasRevenue) {
+                        pillClass = 'bg-green-100 text-green-800 border border-green-300 hover:bg-green-200';
+                    } else {
+                        pillClass = 'bg-slate-200 text-slate-700 hover:bg-slate-300';
+                    }
+                    return (
+                        <button
+                            key={c.id}
+                            onClick={() => handleSelectCompany(c.id)}
+                            className={`py-1.5 px-3 rounded-md text-xs sm:text-sm font-medium transition-colors ${pillClass}`}
+                        >
+                            {c.name}
+                        </button>
+                    );
+                })}
             </div>
+            {companies.length > 1 && (() => {
+                const currentCompanyIndex = companies.findIndex(c => c.id === selectedCompany.id);
+                return (
+                    <div className="mb-6 flex justify-between items-center max-w-xs mx-auto">
+                        <button
+                            onClick={() => { if (currentCompanyIndex > 0) handleSelectCompany(companies[currentCompanyIndex - 1].id); }}
+                            disabled={currentCompanyIndex === 0}
+                            className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 rounded-md text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            ← 前の企業
+                        </button>
+                        <span className="text-sm text-gray-600">{currentCompanyIndex + 1} / {companies.length}</span>
+                        <button
+                            onClick={() => { if (currentCompanyIndex < companies.length - 1) handleSelectCompany(companies[currentCompanyIndex + 1].id); }}
+                            disabled={currentCompanyIndex === companies.length - 1}
+                            className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            次の企業 →
+                        </button>
+                    </div>
+                );
+            })()}
 
             <div className="p-4 sm:p-6 bg-purple-50 rounded-xl shadow-md border border-purple-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-4">
@@ -559,96 +618,110 @@ const CompanyDetailView = ({
                     </div>
                 </div>
 
-                <div className="mb-8 p-4 bg-lime-50 rounded-lg border border-lime-200">
-                    <h3 className="text-xl font-semibold text-lime-800 mb-3">運営ラウンド(OR)別収益入力</h3>
-                    <div className="space-y-3">
-                        {Array.from({ length: numORs }, (_, i) => i + 1).map(orNum => {
-                            const orRevenueEntry = (selectedCompany.orRevenues || []).find(or => or.orNum === orNum);
-                            const revenue = orRevenueEntry ? orRevenueEntry.revenue : '';
-                            return (
-                                <div key={orNum} className="flex flex-col sm:flex-row items-center gap-2 p-3 bg-white rounded-md shadow-sm">
-                                    <label htmlFor={`or${orNum}-revenue-${selectedCompany.id}`} className="font-medium text-gray-700 w-full sm:w-auto whitespace-nowrap">OR {orNum} 収益:</label>
-                                    <input type="number" id={`or${orNum}-revenue-${selectedCompany.id}`} value={revenue} onChange={(e) => handleORRevenueChange(selectedCompany.id, orNum, e.target.value)} placeholder="収益額" className="p-2 border border-gray-300 rounded-md shadow-sm flex-grow w-full sm:w-auto"/>
-                                </div>
-                            );
-                        })}
-                    </div>
+                <div className="mb-6 flex flex-wrap items-center gap-2">
+                    {Array.from({ length: numORs }, (_, i) => i + 1).map(orNum => {
+                        const orRevenueEntry = (selectedCompany.orRevenues || []).find(or => or.orNum === orNum);
+                        const revenue = orRevenueEntry ? orRevenueEntry.revenue : '';
+                        return (
+                            <div key={orNum} className="flex items-center gap-1">
+                                <label htmlFor={`or${orNum}-revenue-${selectedCompany.id}`} className="text-sm font-medium text-gray-600 whitespace-nowrap">OR{orNum}:</label>
+                                <input type="number" id={`or${orNum}-revenue-${selectedCompany.id}`} value={revenue} onChange={(e) => handleORRevenueChange(selectedCompany.id, orNum, e.target.value)} placeholder="0" className="p-2 border border-gray-300 rounded-md w-24 text-sm"/>
+                            </div>
+                        );
+                    })}
                 </div>
                 
                 <div className="mb-8 p-4 bg-sky-50 rounded-lg border border-sky-200">
-                    <div className="flex justify-between items-center mb-3">
+                    <button type="button" onClick={() => setShowTrains(s => !s)} className="flex justify-between items-center w-full mb-1">
                         <h3 className="text-xl font-semibold text-sky-800">列車運行による収益計算</h3>
-                        <button onClick={() => handleAddNewTrainToCompany(selectedCompany.id)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md text-sm">新しい列車を追加</button>
-                    </div>
-                    <p className="text-md text-gray-700 mb-3">現在の列車計算合計: <span className="font-bold text-green-600">{currentTrainCalculationRevenue}</span></p>
-                    {currentTrainCalculationRevenue > 0 && numORs > 0 && (
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                            <span className="text-sm text-gray-700">この計算結果を記録:</span>
-                            {Array.from({ length: numORs }, (_, i) => i + 1).map(orNum => (
-                                <button key={orNum} onClick={() => handleSetTrainRevenueToOR(selectedCompany.id, orNum, currentTrainCalculationRevenue)} className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1.5 px-3 rounded-md text-xs shadow">OR {orNum}へ</button>
-                            ))}
-                        </div>
+                        <span className="text-sm text-sky-600">{showTrains ? '▼' : '▶'}</span>
+                    </button>
+                    <p className="text-sm text-gray-700 mb-3">列車計算合計: <span className="font-bold text-green-600">{currentTrainCalculationRevenue}</span></p>
+                    {showTrains && (
+                        <>
+                            <div className="flex justify-end mb-3">
+                                <button onClick={() => handleAddNewTrainToCompany(selectedCompany.id)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md text-sm">新しい列車を追加</button>
+                            </div>
+                            {currentTrainCalculationRevenue > 0 && numORs > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 mb-4">
+                                    <span className="text-sm text-gray-700">この計算結果を記録:</span>
+                                    {Array.from({ length: numORs }, (_, i) => i + 1).map(orNum => (
+                                        <button key={orNum} onClick={() => handleSetTrainRevenueToOR(selectedCompany.id, orNum, currentTrainCalculationRevenue)} className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1.5 px-3 rounded-md text-sm shadow">OR {orNum}へ</button>
+                                    ))}
+                                </div>
+                            )}
+                            {(selectedCompany.trains || []).length === 0 && (<p className="text-center text-gray-500 italic my-4">列車がありません。</p>)}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {(selectedCompany.trains || []).map((train, index) => (
+                                    <TrainCard key={train.id} train={train} index={index}
+                                        onUpdateTrainStops={(trainId, newStops) => handleUpdateTrainStops(selectedCompany.id, trainId, newStops)}
+                                        onClearTrain={(trainId) => handleClearTrain(selectedCompany.id, trainId)}
+                                        onDeleteTrain={(trainId) => handleDeleteTrain(selectedCompany.id, trainId)}
+                                    />
+                                ))}
+                            </div>
+                        </>
                     )}
-                    {(selectedCompany.trains || []).length === 0 && (<p className="text-center text-gray-500 italic my-4">列車がありません。</p>)}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {(selectedCompany.trains || []).map((train, index) => (
-                            <TrainCard key={train.id} train={train} index={index} 
-                                onUpdateTrainStops={(trainId, newStops) => handleUpdateTrainStops(selectedCompany.id, trainId, newStops)}
-                                onClearTrain={(trainId) => handleClearTrain(selectedCompany.id, trainId)}
-                                onDeleteTrain={(trainId) => handleDeleteTrain(selectedCompany.id, trainId)}
-                            />
-                        ))}
-                    </div>
                 </div>
 
                 {/* Stock Holdings Section */}
                 <div className="mb-8 p-4 bg-purple-100 rounded-lg">
-                    <h3 className="text-xl font-semibold text-purple-800 mb-3">株式保有状況 ({selectedCompany.name})</h3>
-                    <div className="space-y-2">
-                        {players.map(player => (
+                    <button type="button" onClick={() => setShowStockHoldings(s => !s)} className="flex justify-between items-center w-full mb-1">
+                        <h3 className="text-xl font-semibold text-purple-800">株式保有状況 ({selectedCompany.name})</h3>
+                        <span className="text-sm text-purple-600">{showStockHoldings ? '▼' : '▶'}</span>
+                    </button>
+                    {showStockHoldings && (
+                        <div className="space-y-2 mt-3">
+                            {players.map(player => (
+                                <PercentageInputControl
+                                    key={player.id}
+                                    label={player.name}
+                                    value={(selectedCompany.stockHoldings || []).find(sh => sh.playerId === player.id)?.percentage || 0}
+                                    onChange={(newPercentage) => handleStockHoldingChange(selectedCompany.id, player.id, newPercentage)}
+                                />
+                            ))}
+                            {/* Treasury Stock Input */}
                             <PercentageInputControl
-                                key={player.id}
-                                label={player.name}
-                                value={(selectedCompany.stockHoldings || []).find(sh => sh.playerId === player.id)?.percentage || 0}
-                                onChange={(newPercentage) => handleStockHoldingChange(selectedCompany.id, player.id, newPercentage)}
+                                label="自社株 (Treasury)"
+                                value={selectedCompany.treasuryStockPercentage || 0}
+                                onChange={(newPercentage) => handleTreasuryStockChange(selectedCompany.id, newPercentage)}
                             />
-                        ))}
-                        {/* Treasury Stock Input */}
-                        <PercentageInputControl
-                            label="自社株 (Treasury)"
-                            value={selectedCompany.treasuryStockPercentage || 0}
-                            onChange={(newPercentage) => handleTreasuryStockChange(selectedCompany.id, newPercentage)}
-                        />
-                    </div>
+                        </div>
+                    )}
                 </div>
 
 
                 {/* Dividend Display */}
-                { totalORRevenueForCompany > 0 && 
+                { totalORRevenueForCompany > 0 &&
                   ( (selectedCompany.stockHoldings || []).filter(sh => sh.percentage > 0).length > 0 || (selectedCompany.treasuryStockPercentage || 0) > 0 ) && (
                     <div className="mb-8 p-4 bg-green-50 rounded-lg">
-                        <h3 className="text-xl font-semibold text-green-800 mb-3">配当金 (全{numORs}OR合計より) ({selectedCompany.name})</h3>
-                        <ul className="space-y-2">
-                            {(selectedCompany.stockHoldings || []).filter(sh => sh.percentage > 0).map(sh => {
-                                const player = players.find(p => p.id === sh.playerId);
-                                if (!player) return null;
-                                const dividend = Math.floor(totalORRevenueForCompany * (sh.percentage / 100));
-                                return (
-                                    <li key={sh.playerId} className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                                        <span className="font-medium text-gray-700">{player.name} ({sh.percentage}%):</span>
-                                        <span className="font-semibold text-green-600">{dividend}</span>
+                        <button type="button" onClick={() => setShowDividends(s => !s)} className="flex justify-between items-center w-full mb-1">
+                            <h3 className="text-xl font-semibold text-green-800">配当金 (全{numORs}OR合計より) ({selectedCompany.name})</h3>
+                            <span className="text-sm text-green-600">{showDividends ? '▼' : '▶'}</span>
+                        </button>
+                        {showDividends && (
+                            <ul className="space-y-2 mt-3">
+                                {(selectedCompany.stockHoldings || []).filter(sh => sh.percentage > 0).map(sh => {
+                                    const player = players.find(p => p.id === sh.playerId);
+                                    if (!player) return null;
+                                    const dividend = Math.floor(totalORRevenueForCompany * (sh.percentage / 100));
+                                    return (
+                                        <li key={sh.playerId} className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                                            <span className="font-medium text-gray-700">{player.name} ({sh.percentage}%):</span>
+                                            <span className="font-semibold text-green-600">{dividend}</span>
+                                        </li>
+                                    );
+                                })}
+                                {(selectedCompany.treasuryStockPercentage || 0) > 0 && (
+                                    <li className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
+                                        <span className="font-medium text-gray-700">自社株 ({selectedCompany.treasuryStockPercentage}%):</span>
+                                        <span className="font-semibold text-green-600">
+                                            {Math.floor(totalORRevenueForCompany * ((selectedCompany.treasuryStockPercentage || 0) / 100))}
+                                        </span>
                                     </li>
-                                );
-                            })}
-                            {(selectedCompany.treasuryStockPercentage || 0) > 0 && (
-                                <li className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                                    <span className="font-medium text-gray-700">自社株 ({selectedCompany.treasuryStockPercentage}%):</span>
-                                    <span className="font-semibold text-green-600">
-                                        {Math.floor(totalORRevenueForCompany * ((selectedCompany.treasuryStockPercentage || 0) / 100))}
-                                    </span>
-                                </li>
-                            )}
-                        </ul>
+                                )}
+                            </ul>
+                        )}
                     </div>
                 )}
             </div>
@@ -680,6 +753,11 @@ function App() {
           setCompanies(parsed.companies || []);
           setSelectedCompanyId(parsed.selectedCompanyId || null);
           setNumORs(parsed.numORs || 2);
+          if ((parsed.players || []).length === 0 && (parsed.companies || []).length === 0) {
+            setCurrentView('management');
+          }
+        } else {
+          setCurrentView('management');
         }
       } catch (error) {
         console.error('データ読み込みエラー:', error);
@@ -773,6 +851,7 @@ function App() {
   const handleSelectCompany = (companyId) => {
     setSelectedCompanyId(companyId);
     setCurrentView('companyDetail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteCompany = (companyIdToDelete) => {
@@ -928,7 +1007,7 @@ function App() {
         <NavButton viewName="companyDetail" currentView={currentView} setCurrentView={setCurrentView}>企業詳細</NavButton>
       </nav>
 
-      {currentView === 'summary' && <SummaryView players={players} companies={companies} numORs={numORs} />}
+      {currentView === 'summary' && <SummaryView players={players} companies={companies} numORs={numORs} onNavigateToManagement={() => setCurrentView('management')} />}
       
       {currentView === 'management' && (
         <ManagementView
