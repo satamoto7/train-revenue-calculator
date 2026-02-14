@@ -99,6 +99,7 @@ describe('localStorage永続化', () => {
   });
 
   test('localStorageからデータが復元される', async () => {
+    const user = userEvent.setup();
     const initialData = {
       players: [{ id: 'test-1', name: 'テストプレイヤー' }],
       companies: [],
@@ -109,13 +110,8 @@ describe('localStorage永続化', () => {
 
     render(<App />);
 
-    await screen.findByText('テストプレイヤー', {}, { timeout: 3000 }).catch(() => {
-      // サマリー画面で表示される
-    });
-
-    const savedData = JSON.parse(localStorage.getItem('trainRevenue_18xx_data'));
-    expect(savedData.players).toHaveLength(1);
-    expect(savedData.players[0].name).toBe('テストプレイヤー');
+    await user.click(screen.getByText('全般管理'));
+    expect(await screen.findByText('テストプレイヤー')).toBeInTheDocument();
   });
 });
 
