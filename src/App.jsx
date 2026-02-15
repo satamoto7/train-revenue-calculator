@@ -240,6 +240,11 @@ function App() {
     setPlayers(updatedPlayers);
   };
 
+  const handleEditPlayerColor = (playerId, color) => {
+    const updatedPlayers = players.map((p) => (p.id === playerId ? { ...p, color } : p));
+    setPlayers(updatedPlayers);
+  };
+
   const handleDeletePlayer = (playerIdToDelete) => {
     const player = players.find((p) => p.id === playerIdToDelete);
     const playerName = getPlayerDisplayName(player);
@@ -275,6 +280,11 @@ function App() {
 
   const handleEditCompanySymbol = (companyId, symbol) => {
     const updatedCompanies = companies.map((c) => (c.id === companyId ? { ...c, symbol } : c));
+    setCompanies(updatedCompanies);
+  };
+
+  const handleEditCompanyColor = (companyId, color) => {
+    const updatedCompanies = companies.map((c) => (c.id === companyId ? { ...c, color } : c));
     setCompanies(updatedCompanies);
   };
 
@@ -490,9 +500,12 @@ function App() {
           handleDeletePlayer={handleDeletePlayer}
           handleEditPlayerName={handleEditPlayerName}
           handleEditPlayerSymbol={handleEditPlayerSymbol}
+          handleEditPlayerColor={handleEditPlayerColor}
           companies={companies}
           handleAddMultipleCompanies={handleAddMultipleCompanies}
           handleDeleteCompany={handleDeleteCompany}
+          handleEditCompanySymbol={handleEditCompanySymbol}
+          handleEditCompanyColor={handleEditCompanyColor}
           handleSelectCompany={handleSelectCompany}
           selectedCompanyId={selectedCompanyId}
           numORs={numORs}
@@ -518,6 +531,7 @@ function App() {
           handleSelectCompany={handleSelectCompany}
           handleEditCompanyName={handleEditCompanyName}
           handleEditCompanySymbol={handleEditCompanySymbol}
+          handleEditCompanyColor={handleEditCompanyColor}
         />
       )}
 

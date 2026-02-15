@@ -3,7 +3,13 @@ import { calculateCompanyTotalORRevenue, calculateDividend } from '../../lib/cal
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
-import { getCompanyBadge, getCompanyDisplayName, getPlayerDisplayName } from '../../lib/labels';
+import {
+  getColorStyleClass,
+  getCompanyColor,
+  getCompanyDisplayName,
+  getCompanySymbol,
+  getPlayerDisplayName,
+} from '../../lib/labels';
 
 const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
   const setupSteps = [
@@ -116,8 +122,14 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
             {companySummaries.map((company) => (
               <li key={company.id} className="p-3 bg-sky-50 rounded-md shadow-sm">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-sky-800">
-                    {getCompanyBadge(company)} {getCompanyDisplayName(company)}
+                  <span className="font-medium text-sky-800 inline-flex items-center gap-1.5">
+                    <span>{getCompanySymbol(company)}</span>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(getCompanyColor(company))}`}
+                    >
+                      {getCompanyColor(company)}
+                    </span>
+                    <span>{getCompanyDisplayName(company)}</span>
                   </span>
                   <span className="font-semibold text-sky-600 text-lg">
                     {company.totalRevenueAcrossORs}

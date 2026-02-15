@@ -3,8 +3,26 @@ const PLAYER_SYMBOLS = ['●', '▲', '■', '◆', '★', '✚'];
 const COMPANY_COLORS = ['赤', '青', '緑', '黄', '黒', '白', '橙', '紫', '桃', '茶', '空', '灰'];
 const COMPANY_SYMBOLS = ['○', '△', '◇', '□', '☆', '◯', '◈', '⬟', '⬢', '⬣', '✦', '✧'];
 
+const COLOR_STYLE_MAP = {
+  赤: 'bg-red-100 text-red-800 border-red-300',
+  青: 'bg-blue-100 text-blue-800 border-blue-300',
+  緑: 'bg-green-100 text-green-800 border-green-300',
+  黄: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  紫: 'bg-purple-100 text-purple-800 border-purple-300',
+  橙: 'bg-orange-100 text-orange-800 border-orange-300',
+  黒: 'bg-slate-900 text-white border-slate-700',
+  白: 'bg-white text-slate-700 border-slate-300',
+  桃: 'bg-pink-100 text-pink-800 border-pink-300',
+  茶: 'bg-amber-100 text-amber-900 border-amber-400',
+  空: 'bg-sky-100 text-sky-800 border-sky-300',
+  灰: 'bg-gray-200 text-gray-800 border-gray-400',
+  無色: 'bg-slate-100 text-slate-600 border-slate-300',
+};
+
 export const PLAYER_SYMBOL_OPTIONS = PLAYER_SYMBOLS;
 export const COMPANY_SYMBOL_OPTIONS = COMPANY_SYMBOLS;
+export const PLAYER_COLOR_OPTIONS = PLAYER_COLORS;
+export const COMPANY_COLOR_OPTIONS = COMPANY_COLORS;
 
 export const getSeatLabel = (index) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -16,6 +34,11 @@ export const getDefaultPlayerColor = (index) => PLAYER_COLORS[index % PLAYER_COL
 export const getDefaultPlayerSymbol = (index) => PLAYER_SYMBOLS[index % PLAYER_SYMBOLS.length];
 export const getDefaultCompanyColor = (index) => COMPANY_COLORS[index % COMPANY_COLORS.length];
 export const getDefaultCompanySymbol = (index) => COMPANY_SYMBOLS[index % COMPANY_SYMBOLS.length];
+
+export const isKnownPlayerColor = (color) => PLAYER_COLORS.includes(color);
+export const isKnownCompanyColor = (color) => COMPANY_COLORS.includes(color);
+
+export const getColorStyleClass = (color) => COLOR_STYLE_MAP[color] || COLOR_STYLE_MAP.無色;
 
 export const getPlayerDisplayName = (player) =>
   player?.displayName ||
@@ -32,8 +55,11 @@ export const getCompanyDisplayName = (company) => {
   return 'Company';
 };
 
+export const getCompanySymbol = (company) => company?.symbol || '○';
+export const getCompanyColor = (company) => company?.color || '無色';
+
 export const getCompanyBadge = (company) => {
-  const symbol = company?.symbol || '○';
-  const color = company?.color || '無色';
+  const symbol = getCompanySymbol(company);
+  const color = getCompanyColor(company);
   return `${symbol}${color}`;
 };
