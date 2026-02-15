@@ -7,7 +7,7 @@ import {
 } from '../lib/labels';
 
 export const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
-export const APP_SCHEMA_VERSION = 2;
+export const APP_SCHEMA_VERSION = 3;
 
 const DEFAULT_STATE = {
   players: [],
@@ -40,17 +40,19 @@ const normalizePlayer = (player, index) => {
 
 const inferGenericIndex = (company, index) => {
   if (Number.isInteger(company?.genericIndex)) return company.genericIndex;
-  const match = company?.name?.match(/^Co(\d+)$/i);
-  if (match) return Number(match[1]);
   return index + 1;
 };
 
 const normalizeCompany = (company, index) => {
   const genericIndex = inferGenericIndex(company, index);
+  const canonicalName = `Co${genericIndex}`;
+  const displayName = company?.displayName || '';
+
   return {
     ...company,
     id: company?.id || createFallbackId('company', index),
-    name: company?.name || `Co${genericIndex}`,
+    name: canonicalName,
+    displayName,
     genericIndex,
     color: company?.color || getDefaultCompanyColor(index),
     symbol: company?.symbol || getDefaultCompanySymbol(index),
@@ -93,6 +95,7 @@ export function load() {
   if (!raw) return null;
 
   const parsed = JSON.parse(raw);
+  if (parsed?.schemaVersion !== APP_SCHEMA_VERSION) return null;
   return migrate(parsed);
 }
 

@@ -21,7 +21,7 @@ describe('appStorage', () => {
     expect(typeof stored.lastUpdated).toBe('string');
   });
 
-  test('load は旧フォーマット(schemaVersionなし)を migrate して返す', () => {
+  test('load は schemaVersion 不一致データを無視して null を返す', () => {
     const legacyData = {
       players: [{ id: 'p1', name: 'legacy' }],
       companies: [{ id: 'c1', name: '赤会社' }],
@@ -32,11 +32,7 @@ describe('appStorage', () => {
     localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(legacyData));
 
     const loaded = load();
-    expect(loaded.players[0].displayName).toBe('legacy');
-    expect(loaded.players[0].seatLabel).toBe('A');
-    expect(loaded.companies[0].genericIndex).toBe(1);
-    expect(loaded.companies[0].color).toBeTruthy();
-    expect(loaded.numORs).toBe(3);
+    expect(loaded).toBeNull();
   });
 
   test('migrate は不正値をデフォルトへ補正する', () => {

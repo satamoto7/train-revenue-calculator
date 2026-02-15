@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import App from './App';
+import { APP_SCHEMA_VERSION } from './storage/appStorage';
 
 // crypto.randomUUID のポリフィル（Jest環境用）
 if (!window.crypto?.randomUUID) {
@@ -40,6 +41,7 @@ describe('アプリ初期表示', () => {
 
   test('データがある場合はサマリー画面が初期表示される', () => {
     const initialData = {
+      schemaVersion: APP_SCHEMA_VERSION,
       players: [{ id: 'p1', name: 'テスト' }],
       companies: [
         {
@@ -68,6 +70,7 @@ describe('画面遷移', () => {
     const user = userEvent.setup();
     // Start from summary view with pre-seeded data
     const initialData = {
+      schemaVersion: APP_SCHEMA_VERSION,
       players: [{ id: 'p1', name: 'テスト' }],
       companies: [
         {
@@ -148,12 +151,13 @@ describe('localStorage永続化', () => {
     const savedData = JSON.parse(localStorage.getItem('trainRevenue_18xx_data'));
     expect(savedData).toBeTruthy();
     expect(savedData.players).toHaveLength(2);
-    expect(savedData.schemaVersion).toBe(2);
+    expect(savedData.schemaVersion).toBe(APP_SCHEMA_VERSION);
   });
 
   test('localStorageからデータが復元される', async () => {
     const user = userEvent.setup();
     const initialData = {
+      schemaVersion: APP_SCHEMA_VERSION,
       players: [{ id: 'test-1', name: 'テストプレイヤー' }],
       companies: [],
       selectedCompanyId: null,

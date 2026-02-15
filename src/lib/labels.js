@@ -3,6 +3,9 @@ const PLAYER_SYMBOLS = ['●', '▲', '■', '◆', '★', '✚'];
 const COMPANY_COLORS = ['赤', '青', '緑', '黄', '黒', '白', '橙', '紫', '桃', '茶', '空', '灰'];
 const COMPANY_SYMBOLS = ['○', '△', '◇', '□', '☆', '◯', '◈', '⬟', '⬢', '⬣', '✦', '✧'];
 
+export const PLAYER_SYMBOL_OPTIONS = PLAYER_SYMBOLS;
+export const COMPANY_SYMBOL_OPTIONS = COMPANY_SYMBOLS;
+
 export const getSeatLabel = (index) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   if (index < alphabet.length) return alphabet[index];
@@ -22,9 +25,10 @@ export const getPlayerDisplayName = (player) =>
 export const getPlayerShortLabel = (player) => player?.seatLabel || 'P';
 
 export const getCompanyDisplayName = (company) => {
+  if (company?.displayName && company.displayName.trim()) return company.displayName.trim();
   if (company?.abbr && company.abbr.trim()) return company.abbr.trim();
-  if (Number.isInteger(company?.genericIndex)) return `Co${company.genericIndex}`;
   if (company?.name && company.name.trim()) return company.name.trim();
+  if (Number.isInteger(company?.genericIndex)) return `Co${company.genericIndex}`;
   return 'Company';
 };
 

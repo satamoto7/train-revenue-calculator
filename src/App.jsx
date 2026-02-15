@@ -37,6 +37,7 @@ const createPlayer = (index) => {
 const createCompany = (index, numORs) => ({
   id: crypto.randomUUID(),
   name: `Co${index + 1}`,
+  displayName: '',
   genericIndex: index + 1,
   color: getDefaultCompanyColor(index),
   symbol: getDefaultCompanySymbol(index),
@@ -234,6 +235,11 @@ function App() {
     setPlayers(updatedPlayers);
   };
 
+  const handleEditPlayerSymbol = (playerId, symbol) => {
+    const updatedPlayers = players.map((p) => (p.id === playerId ? { ...p, symbol } : p));
+    setPlayers(updatedPlayers);
+  };
+
   const handleDeletePlayer = (playerIdToDelete) => {
     const player = players.find((p) => p.id === playerIdToDelete);
     const playerName = getPlayerDisplayName(player);
@@ -260,10 +266,15 @@ function App() {
     setCompanies(updatedCompanies);
   };
 
-  const handleEditCompanyName = (companyId, newName) => {
+  const handleEditCompanyName = (companyId, newDisplayName) => {
     const updatedCompanies = companies.map((c) =>
-      c.id === companyId ? { ...c, name: newName } : c
+      c.id === companyId ? { ...c, displayName: newDisplayName } : c
     );
+    setCompanies(updatedCompanies);
+  };
+
+  const handleEditCompanySymbol = (companyId, symbol) => {
+    const updatedCompanies = companies.map((c) => (c.id === companyId ? { ...c, symbol } : c));
     setCompanies(updatedCompanies);
   };
 
@@ -478,6 +489,7 @@ function App() {
           handleAddMultiplePlayers={handleAddMultiplePlayers}
           handleDeletePlayer={handleDeletePlayer}
           handleEditPlayerName={handleEditPlayerName}
+          handleEditPlayerSymbol={handleEditPlayerSymbol}
           companies={companies}
           handleAddMultipleCompanies={handleAddMultipleCompanies}
           handleDeleteCompany={handleDeleteCompany}
@@ -505,6 +517,7 @@ function App() {
           numORs={numORs}
           handleSelectCompany={handleSelectCompany}
           handleEditCompanyName={handleEditCompanyName}
+          handleEditCompanySymbol={handleEditCompanySymbol}
         />
       )}
 

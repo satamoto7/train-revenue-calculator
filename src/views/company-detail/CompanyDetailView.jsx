@@ -8,7 +8,12 @@ import {
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
-import { getCompanyBadge, getCompanyDisplayName, getPlayerDisplayName } from '../../lib/labels';
+import {
+  COMPANY_SYMBOL_OPTIONS,
+  getCompanyBadge,
+  getCompanyDisplayName,
+  getPlayerDisplayName,
+} from '../../lib/labels';
 
 const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertStopBefore }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -354,6 +359,7 @@ const CompanyDetailView = ({
   numORs,
   handleSelectCompany,
   handleEditCompanyName,
+  handleEditCompanySymbol,
 }) => {
   const [editingCompanyName, setEditingCompanyName] = useState(false);
   const [newCompanyNameInput, setNewCompanyNameInput] = useState('');
@@ -363,12 +369,12 @@ const CompanyDetailView = ({
 
   useEffect(() => {
     if (selectedCompany) {
-      setNewCompanyNameInput(selectedCompany.name);
+      setNewCompanyNameInput(selectedCompany.displayName || '');
     }
   }, [selectedCompany]);
 
   const confirmEditCompanyName = () => {
-    if (selectedCompany && newCompanyNameInput.trim()) {
+    if (selectedCompany) {
       handleEditCompanyName(selectedCompany.id, newCompanyNameInput.trim());
     }
     setEditingCompanyName(false);
@@ -520,7 +526,7 @@ const CompanyDetailView = ({
                 <Button
                   type="button"
                   onClick={() => {
-                    setNewCompanyNameInput(selectedCompany.name);
+                    setNewCompanyNameInput(selectedCompany.displayName || '');
                     setEditingCompanyName(true);
                   }}
                   variant="ghost"
@@ -530,6 +536,23 @@ const CompanyDetailView = ({
                 </Button>
               </h2>
             )}
+            <div className="mt-2 flex items-center gap-2">
+              <label htmlFor="company-symbol" className="text-sm text-gray-600">
+                記号:
+              </label>
+              <select
+                id="company-symbol"
+                value={selectedCompany.symbol || '○'}
+                onChange={(e) => handleEditCompanySymbol(selectedCompany.id, e.target.value)}
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+              >
+                {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
+                  <option key={symbol} value={symbol}>
+                    {symbol}
+                  </option>
+                ))}
+              </select>
+            </div>
             <p className="text-sm text-gray-600 mt-1">
               記録済OR収益合計:{' '}
               <span className="font-semibold text-green-700 ml-1">{totalORRevenueForCompany}</span>
