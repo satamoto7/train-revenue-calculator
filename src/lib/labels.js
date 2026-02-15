@@ -62,6 +62,9 @@ export const getPlayerDisplayName = (player) =>
   player?.name ||
   (player?.seatLabel ? `Player ${player.seatLabel}` : 'Player');
 
+export const getPlayerSymbol = (player) => player?.symbol || '●';
+export const getPlayerColor = (player) => player?.color || '無色';
+
 export const getPlayerShortLabel = (player) => player?.seatLabel || 'P';
 
 export const getCompanyDisplayName = (company) => {
