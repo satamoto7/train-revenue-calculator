@@ -5,22 +5,15 @@ import Modal from './components/ui/Modal';
 import SummaryView from './views/summary/SummaryView';
 import ManagementView from './views/management/ManagementView';
 import CompanyDetailView from './views/company-detail/CompanyDetailView';
-
-// Default company colors for quick add
-const defaultCompanyColors = [
-  '赤',
-  '青',
-  '緑',
-  '黄',
-  '黒',
-  '白',
-  '橙',
-  '紫',
-  '桃',
-  '茶',
-  '空',
-  '灰',
-];
+import {
+  getCompanyDisplayName,
+  getDefaultCompanyColor,
+  getDefaultCompanySymbol,
+  getDefaultPlayerColor,
+  getDefaultPlayerSymbol,
+  getPlayerDisplayName,
+  getSeatLabel,
+} from './lib/labels';
 
 const initialAppState = {
   players: [],
@@ -29,6 +22,34 @@ const initialAppState = {
   numORs: 2,
   currentView: 'summary',
 };
+
+const createPlayer = (index) => {
+  const seatLabel = getSeatLabel(index);
+  return {
+    id: crypto.randomUUID(),
+    seatLabel,
+    displayName: `Player ${seatLabel}`,
+    color: getDefaultPlayerColor(index),
+    symbol: getDefaultPlayerSymbol(index),
+  };
+};
+
+const createCompany = (index, numORs) => ({
+  id: crypto.randomUUID(),
+  name: `Co${index + 1}`,
+  genericIndex: index + 1,
+  color: getDefaultCompanyColor(index),
+  symbol: getDefaultCompanySymbol(index),
+  abbr: '',
+  templateId: null,
+  icon: null,
+  trains: [],
+  stockHoldings: [],
+  orRevenues: Array(numORs)
+    .fill(null)
+    .map((_, orIdx) => ({ orNum: orIdx + 1, revenue: 0 })),
+  treasuryStockPercentage: 0,
+});
 
 const buildORRevenues = (numORs, currentOrRevenues = []) =>
   Array.from({ length: numORs }, (_, idx) => {
@@ -201,21 +222,21 @@ function App() {
 
   // --- Player Management ---
   const handleAddMultiplePlayers = (count) => {
-    const newPlayers = Array.from({ length: count }, (_, i) => ({
-      id: crypto.randomUUID(),
-      name: `プレイヤー ${players.length + i + 1}`,
-    }));
+    const newPlayers = Array.from({ length: count }, (_, i) => createPlayer(players.length + i));
     const updatedPlayers = [...players, ...newPlayers];
     setPlayers(updatedPlayers);
   };
 
   const handleEditPlayerName = (playerId, newName) => {
-    const updatedPlayers = players.map((p) => (p.id === playerId ? { ...p, name: newName } : p));
+    const updatedPlayers = players.map((p) =>
+      p.id === playerId ? { ...p, displayName: newName, name: newName } : p
+    );
     setPlayers(updatedPlayers);
   };
 
   const handleDeletePlayer = (playerIdToDelete) => {
-    const playerName = players.find((p) => p.id === playerIdToDelete)?.name;
+    const player = players.find((p) => p.id === playerIdToDelete);
+    const playerName = getPlayerDisplayName(player);
     setConfirmAction(() => () => {
       const updatedPlayers = players.filter((p) => p.id !== playerIdToDelete);
       const updatedCompanies = companies.map((c) => ({
@@ -232,19 +253,9 @@ function App() {
 
   // --- Company Management ---
   const handleAddMultipleCompanies = (count) => {
-    const newCompanies = Array.from({ length: count }, (_, i) => {
-      const companyName = `${defaultCompanyColors[(companies.length + i) % defaultCompanyColors.length]}会社`;
-      return {
-        id: crypto.randomUUID(),
-        name: companyName,
-        trains: [],
-        stockHoldings: [],
-        orRevenues: Array(numORs)
-          .fill(null)
-          .map((_, orIdx) => ({ orNum: orIdx + 1, revenue: 0 })),
-        treasuryStockPercentage: 0, // Initialize treasury stock
-      };
-    });
+    const newCompanies = Array.from({ length: count }, (_, i) =>
+      createCompany(companies.length + i, numORs)
+    );
     const updatedCompanies = [...companies, ...newCompanies];
     setCompanies(updatedCompanies);
   };
@@ -263,7 +274,7 @@ function App() {
   };
 
   const handleDeleteCompany = (companyIdToDelete) => {
-    const companyName = companies.find((c) => c.id === companyIdToDelete)?.name;
+    const companyName = getCompanyDisplayName(companies.find((c) => c.id === companyIdToDelete));
     setConfirmAction(() => () => {
       const updatedCompanies = companies.filter((c) => c.id !== companyIdToDelete);
       let newSelectedCompanyId = selectedCompanyId;

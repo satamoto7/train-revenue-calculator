@@ -7,7 +7,7 @@ describe('appStorage', () => {
 
   test('save は schemaVersion を付けて保存する', () => {
     save({
-      players: [{ id: 'p1', name: 'P1' }],
+      players: [{ id: 'p1', displayName: 'Player A', seatLabel: 'A' }],
       companies: [],
       selectedCompanyId: null,
       numORs: 2,
@@ -24,7 +24,7 @@ describe('appStorage', () => {
   test('load は旧フォーマット(schemaVersionなし)を migrate して返す', () => {
     const legacyData = {
       players: [{ id: 'p1', name: 'legacy' }],
-      companies: [],
+      companies: [{ id: 'c1', name: '赤会社' }],
       selectedCompanyId: null,
       numORs: 3,
     };
@@ -32,7 +32,10 @@ describe('appStorage', () => {
     localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(legacyData));
 
     const loaded = load();
-    expect(loaded.players[0].name).toBe('legacy');
+    expect(loaded.players[0].displayName).toBe('legacy');
+    expect(loaded.players[0].seatLabel).toBe('A');
+    expect(loaded.companies[0].genericIndex).toBe(1);
+    expect(loaded.companies[0].color).toBeTruthy();
     expect(loaded.numORs).toBe(3);
   });
 

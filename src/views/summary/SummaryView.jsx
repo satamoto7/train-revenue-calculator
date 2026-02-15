@@ -3,6 +3,7 @@ import { calculateCompanyTotalORRevenue, calculateDividend } from '../../lib/cal
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
+import { getCompanyBadge, getCompanyDisplayName, getPlayerDisplayName } from '../../lib/labels';
 
 const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
   const setupSteps = [
@@ -99,7 +100,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
                 key={player.id}
                 className="flex justify-between items-center p-3 bg-teal-50 rounded-md shadow-sm"
               >
-                <span className="font-medium text-teal-800">{player.name}</span>
+                <span className="font-medium text-teal-800">{getPlayerDisplayName(player)}</span>
                 <span className="font-semibold text-teal-600 text-lg">{player.totalDividend}</span>
               </li>
             ))}
@@ -115,7 +116,9 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
             {companySummaries.map((company) => (
               <li key={company.id} className="p-3 bg-sky-50 rounded-md shadow-sm">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-sky-800">{company.name}</span>
+                  <span className="font-medium text-sky-800">
+                    {getCompanyBadge(company)} {getCompanyDisplayName(company)}
+                  </span>
                   <span className="font-semibold text-sky-600 text-lg">
                     {company.totalRevenueAcrossORs}
                   </span>

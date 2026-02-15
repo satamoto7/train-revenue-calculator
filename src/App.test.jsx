@@ -119,8 +119,8 @@ describe('プレイヤー管理', () => {
     // Already on management view for empty state
     await user.click(screen.getByText('プレイヤーを一括追加'));
 
-    expect(screen.getByText('プレイヤー 1')).toBeInTheDocument();
-    expect(screen.getByText('プレイヤー 2')).toBeInTheDocument();
+    expect(screen.getByText(/Player A/)).toBeInTheDocument();
+    expect(screen.getByText(/Player B/)).toBeInTheDocument();
   });
 });
 
@@ -130,10 +130,10 @@ describe('企業管理', () => {
     render(<App />);
 
     // Already on management view for empty state
-    await user.click(screen.getByText('企業を一括追加 (色名)'));
+    await user.click(screen.getByText('企業を一括追加 (汎用 Co)'));
 
-    expect(screen.getByText('赤会社')).toBeInTheDocument();
-    expect(screen.getByText('青会社')).toBeInTheDocument();
+    expect(screen.getByText(/Co1/)).toBeInTheDocument();
+    expect(screen.getByText(/Co2/)).toBeInTheDocument();
   });
 });
 
@@ -148,7 +148,7 @@ describe('localStorage永続化', () => {
     const savedData = JSON.parse(localStorage.getItem('trainRevenue_18xx_data'));
     expect(savedData).toBeTruthy();
     expect(savedData.players).toHaveLength(2);
-    expect(savedData.schemaVersion).toBe(1);
+    expect(savedData.schemaVersion).toBe(2);
   });
 
   test('localStorageからデータが復元される', async () => {
@@ -165,7 +165,7 @@ describe('localStorage永続化', () => {
 
     const nav = screen.getByRole('navigation');
     await user.click(within(nav).getByText('全般管理'));
-    expect(await screen.findByText('テストプレイヤー')).toBeInTheDocument();
+    expect(await screen.findByText(/テストプレイヤー/)).toBeInTheDocument();
   });
 });
 
