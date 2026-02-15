@@ -3,6 +3,8 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
+  COMPANY_SYMBOL_OPTIONS,
+  PLAYER_SYMBOL_OPTIONS,
   getCompanyBadge,
   getCompanyDisplayName,
   getPlayerDisplayName,
@@ -14,9 +16,11 @@ const ManagementView = ({
   handleAddMultiplePlayers,
   handleDeletePlayer,
   handleEditPlayerName,
+  handleEditPlayerSymbol,
   companies,
   handleAddMultipleCompanies,
   handleDeleteCompany,
+  handleEditCompanySymbol,
   handleSelectCompany,
   selectedCompanyId,
   numORs,
@@ -134,6 +138,18 @@ const ManagementView = ({
                     </div>
                   ) : (
                     <>
+                      <select
+                        value={player.symbol || '●'}
+                        onChange={(e) => handleEditPlayerSymbol(player.id, e.target.value)}
+                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-sm"
+                        aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の記号`}
+                      >
+                        {PLAYER_SYMBOL_OPTIONS.map((symbol) => (
+                          <option key={symbol} value={symbol}>
+                            {symbol}
+                          </option>
+                        ))}
+                      </select>
                       <Button
                         type="button"
                         onClick={() => startEditPlayerName(player)}
@@ -141,8 +157,8 @@ const ManagementView = ({
                         className="text-gray-800 p-0 shadow-none hover:bg-transparent hover:text-blue-600"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前を編集`}
                       >
-                        {player.symbol || '●'} {player.color || '無色'} /{' '}
-                        {getPlayerShortLabel(player)} {getPlayerDisplayName(player)}
+                        {player.color || '無色'} / {getPlayerShortLabel(player)}{' '}
+                        {getPlayerDisplayName(player)}
                       </Button>
                       <Button
                         type="button"
@@ -224,6 +240,18 @@ const ManagementView = ({
                   >
                     {getCompanyBadge(company)} {getCompanyDisplayName(company)}
                   </Button>
+                  <select
+                    value={company.symbol || '○'}
+                    onChange={(e) => handleEditCompanySymbol(company.id, e.target.value)}
+                    className="rounded border border-gray-300 bg-white px-1 py-1 text-sm"
+                    aria-label={`企業「${getCompanyDisplayName(company)}」の記号`}
+                  >
+                    {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
+                      <option key={symbol} value={symbol}>
+                        {symbol}
+                      </option>
+                    ))}
+                  </select>
                   <Button
                     type="button"
                     onClick={() => handleDeleteCompany(company.id)}
