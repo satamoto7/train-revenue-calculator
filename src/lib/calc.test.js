@@ -52,6 +52,15 @@ describe('calc utilities', () => {
       ];
       expect(calculateCompanyTotalORRevenue(orRevenues, 2)).toBe(300);
     });
+
+    test('OR番号が並び順と不一致でもOR番号ベースで合計する', () => {
+      const orRevenues = [
+        { orNum: 3, revenue: 300 },
+        { orNum: 1, revenue: 100 },
+        { orNum: 2, revenue: 200 },
+      ];
+      expect(calculateCompanyTotalORRevenue(orRevenues, 2)).toBe(300);
+    });
   });
 
   describe('calculateDividend', () => {
