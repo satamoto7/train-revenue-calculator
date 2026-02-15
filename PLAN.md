@@ -361,3 +361,7 @@ BEST_PRACTICES.md の調査結果に基づき、3フェーズに分けた段階�
 - [ ] `npm run test` / `npm run lint` が通るか
 - [ ] UI変更が視認できるスクリーンショットを添付したか
 - [ ] `docs/frontend-modernization-best-practices-plan.md` の進捗ログを更新したか
+
+## 参考メモ
+
+- UI導線の再設計メモ: `docs/future-ui-flow-memo.md`
