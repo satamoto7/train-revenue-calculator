@@ -43,10 +43,11 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
   const companySummaries = companies
     .map((company) => {
       const totalRevenueAcrossORs = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
-      const orDetails = (company.orRevenues || [])
-        .slice(0, numORs)
-        .map((or, idx) => `OR${idx + 1}: ${or.revenue || 0}`)
-        .join(', ');
+      const orDetails = Array.from({ length: numORs }, (_, idx) => {
+        const orNum = idx + 1;
+        const orEntry = (company.orRevenues || []).find((or) => or.orNum === orNum);
+        return `OR${orNum}: ${orEntry?.revenue || 0}`;
+      }).join(', ');
       return {
         ...company,
         totalRevenueAcrossORs,
