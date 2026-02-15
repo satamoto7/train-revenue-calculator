@@ -4,6 +4,8 @@ import {
   getDefaultPlayerColor,
   getDefaultPlayerSymbol,
   getSeatLabel,
+  isKnownCompanyColor,
+  isKnownPlayerColor,
 } from '../lib/labels';
 
 export const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
@@ -33,7 +35,7 @@ const normalizePlayer = (player, index) => {
     seatLabel,
     displayName,
     name: player?.name || displayName,
-    color: player?.color || getDefaultPlayerColor(index),
+    color: isKnownPlayerColor(player?.color) ? player.color : getDefaultPlayerColor(index),
     symbol: player?.symbol || getDefaultPlayerSymbol(index),
   };
 };
@@ -54,7 +56,7 @@ const normalizeCompany = (company, index) => {
     name: canonicalName,
     displayName,
     genericIndex,
-    color: company?.color || getDefaultCompanyColor(index),
+    color: isKnownCompanyColor(company?.color) ? company.color : getDefaultCompanyColor(index),
     symbol: company?.symbol || getDefaultCompanySymbol(index),
     abbr: company?.abbr || '',
     templateId: company?.templateId ?? null,

@@ -9,9 +9,12 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
+  COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
-  getCompanyBadge,
+  getColorStyleClass,
+  getCompanyColor,
   getCompanyDisplayName,
+  getCompanySymbol,
   getPlayerDisplayName,
 } from '../../lib/labels';
 
@@ -360,6 +363,7 @@ const CompanyDetailView = ({
   handleSelectCompany,
   handleEditCompanyName,
   handleEditCompanySymbol,
+  handleEditCompanyColor,
 }) => {
   const [editingCompanyName, setEditingCompanyName] = useState(false);
   const [newCompanyNameInput, setNewCompanyNameInput] = useState('');
@@ -401,7 +405,15 @@ const CompanyDetailView = ({
                   variant="secondary"
                   className="py-2 px-4 text-sm text-indigo-700 border border-indigo-300"
                 >
-                  {getCompanyBadge(company)} {getCompanyDisplayName(company)}
+                  <span className="inline-flex items-center gap-1">
+                    <span>{getCompanySymbol(company)}</span>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(getCompanyColor(company))}`}
+                    >
+                      {getCompanyColor(company)}
+                    </span>
+                    <span>{getCompanyDisplayName(company)}</span>
+                  </span>
                 </Button>
               ))}
             </div>
@@ -447,7 +459,15 @@ const CompanyDetailView = ({
               className={`min-h-11 py-1.5 px-3 rounded-md text-ui-xs sm:text-ui-sm font-medium transition-colors ${pillClass}`}
             >
               <span className="block leading-tight">
-                {getCompanyBadge(c)} {getCompanyDisplayName(c)}
+                <span className="inline-flex items-center gap-1">
+                  <span>{getCompanySymbol(c)}</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] sm:text-ui-xs ${getColorStyleClass(getCompanyColor(c))}`}
+                  >
+                    {getCompanyColor(c)}
+                  </span>
+                  <span>{getCompanyDisplayName(c)}</span>
+                </span>
               </span>
               <span className="block text-[10px] sm:text-ui-xs opacity-90">{statusLabel}</span>
             </Button>
@@ -549,6 +569,21 @@ const CompanyDetailView = ({
                 {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
                   <option key={symbol} value={symbol}>
                     {symbol}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="company-color" className="text-sm text-gray-600">
+                色:
+              </label>
+              <select
+                id="company-color"
+                value={selectedCompany.color || '赤'}
+                onChange={(e) => handleEditCompanyColor(selectedCompany.id, e.target.value)}
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+              >
+                {COMPANY_COLOR_OPTIONS.map((color) => (
+                  <option key={color} value={color}>
+                    {color}
                   </option>
                 ))}
               </select>

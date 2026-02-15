@@ -3,10 +3,14 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
+  COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
+  PLAYER_COLOR_OPTIONS,
   PLAYER_SYMBOL_OPTIONS,
-  getCompanyBadge,
+  getColorStyleClass,
+  getCompanyColor,
   getCompanyDisplayName,
+  getCompanySymbol,
   getPlayerDisplayName,
   getPlayerShortLabel,
 } from '../../lib/labels';
@@ -17,10 +21,12 @@ const ManagementView = ({
   handleDeletePlayer,
   handleEditPlayerName,
   handleEditPlayerSymbol,
+  handleEditPlayerColor,
   companies,
   handleAddMultipleCompanies,
   handleDeleteCompany,
   handleEditCompanySymbol,
+  handleEditCompanyColor,
   handleSelectCompany,
   selectedCompanyId,
   numORs,
@@ -150,6 +156,18 @@ const ManagementView = ({
                           </option>
                         ))}
                       </select>
+                      <select
+                        value={player.color || '赤'}
+                        onChange={(e) => handleEditPlayerColor(player.id, e.target.value)}
+                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-sm"
+                        aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の色`}
+                      >
+                        {PLAYER_COLOR_OPTIONS.map((color) => (
+                          <option key={color} value={color}>
+                            {color}
+                          </option>
+                        ))}
+                      </select>
                       <Button
                         type="button"
                         onClick={() => startEditPlayerName(player)}
@@ -157,8 +175,12 @@ const ManagementView = ({
                         className="text-gray-800 p-0 shadow-none hover:bg-transparent hover:text-blue-600"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前を編集`}
                       >
-                        {player.color || '無色'} / {getPlayerShortLabel(player)}{' '}
-                        {getPlayerDisplayName(player)}
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(player.color)}`}
+                        >
+                          {player.color || '無色'}
+                        </span>{' '}
+                        / {getPlayerShortLabel(player)} {getPlayerDisplayName(player)}
                       </Button>
                       <Button
                         type="button"
@@ -238,7 +260,15 @@ const ManagementView = ({
                     variant={company.id === selectedCompanyId ? 'primary' : 'secondary'}
                     className={`py-2 px-4 text-sm ${company.id === selectedCompanyId ? 'ring-2 ring-indigo-400' : 'text-indigo-700 border border-indigo-300'}`}
                   >
-                    {getCompanyBadge(company)} {getCompanyDisplayName(company)}
+                    <span className="inline-flex items-center gap-1">
+                      <span>{getCompanySymbol(company)}</span>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(getCompanyColor(company))}`}
+                      >
+                        {getCompanyColor(company)}
+                      </span>
+                      <span>{getCompanyDisplayName(company)}</span>
+                    </span>
                   </Button>
                   <select
                     value={company.symbol || '○'}
@@ -249,6 +279,18 @@ const ManagementView = ({
                     {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
                       <option key={symbol} value={symbol}>
                         {symbol}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={company.color || '赤'}
+                    onChange={(e) => handleEditCompanyColor(company.id, e.target.value)}
+                    className="rounded border border-gray-300 bg-white px-1 py-1 text-sm"
+                    aria-label={`企業「${getCompanyDisplayName(company)}」の色`}
+                  >
+                    {COMPANY_COLOR_OPTIONS.map((color) => (
+                      <option key={color} value={color}>
+                        {color}
                       </option>
                     ))}
                   </select>
