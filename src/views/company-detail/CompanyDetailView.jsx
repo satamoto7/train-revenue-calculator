@@ -444,7 +444,7 @@ const CompanyDetailView = ({
             pillClass = 'bg-indigo-600 text-white shadow-md';
             statusLabel = '選択中';
           } else if (hasRevenue) {
-            pillClass = 'bg-green-100 text-green-800 border border-green-300 hover:bg-green-200';
+            pillClass = 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200';
             statusLabel = '収益あり';
           } else {
             pillClass = 'bg-slate-200 text-slate-700 hover:bg-slate-300';
@@ -511,7 +511,7 @@ const CompanyDetailView = ({
           );
         })()}
 
-      <div className="p-4 sm:p-6 bg-purple-50 rounded-xl shadow-md border border-purple-200">
+      <div className="p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-4">
           <div>
             {editingCompanyName ? (
@@ -542,8 +542,17 @@ const CompanyDetailView = ({
               </div>
             ) : (
               <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2">
+                <span
+                  className={`text-xl leading-none ${getColorTextClass(getCompanyColor(selectedCompany))}`}
+                  aria-hidden="true"
+                >
+                  {getCompanySymbol(selectedCompany)}
+                </span>
                 <span className="font-bold text-indigo-600">
                   {getCompanyDisplayName(selectedCompany)}
+                </span>
+                <span className="text-ui-xs text-slate-500">
+                  ({getCompanyColor(selectedCompany)})
                 </span>
                 <Button
                   type="button"
@@ -558,37 +567,42 @@ const CompanyDetailView = ({
                 </Button>
               </h2>
             )}
-            <div className="mt-2 flex items-center gap-2">
-              <label htmlFor="company-symbol" className="text-sm text-gray-600">
-                記号:
-              </label>
-              <select
-                id="company-symbol"
-                value={selectedCompany.symbol || '○'}
-                onChange={(e) => handleEditCompanySymbol(selectedCompany.id, e.target.value)}
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
-              >
-                {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="company-color" className="text-sm text-gray-600">
-                色:
-              </label>
-              <select
-                id="company-color"
-                value={selectedCompany.color || '赤'}
-                onChange={(e) => handleEditCompanyColor(selectedCompany.id, e.target.value)}
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
-              >
-                {COMPANY_COLOR_OPTIONS.map((color) => (
-                  <option key={color} value={color}>
-                    {color}
-                  </option>
-                ))}
-              </select>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-ui-xs text-slate-600 mb-2">
+                ここで選んだ記号・色は、企業一覧やサマリーにも表示されます。
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="company-symbol" className="text-sm text-gray-600">
+                  記号:
+                </label>
+                <select
+                  id="company-symbol"
+                  value={selectedCompany.symbol || '○'}
+                  onChange={(e) => handleEditCompanySymbol(selectedCompany.id, e.target.value)}
+                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                >
+                  {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
+                    <option key={symbol} value={symbol}>
+                      {symbol}
+                    </option>
+                  ))}
+                </select>
+                <label htmlFor="company-color" className="text-sm text-gray-600">
+                  色:
+                </label>
+                <select
+                  id="company-color"
+                  value={selectedCompany.color || '赤'}
+                  onChange={(e) => handleEditCompanyColor(selectedCompany.id, e.target.value)}
+                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                >
+                  {COMPANY_COLOR_OPTIONS.map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <p className="text-sm text-gray-600 mt-1">
               記録済OR収益合計:{' '}

@@ -8,7 +8,9 @@ import {
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
+  getPlayerColor,
   getPlayerDisplayName,
+  getPlayerSymbol,
 } from '../../lib/labels';
 
 const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => {
@@ -97,7 +99,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card>
-          <SectionHeader size="section" as="h3" className="mb-4 text-teal-700">
+          <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
             プレイヤー別総配当
           </SectionHeader>
           {players.length === 0 && <p className="text-gray-500 italic">プレイヤーがいません。</p>}
@@ -105,25 +107,36 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
             {sortedPlayerDividends.map((player) => (
               <li
                 key={player.id}
-                className="flex justify-between items-center p-3 bg-teal-50 rounded-md shadow-sm"
+                className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-md shadow-sm"
               >
-                <span className="font-medium text-teal-800">{getPlayerDisplayName(player)}</span>
-                <span className="font-semibold text-teal-600 text-lg">{player.totalDividend}</span>
+                <span className="font-medium text-slate-800 inline-flex items-center gap-1.5">
+                  <span
+                    className={`text-base leading-none ${getColorTextClass(getPlayerColor(player))}`}
+                  >
+                    {getPlayerSymbol(player)}
+                  </span>
+                  <span className="text-ui-xs text-slate-500">({getPlayerColor(player)})</span>
+                  <span>{getPlayerDisplayName(player)}</span>
+                </span>
+                <span className="font-semibold text-slate-700 text-lg">{player.totalDividend}</span>
               </li>
             ))}
           </ul>
         </Card>
 
         <Card>
-          <SectionHeader size="section" as="h3" className="mb-4 text-sky-700">
+          <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
             企業別総収益
           </SectionHeader>
           {companies.length === 0 && <p className="text-gray-500 italic">企業がありません。</p>}
           <ul className="space-y-3">
             {companySummaries.map((company) => (
-              <li key={company.id} className="p-3 bg-sky-50 rounded-md shadow-sm">
+              <li
+                key={company.id}
+                className="p-3 bg-slate-50 border border-slate-200 rounded-md shadow-sm"
+              >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-sky-800 inline-flex items-center gap-1.5">
+                  <span className="font-medium text-slate-800 inline-flex items-center gap-1.5">
                     <span
                       className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
                     >
@@ -132,7 +145,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
                     <span className="text-ui-xs text-slate-500">({getCompanyColor(company)})</span>
                     <span>{getCompanyDisplayName(company)}</span>
                   </span>
-                  <span className="font-semibold text-sky-600 text-lg">
+                  <span className="font-semibold text-slate-700 text-lg">
                     {company.totalRevenueAcrossORs}
                   </span>
                 </div>
