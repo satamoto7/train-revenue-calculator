@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
+import {
+  getCompanyBadge,
+  getCompanyDisplayName,
+  getPlayerDisplayName,
+  getPlayerShortLabel,
+} from '../../lib/labels';
 
 const ManagementView = ({
   players,
@@ -24,7 +30,7 @@ const ManagementView = ({
 
   const startEditPlayerName = (player) => {
     setEditingPlayerId(player.id);
-    setEditingPlayerNameInput(player.name);
+    setEditingPlayerNameInput(getPlayerDisplayName(player));
   };
   const confirmEditPlayerName = () => {
     if (editingPlayerId && editingPlayerNameInput.trim()) {
@@ -85,7 +91,7 @@ const ManagementView = ({
               onChange={(e) => setNumPlayersToAdd(parseInt(e.target.value))}
               className="p-2 border border-gray-300 rounded-md shadow-sm"
             >
-              {[2, 3, 4, 5].map((n) => (
+              {[2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>
                   {n}名
                 </option>
@@ -133,14 +139,15 @@ const ManagementView = ({
                         onClick={() => startEditPlayerName(player)}
                         variant="ghost"
                         className="text-gray-800 p-0 shadow-none hover:bg-transparent hover:text-blue-600"
-                        aria-label={`プレイヤー「${player.name}」の名前を編集`}
+                        aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前を編集`}
                       >
-                        {player.name}
+                        {player.symbol || '●'} {player.color || '無色'} /{' '}
+                        {getPlayerShortLabel(player)} {getPlayerDisplayName(player)}
                       </Button>
                       <Button
                         type="button"
                         onClick={() => handleDeletePlayer(player.id)}
-                        title={`プレイヤー「${player.name}」を削除`}
+                        title={`プレイヤー「${getPlayerDisplayName(player)}」を削除`}
                         variant="danger"
                         className="p-1"
                       >
@@ -186,12 +193,11 @@ const ManagementView = ({
               onChange={(e) => setNumCompaniesToAdd(parseInt(e.target.value))}
               className="p-2 border border-gray-300 rounded-md shadow-sm"
             >
-              {Array.from({ length: 9 }, (_, i) => i + 4).map((n) => (
+              {Array.from({ length: 15 }, (_, i) => i + 4).map((n) => (
                 <option key={n} value={n}>
                   {n}社
                 </option>
-              ))}{' '}
-              {/* 4-12社 */}
+              ))}
             </select>
           </div>
           <Button
@@ -199,7 +205,7 @@ const ManagementView = ({
             onClick={() => handleAddMultipleCompanies(numCompaniesToAdd)}
             className="py-2.5 px-5"
           >
-            企業を一括追加 (色名)
+            企業を一括追加 (汎用 Co)
           </Button>
         </div>
         {companies.length > 0 && (
@@ -216,12 +222,12 @@ const ManagementView = ({
                     variant={company.id === selectedCompanyId ? 'primary' : 'secondary'}
                     className={`py-2 px-4 text-sm ${company.id === selectedCompanyId ? 'ring-2 ring-indigo-400' : 'text-indigo-700 border border-indigo-300'}`}
                   >
-                    {company.name}
+                    {getCompanyBadge(company)} {getCompanyDisplayName(company)}
                   </Button>
                   <Button
                     type="button"
                     onClick={() => handleDeleteCompany(company.id)}
-                    title={`企業「${company.name}」を削除`}
+                    title={`企業「${getCompanyDisplayName(company)}」を削除`}
                     variant="danger"
                     className="p-1.5"
                   >

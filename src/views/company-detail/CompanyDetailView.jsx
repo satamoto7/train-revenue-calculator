@@ -8,6 +8,7 @@ import {
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
+import { getCompanyBadge, getCompanyDisplayName, getPlayerDisplayName } from '../../lib/labels';
 
 const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertStopBefore }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -394,7 +395,7 @@ const CompanyDetailView = ({
                   variant="secondary"
                   className="py-2 px-4 text-sm text-indigo-700 border border-indigo-300"
                 >
-                  {company.name}
+                  {getCompanyBadge(company)} {getCompanyDisplayName(company)}
                 </Button>
               ))}
             </div>
@@ -439,7 +440,9 @@ const CompanyDetailView = ({
               variant="secondary"
               className={`min-h-11 py-1.5 px-3 rounded-md text-ui-xs sm:text-ui-sm font-medium transition-colors ${pillClass}`}
             >
-              <span className="block leading-tight">{c.name}</span>
+              <span className="block leading-tight">
+                {getCompanyBadge(c)} {getCompanyDisplayName(c)}
+              </span>
               <span className="block text-[10px] sm:text-ui-xs opacity-90">{statusLabel}</span>
             </Button>
           );
@@ -511,7 +514,9 @@ const CompanyDetailView = ({
               </div>
             ) : (
               <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2">
-                <span className="font-bold text-indigo-600">{selectedCompany.name}</span>
+                <span className="font-bold text-indigo-600">
+                  {getCompanyDisplayName(selectedCompany)}
+                </span>
                 <Button
                   type="button"
                   onClick={() => {
@@ -638,7 +643,7 @@ const CompanyDetailView = ({
             className="flex justify-between items-center w-full mb-1 px-0 shadow-none"
           >
             <h3 className="text-xl font-semibold text-purple-800">
-              株式保有状況 ({selectedCompany.name})
+              株式保有状況 ({getCompanyDisplayName(selectedCompany)})
             </h3>
             <span className="text-sm text-purple-600">{showStockHoldings ? '▼' : '▶'}</span>
           </Button>
@@ -647,7 +652,7 @@ const CompanyDetailView = ({
               {players.map((player) => (
                 <PercentageInputControl
                   key={player.id}
-                  label={player.name}
+                  label={getPlayerDisplayName(player)}
                   value={
                     (selectedCompany.stockHoldings || []).find((sh) => sh.playerId === player.id)
                       ?.percentage || 0
@@ -684,7 +689,7 @@ const CompanyDetailView = ({
                 className="flex justify-between items-center w-full mb-1 px-0 shadow-none"
               >
                 <h3 className="text-xl font-semibold text-green-800">
-                  配当金 (全{numORs}OR合計より) ({selectedCompany.name})
+                  配当金 (全{numORs}OR合計より) ({getCompanyDisplayName(selectedCompany)})
                 </h3>
                 <span className="text-sm text-green-600">{showDividends ? '▼' : '▶'}</span>
               </Button>
@@ -702,7 +707,7 @@ const CompanyDetailView = ({
                           className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm"
                         >
                           <span className="font-medium text-gray-700">
-                            {player.name} ({sh.percentage}%):
+                            {getPlayerDisplayName(player)} ({sh.percentage}%):
                           </span>
                           <span className="font-semibold text-green-600">{dividend}</span>
                         </li>
