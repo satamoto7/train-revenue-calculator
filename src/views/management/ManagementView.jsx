@@ -7,7 +7,7 @@ import {
   COMPANY_SYMBOL_OPTIONS,
   PLAYER_COLOR_OPTIONS,
   PLAYER_SYMBOL_OPTIONS,
-  getColorStyleClass,
+  getColorTextClass,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -83,8 +83,8 @@ const ManagementView = ({
         </div>
       </div>
 
-      <div className="mb-8 p-4 sm:p-6 bg-teal-50 rounded-xl shadow-md border border-teal-200">
-        <SectionHeader size="section" as="h3" className="mb-4 text-teal-700">
+      <div className="mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
+        <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
           プレイヤー管理
         </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
@@ -175,12 +175,11 @@ const ManagementView = ({
                         className="text-gray-800 p-0 shadow-none hover:bg-transparent hover:text-blue-600"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前を編集`}
                       >
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(player.color)}`}
-                        >
-                          {player.color || '無色'}
+                        <span className={`text-lg leading-none ${getColorTextClass(player.color)}`}>
+                          {player.symbol || '●'}
                         </span>{' '}
-                        / {getPlayerShortLabel(player)} {getPlayerDisplayName(player)}
+                        / {getPlayerShortLabel(player)} {getPlayerDisplayName(player)} (
+                        {player.color || '無色'})
                       </Button>
                       <Button
                         type="button"
@@ -213,8 +212,8 @@ const ManagementView = ({
         )}
       </div>
 
-      <div className="mb-8 p-4 sm:p-6 bg-sky-50 rounded-xl shadow-md border border-sky-200">
-        <SectionHeader size="section" as="h3" className="mb-4 text-sky-700">
+      <div className="mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
+        <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
           企業管理
         </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
@@ -261,11 +260,13 @@ const ManagementView = ({
                     className={`py-2 px-4 text-sm ${company.id === selectedCompanyId ? 'ring-2 ring-indigo-400' : 'text-indigo-700 border border-indigo-300'}`}
                   >
                     <span className="inline-flex items-center gap-1">
-                      <span>{getCompanySymbol(company)}</span>
                       <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(getCompanyColor(company))}`}
+                        className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
                       >
-                        {getCompanyColor(company)}
+                        {getCompanySymbol(company)}
+                      </span>
+                      <span className="text-ui-xs text-slate-500">
+                        ({getCompanyColor(company)})
                       </span>
                       <span>{getCompanyDisplayName(company)}</span>
                     </span>
