@@ -18,7 +18,16 @@ import {
   getPlayerDisplayName,
 } from '../../lib/labels';
 
-const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertStopBefore }) => {
+const RevenueStopEditor = ({
+  stop,
+  index,
+  trainId,
+  onUpdateStop,
+  onDeleteStop,
+  onInsertStopBefore,
+  activeStopKey,
+  onSetActiveStop,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(stop.toString());
 
@@ -26,15 +35,23 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
     setEditValue(stop.toString());
   }, [stop]);
 
+  const myKey = `${trainId}-${index}`;
+  const isThisActive = activeStopKey === myKey;
+
+  // Mobile: hidden by default, shown when active. Desktop: opacity transition on group-hover.
+  const mobileShowClass = isThisActive ? '' : 'hidden sm:inline-flex';
+  const mobileShowRowClass = isThisActive ? 'flex' : 'hidden sm:flex';
+  const hoverClass =
+    'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity';
+
   const handleUpdate = () => {
     const newValue = parseInt(editValue);
     if (!isNaN(newValue) && newValue >= 0) {
       onUpdateStop(index, newValue);
-      setIsEditing(false);
     } else {
       setEditValue(stop.toString());
-      setIsEditing(false);
     }
+    setIsEditing(false);
   };
 
   const quickChange = (amount) => {
@@ -84,55 +101,63 @@ const RevenueStopEditor = ({ stop, index, onUpdateStop, onDeleteStop, onInsertSt
   }
 
   return (
-    <div className="flex items-center gap-0.5 group">
-      <Button
-        type="button"
-        onClick={() => onInsertStopBefore(index)}
-        variant="ghost"
-        className="h-8 w-8 p-0 text-ui-sm text-status-info border border-blue-300 hover:bg-blue-200 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity"
-        aria-label={`地点${index}の前に挿入`}
-      >
-        +
-      </Button>
-      <div className="relative">
+    <div
+      className={`flex flex-col items-center group relative ${isThisActive ? 'z-10' : ''} sm:hover:z-10`}
+    >
+      <div className="flex items-center gap-0.5">
+        <Button
+          type="button"
+          onClick={() => onInsertStopBefore(index)}
+          variant="ghost"
+          className={`h-8 w-8 p-0 text-ui-sm text-status-info border border-blue-300 hover:bg-blue-200 rounded-full ${mobileShowClass} ${hoverClass}`}
+          aria-label={`地点${index}の前に挿入`}
+        >
+          +
+        </Button>
         <Button
           type="button"
           variant="secondary"
-          className="p-1.5 text-sm text-left"
-          onClick={() => setIsEditing(true)}
+          className="min-w-[2.5rem] min-h-[2.5rem] p-2 text-sm text-center font-mono"
+          onClick={() => {
+            if (isThisActive) {
+              setIsEditing(true);
+            } else {
+              onSetActiveStop(myKey);
+            }
+          }}
           aria-label={`収益地点 ${stop} を編集`}
         >
           {stop}
         </Button>
-        <div className="absolute -top-3 -right-2 flex gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
-          <Button
-            type="button"
-            onClick={() => quickChange(10)}
-            className="px-2 py-1 text-ui-xs rounded-full bg-status-success hover:bg-green-700"
-            aria-label={`${stop} を +10`}
-          >
-            +
-          </Button>
-          <Button
-            type="button"
-            onClick={() => quickChange(-10)}
-            variant="danger"
-            className="px-2 py-1 text-ui-xs rounded-full"
-            aria-label={`${stop} を -10`}
-          >
-            -
-          </Button>
-        </div>
+        <Button
+          type="button"
+          onClick={() => onDeleteStop(index)}
+          variant="danger"
+          className={`h-8 w-8 p-0 text-ui-sm rounded-full ${mobileShowClass} ${hoverClass}`}
+          aria-label={`地点${index}を削除`}
+        >
+          &times;
+        </Button>
       </div>
-      <Button
-        type="button"
-        onClick={() => onDeleteStop(index)}
-        variant="danger"
-        className="h-8 w-8 p-0 text-ui-sm rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity"
-        aria-label={`地点${index}を削除`}
-      >
-        &times;
-      </Button>
+      <div className={`gap-0.5 mt-0.5 ${mobileShowRowClass} ${hoverClass}`}>
+        <Button
+          type="button"
+          onClick={() => quickChange(10)}
+          className="px-1.5 py-0.5 text-ui-xs rounded-full bg-status-success hover:bg-green-700"
+          aria-label={`${stop} を +10`}
+        >
+          +10
+        </Button>
+        <Button
+          type="button"
+          onClick={() => quickChange(-10)}
+          variant="danger"
+          className="px-1.5 py-0.5 text-ui-xs rounded-full"
+          aria-label={`${stop} を -10`}
+        >
+          -10
+        </Button>
+      </div>
     </div>
   );
 };
@@ -185,6 +210,7 @@ const RevenueInput = ({ onAddStop }) => {
 
 const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTrain }) => {
   const [showRevenueInput, setShowRevenueInput] = useState(train.stops.length === 0);
+  const [activeStopKey, setActiveStopKey] = useState(null);
 
   const handleAddStopToEnd = (value) => {
     const newStops = [...train.stops, value];
@@ -200,12 +226,18 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
   const handleDeleteStop = (stopIndex) => {
     const newStops = train.stops.filter((_, i) => i !== stopIndex);
     onUpdateTrainStops(train.id, newStops);
+    setActiveStopKey(null);
   };
 
   const handleInsertStopBefore = (stopIndex) => {
     const newStops = [...train.stops];
     newStops.splice(stopIndex, 0, 0);
     onUpdateTrainStops(train.id, newStops);
+    setActiveStopKey(null);
+  };
+
+  const handleSetActiveStop = (key) => {
+    setActiveStopKey((prev) => (prev === key ? null : key));
   };
 
   return (
@@ -223,19 +255,24 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
       </div>
 
       <div className="mb-3 min-h-[60px]">
-        <p className="text-ui-sm font-medium text-gray-600 mb-1">運行経路 (クリックで編集):</p>
+        <p className="text-ui-sm font-medium text-gray-600 mb-1">運行経路 (タップ/ホバーで操作):</p>
         {train.stops.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-start gap-2 sm:gap-3">
             {train.stops.map((stop, idx) => (
               <React.Fragment key={idx}>
                 <RevenueStopEditor
                   stop={stop}
                   index={idx}
+                  trainId={train.id}
                   onUpdateStop={handleUpdateStop}
                   onDeleteStop={handleDeleteStop}
                   onInsertStopBefore={handleInsertStopBefore}
+                  activeStopKey={activeStopKey}
+                  onSetActiveStop={handleSetActiveStop}
                 />
-                {idx < train.stops.length - 1 && <span className="text-gray-400 text-xs">+</span>}
+                {idx < train.stops.length - 1 && (
+                  <span className="text-gray-400 text-xs self-start mt-3">+</span>
+                )}
               </React.Fragment>
             ))}
           </div>
