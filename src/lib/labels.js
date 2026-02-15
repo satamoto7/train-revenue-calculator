@@ -19,6 +19,22 @@ const COLOR_STYLE_MAP = {
   無色: 'bg-slate-100 text-slate-600 border-slate-300',
 };
 
+const COLOR_TEXT_MAP = {
+  赤: 'text-red-600',
+  青: 'text-blue-600',
+  緑: 'text-green-600',
+  黄: 'text-yellow-600',
+  紫: 'text-purple-600',
+  橙: 'text-orange-600',
+  黒: 'text-slate-900',
+  白: 'text-slate-500',
+  桃: 'text-pink-600',
+  茶: 'text-amber-700',
+  空: 'text-sky-600',
+  灰: 'text-gray-600',
+  無色: 'text-slate-500',
+};
+
 export const PLAYER_SYMBOL_OPTIONS = PLAYER_SYMBOLS;
 export const COMPANY_SYMBOL_OPTIONS = COMPANY_SYMBOLS;
 export const PLAYER_COLOR_OPTIONS = PLAYER_COLORS;
@@ -39,6 +55,7 @@ export const isKnownPlayerColor = (color) => PLAYER_COLORS.includes(color);
 export const isKnownCompanyColor = (color) => COMPANY_COLORS.includes(color);
 
 export const getColorStyleClass = (color) => COLOR_STYLE_MAP[color] || COLOR_STYLE_MAP.無色;
+export const getColorTextClass = (color) => COLOR_TEXT_MAP[color] || COLOR_TEXT_MAP.無色;
 
 export const getPlayerDisplayName = (player) =>
   player?.displayName ||

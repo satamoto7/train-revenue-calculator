@@ -11,7 +11,7 @@ import SectionHeader from '../../components/ui/SectionHeader';
 import {
   COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
-  getColorStyleClass,
+  getColorTextClass,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -406,12 +406,12 @@ const CompanyDetailView = ({
                   className="py-2 px-4 text-sm text-indigo-700 border border-indigo-300"
                 >
                   <span className="inline-flex items-center gap-1">
-                    <span>{getCompanySymbol(company)}</span>
                     <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-ui-xs ${getColorStyleClass(getCompanyColor(company))}`}
+                      className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
                     >
-                      {getCompanyColor(company)}
+                      {getCompanySymbol(company)}
                     </span>
+                    <span className="text-ui-xs text-slate-500">({getCompanyColor(company)})</span>
                     <span>{getCompanyDisplayName(company)}</span>
                   </span>
                 </Button>
@@ -460,11 +460,13 @@ const CompanyDetailView = ({
             >
               <span className="block leading-tight">
                 <span className="inline-flex items-center gap-1">
-                  <span>{getCompanySymbol(c)}</span>
                   <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] sm:text-ui-xs ${getColorStyleClass(getCompanyColor(c))}`}
+                    className={`text-base leading-none ${getColorTextClass(getCompanyColor(c))}`}
                   >
-                    {getCompanyColor(c)}
+                    {getCompanySymbol(c)}
+                  </span>
+                  <span className="text-[10px] sm:text-ui-xs text-slate-500">
+                    ({getCompanyColor(c)})
                   </span>
                   <span>{getCompanyDisplayName(c)}</span>
                 </span>
