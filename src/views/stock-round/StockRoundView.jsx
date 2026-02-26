@@ -16,6 +16,7 @@ const StockRoundView = ({
   hasIpoShares,
   validation,
   handleStockChange,
+  handleUnestablishedChange,
   handleValidate,
   handleComplete,
 }) => {
@@ -47,6 +48,7 @@ const StockRoundView = ({
               <th className="px-2 py-2">自社株</th>
               <th className="px-2 py-2">バンク</th>
               <th className="px-2 py-2">IPO</th>
+              <th className="px-2 py-2">未設立</th>
               <th className="px-2 py-2">状態</th>
             </tr>
           </thead>
@@ -140,6 +142,18 @@ const StockRoundView = ({
                     >
                       {autoIpo}
                     </span>
+                  </td>
+                  <td className="px-2 py-2">
+                    <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(company.isUnestablished)}
+                        onChange={(e) => handleUnestablishedChange(company.id, e.target.checked)}
+                        aria-label={`${getCompanyDisplayName(company)}を未設立として扱う`}
+                        className="h-4 w-4 rounded border-border-subtle text-brand-primary focus:ring-brand-accent"
+                      />
+                      未設立
+                    </label>
                   </td>
                   <td className="px-2 py-2">
                     {rowValidation?.invalid ? (

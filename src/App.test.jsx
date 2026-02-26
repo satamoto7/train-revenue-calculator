@@ -24,6 +24,12 @@ const setupToStockRound = async (user) => {
   await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
 };
 
+const setCompanyHolding = async (user, companyName, percentage) => {
+  const input = screen.getByLabelText(`${companyName}のPlayer A保有率`);
+  await user.clear(input);
+  await user.type(input, `${percentage}`);
+};
+
 describe('新フロー表示', () => {
   test('初期表示は設定ステップで、4ステップナビが表示される', () => {
     render(<App />);
@@ -50,6 +56,25 @@ describe('新フロー表示', () => {
 });
 
 describe('SR株式', () => {
+  test('初期表示では未入力企業が未設立としてチェックされる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+
+    expect(screen.getByRole('checkbox', { name: 'Co1を未設立として扱う' })).toBeChecked();
+  });
+
+  test('株式入力をすると未設立チェックが自動で外れる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+
+    expect(screen.getByRole('checkbox', { name: 'Co1を未設立として扱う' })).not.toBeChecked();
+  });
+
   test('IPOなしではバンクが自動計算表示になる', async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -89,6 +114,8 @@ describe('OR実行', () => {
     render(<App />);
 
     await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await setCompanyHolding(user, 'Co2', 10);
     await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
 
     const upButtonsBefore = screen.getAllByRole('button', { name: '↑' });
@@ -111,10 +138,39 @@ describe('OR実行', () => {
     await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
     await user.click(screen.getByRole('button', { name: '企業を一括追加' }));
     await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+    await setCompanyHolding(user, 'Co1', 10);
     await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
     await user.click(screen.getByRole('button', { name: 'この企業を完了' }));
 
     expect(screen.getByRole('button', { name: '次SR開始' })).toBeInTheDocument();
+  });
+
+  test('未設立にした企業はORで選択不可になり進捗対象から除外される', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await setCompanyHolding(user, 'Co2', 10);
+    await user.click(screen.getByRole('checkbox', { name: 'Co2を未設立として扱う' }));
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    expect(screen.getByText('進捗: 0 / 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Co2.*未設立/ })).toBeDisabled();
+  });
+
+  test('全社未設立でORに進むと警告のみ表示される', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    expect(
+      screen.getByText('OR対象企業がありません。SRで未設立を解除してください。')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'この企業を完了' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '次SR開始' })).not.toBeInTheDocument();
   });
 });
 
@@ -129,6 +185,7 @@ describe('サイクルと保存', () => {
     await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
     await user.click(screen.getByRole('button', { name: '企業を一括追加' }));
     await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+    await setCompanyHolding(user, 'Co1', 10);
     await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
     await user.click(screen.getByRole('button', { name: 'この企業を完了' }));
     await user.click(screen.getByRole('button', { name: '次SR開始' }));

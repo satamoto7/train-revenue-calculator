@@ -7,6 +7,7 @@ import {
   isKnownCompanyColor,
   isKnownPlayerColor,
 } from '../lib/labels';
+import { inferIsUnestablished } from '../lib/companyStatus';
 
 export const APP_STORAGE_KEY = 'trainRevenue_18xx_data';
 export const APP_SCHEMA_VERSION = 4;
@@ -41,9 +42,9 @@ const normalizePlayer = (player, index) => {
   };
 };
 
-const normalizeCompany = (company, index, numORs) => {
+const normalizeCompany = (company, index, numORs, hasIpoShares) => {
   const genericIndex = Number.isInteger(company?.genericIndex) ? company.genericIndex : index + 1;
-  return {
+  const normalized = {
     ...company,
     id: company?.id || createFallbackId('company', index),
     genericIndex,
@@ -70,6 +71,14 @@ const normalizeCompany = (company, index, numORs) => {
         revenue: Number.isFinite(existing?.revenue) ? existing.revenue : 0,
       };
     }),
+  };
+
+  return {
+    ...normalized,
+    isUnestablished:
+      typeof company?.isUnestablished === 'boolean'
+        ? company.isUnestablished
+        : inferIsUnestablished(normalized, hasIpoShares),
   };
 };
 
@@ -101,14 +110,16 @@ const defaultState = {
   srValidation: {},
 };
 
-const normalizeCycleHistoryEntry = (entry, historyIndex, numORs) => ({
+const normalizeCycleHistoryEntry = (entry, historyIndex, numORs, hasIpoShares) => ({
   cycleNo: Number.isInteger(entry?.cycleNo) ? entry.cycleNo : historyIndex + 1,
   completedAt: typeof entry?.completedAt === 'string' ? entry.completedAt : null,
   playersSnapshot: Array.isArray(entry?.playersSnapshot)
     ? entry.playersSnapshot.map((player, index) => normalizePlayer(player, index))
     : [],
   companiesSnapshot: Array.isArray(entry?.companiesSnapshot)
-    ? entry.companiesSnapshot.map((company, index) => normalizeCompany(company, index, numORs))
+    ? entry.companiesSnapshot.map((company, index) =>
+        normalizeCompany(company, index, numORs, hasIpoShares)
+      )
     : [],
 });
 
@@ -126,8 +137,11 @@ export function migrate(saved) {
   const players = Array.isArray(saved.players)
     ? saved.players.map((player, index) => normalizePlayer(player, index))
     : [];
+  const hasIpoShares = saved?.flow?.hasIpoShares !== false;
   const companies = Array.isArray(saved.companies)
-    ? saved.companies.map((company, index) => normalizeCompany(company, index, numORs))
+    ? saved.companies.map((company, index) =>
+        normalizeCompany(company, index, numORs, hasIpoShares)
+      )
     : [];
 
   const fallbackOrder = companies.map((company) => company.id);
@@ -170,7 +184,7 @@ export function migrate(saved) {
 
   const cycleHistory = Array.isArray(saved.cycleHistory)
     ? saved.cycleHistory.map((entry, historyIndex) =>
-        normalizeCycleHistoryEntry(entry, historyIndex, numORs)
+        normalizeCycleHistoryEntry(entry, historyIndex, numORs, hasIpoShares)
       )
     : [];
 

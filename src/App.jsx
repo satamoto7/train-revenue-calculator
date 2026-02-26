@@ -15,6 +15,7 @@ import {
   getSeatLabel,
 } from './lib/labels';
 import { calculateCompanyTrainRevenue } from './lib/calc';
+import { hasAnyStockInput, inferIsUnestablished } from './lib/companyStatus';
 
 const STEP_CONFIG = [
   { key: 'setup', label: '設定' },
@@ -54,6 +55,7 @@ const createCompany = (index, numORs) => ({
   icon: null,
   trains: [],
   stockHoldings: [],
+  isUnestablished: true,
   treasuryStockPercentage: 0,
   bankPoolPercentage: 0,
   ipoPercentage: 100,
@@ -126,6 +128,39 @@ const syncCompanyOrder = (companyOrder, companies) => {
   return [...known, ...missing];
 };
 
+const resolveIsUnestablished = (company, hasIpoShares) =>
+  typeof company?.isUnestablished === 'boolean'
+    ? company.isUnestablished
+    : inferIsUnestablished(company, hasIpoShares);
+
+const splitCompanyOrderByEstablishment = (companyOrder, companies) => {
+  const companiesById = new Map(companies.map((company) => [company.id, company]));
+  const known = companyOrder.filter((companyId) => companiesById.has(companyId));
+  const missing = companies
+    .map((company) => company.id)
+    .filter((companyId) => !known.includes(companyId));
+  const normalizedOrder = [...known, ...missing];
+
+  const establishedIds = normalizedOrder.filter(
+    (companyId) => !companiesById.get(companyId)?.isUnestablished
+  );
+  const unestablishedIds = normalizedOrder.filter(
+    (companyId) => companiesById.get(companyId)?.isUnestablished
+  );
+
+  return {
+    establishedIds,
+    unestablishedIds,
+    orderedIds: [...establishedIds, ...unestablishedIds],
+  };
+};
+
+const getFirstEstablishedCompanyId = (companyOrder, companies) =>
+  splitCompanyOrderByEstablishment(companyOrder, companies).establishedIds[0] || null;
+
+const getEstablishedCompanyIds = (companyOrder, companies) =>
+  splitCompanyOrderByEstablishment(companyOrder, companies).establishedIds;
+
 const baseState = {
   players: [],
   companies: [],
@@ -163,6 +198,7 @@ function appReducer(state, action) {
     case 'COMPANY_SET_ALL': {
       const companies = action.payload.map((company) => ({
         ...company,
+        isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
       }));
       const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder || [], companies);
@@ -244,6 +280,7 @@ function appReducer(state, action) {
 
       const normalizedCompanies = state.companies.map((company) => ({
         ...company,
+        isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
       }));
       const companyOrder = normalizedCompanies.map((company) => company.id);
@@ -274,6 +311,8 @@ function appReducer(state, action) {
         companies: state.companies.map((company) => {
           if (company.id !== companyId) return company;
 
+          let nextCompany = company;
+
           if (target === 'player') {
             const stockHoldings = [...(company.stockHoldings || [])];
             const existingIndex = stockHoldings.findIndex(
@@ -281,40 +320,48 @@ function appReducer(state, action) {
             );
 
             if (nextValue === 0) {
-              return {
+              nextCompany = {
                 ...company,
                 stockHoldings: stockHoldings.filter((holding) => holding.playerId !== playerId),
               };
-            }
-
-            if (existingIndex >= 0) {
+            } else if (existingIndex >= 0) {
               stockHoldings[existingIndex] = {
                 ...stockHoldings[existingIndex],
                 percentage: nextValue,
               };
+              nextCompany = { ...company, stockHoldings };
             } else {
               stockHoldings.push({ playerId, percentage: nextValue });
+              nextCompany = { ...company, stockHoldings };
             }
-
-            return { ...company, stockHoldings };
-          }
-
-          if (target === 'treasury') {
-            return {
+          } else if (target === 'treasury') {
+            nextCompany = {
               ...company,
               treasuryStockPercentage: nextValue,
             };
-          }
-
-          if (target === 'bank') {
-            return {
+          } else if (target === 'bank') {
+            nextCompany = {
               ...company,
               bankPoolPercentage: nextValue,
             };
           }
 
-          return company;
+          if (hasAnyStockInput(nextCompany, state.flow.hasIpoShares)) {
+            return { ...nextCompany, isUnestablished: false };
+          }
+
+          return nextCompany;
         }),
+      };
+    }
+
+    case 'SR_UNESTABLISHED_SET': {
+      const { companyId, isUnestablished } = action.payload;
+      return {
+        ...state,
+        companies: state.companies.map((company) =>
+          company.id === companyId ? { ...company, isUnestablished } : company
+        ),
       };
     }
 
@@ -328,19 +375,27 @@ function appReducer(state, action) {
     }
 
     case 'OR_ORDER_MOVE_UP': {
-      const completed =
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || [];
+      const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
+        state.activeCycle.companyOrder,
+        state.companies
+      );
+      const establishedSet = new Set(establishedIds);
+      const completed = (
+        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+      ).filter((companyId) => establishedSet.has(companyId));
       if (completed.length > 0) return state;
 
       const companyId = action.payload;
-      const currentIndex = state.activeCycle.companyOrder.indexOf(companyId);
+      if (!establishedSet.has(companyId)) return state;
+      const currentIndex = establishedIds.indexOf(companyId);
       if (currentIndex <= 0) return state;
 
-      const nextOrder = [...state.activeCycle.companyOrder];
-      [nextOrder[currentIndex - 1], nextOrder[currentIndex]] = [
-        nextOrder[currentIndex],
-        nextOrder[currentIndex - 1],
+      const nextEstablished = [...establishedIds];
+      [nextEstablished[currentIndex - 1], nextEstablished[currentIndex]] = [
+        nextEstablished[currentIndex],
+        nextEstablished[currentIndex - 1],
       ];
+      const nextOrder = [...nextEstablished, ...unestablishedIds];
 
       return {
         ...state,
@@ -352,20 +407,27 @@ function appReducer(state, action) {
     }
 
     case 'OR_ORDER_MOVE_DOWN': {
-      const completed =
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || [];
+      const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
+        state.activeCycle.companyOrder,
+        state.companies
+      );
+      const establishedSet = new Set(establishedIds);
+      const completed = (
+        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+      ).filter((companyId) => establishedSet.has(companyId));
       if (completed.length > 0) return state;
 
       const companyId = action.payload;
-      const currentIndex = state.activeCycle.companyOrder.indexOf(companyId);
-      if (currentIndex < 0 || currentIndex >= state.activeCycle.companyOrder.length - 1)
-        return state;
+      if (!establishedSet.has(companyId)) return state;
+      const currentIndex = establishedIds.indexOf(companyId);
+      if (currentIndex < 0 || currentIndex >= establishedIds.length - 1) return state;
 
-      const nextOrder = [...state.activeCycle.companyOrder];
-      [nextOrder[currentIndex], nextOrder[currentIndex + 1]] = [
-        nextOrder[currentIndex + 1],
-        nextOrder[currentIndex],
+      const nextEstablished = [...establishedIds];
+      [nextEstablished[currentIndex], nextEstablished[currentIndex + 1]] = [
+        nextEstablished[currentIndex + 1],
+        nextEstablished[currentIndex],
       ];
+      const nextOrder = [...nextEstablished, ...unestablishedIds];
 
       return {
         ...state,
@@ -377,11 +439,15 @@ function appReducer(state, action) {
     }
 
     case 'OR_ORDER_REBALANCE_REMAINING': {
-      const completed =
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || [];
-      const remaining = state.activeCycle.companyOrder.filter(
-        (companyId) => !completed.includes(companyId)
+      const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
+        state.activeCycle.companyOrder,
+        state.companies
       );
+      const establishedSet = new Set(establishedIds);
+      const completed = (
+        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+      ).filter((companyId) => establishedSet.has(companyId));
+      const remaining = establishedIds.filter((companyId) => !completed.includes(companyId));
       const draft = action.payload;
 
       if (remaining.length !== draft.length) return state;
@@ -392,15 +458,25 @@ function appReducer(state, action) {
         ...state,
         activeCycle: {
           ...state.activeCycle,
-          companyOrder: [...completed, ...draft],
-          selectedCompanyId: draft[0] || completed[completed.length - 1] || null,
+          companyOrder: [...completed, ...draft, ...unestablishedIds],
+          selectedCompanyId:
+            draft[0] || completed[completed.length - 1] || establishedIds[0] || null,
         },
       };
     }
 
     case 'OR_COMPANY_MARK_DONE': {
+      const { establishedIds } = splitCompanyOrderByEstablishment(
+        state.activeCycle.companyOrder,
+        state.companies
+      );
+      const establishedSet = new Set(establishedIds);
+      if (!establishedSet.has(action.payload)) return state;
+
       const currentOR = state.activeCycle.currentOR;
-      const completed = state.activeCycle.completedCompanyIdsByOR?.[currentOR] || [];
+      const completed = (state.activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter(
+        (companyId) => establishedSet.has(companyId)
+      );
       if (completed.includes(action.payload)) return state;
 
       const nextCompleted = [...completed, action.payload];
@@ -409,7 +485,7 @@ function appReducer(state, action) {
         [currentOR]: nextCompleted,
       };
 
-      const nextUncompleted = state.activeCycle.companyOrder.filter(
+      const nextUncompleted = establishedIds.filter(
         (companyId) => !nextCompleted.includes(companyId)
       );
 
@@ -426,15 +502,22 @@ function appReducer(state, action) {
     case 'OR_NEXT_ROUND': {
       if (state.activeCycle.currentOR >= state.flow.numORs) return state;
       const nextOR = state.activeCycle.currentOR + 1;
+      const establishedIds = getEstablishedCompanyIds(
+        state.activeCycle.companyOrder,
+        state.companies
+      );
+      const establishedSet = new Set(establishedIds);
       return {
         ...state,
         activeCycle: {
           ...state.activeCycle,
           currentOR: nextOR,
-          selectedCompanyId: state.activeCycle.companyOrder[0] || null,
+          selectedCompanyId: establishedIds[0] || null,
           completedCompanyIdsByOR: {
             ...state.activeCycle.completedCompanyIdsByOR,
-            [nextOR]: state.activeCycle.completedCompanyIdsByOR[nextOR] || [],
+            [nextOR]: (state.activeCycle.completedCompanyIdsByOR[nextOR] || []).filter(
+              (companyId) => establishedSet.has(companyId)
+            ),
           },
         },
       };
@@ -536,10 +619,14 @@ function appReducer(state, action) {
 
       const nextCompanies = state.companies.map((company) => ({
         ...company,
+        isUnestablished: company.isUnestablished
+          ? true
+          : inferIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs),
       }));
 
       const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder, nextCompanies);
+      const nextSelectedCompanyId = getFirstEstablishedCompanyId(companyOrder, nextCompanies);
       const nextCycleNo = currentCycleNo + 1;
 
       return {
@@ -555,7 +642,7 @@ function appReducer(state, action) {
           currentOR: 1,
           companyOrder,
           completedCompanyIdsByOR: buildEmptyCompletedByOR(state.flow.numORs),
-          selectedCompanyId: companyOrder[0] || null,
+          selectedCompanyId: nextSelectedCompanyId,
         },
         cycleHistory: [...state.cycleHistory, completedCycle],
         summarySelectedCycleNo: currentCycleNo,
@@ -732,6 +819,16 @@ function App() {
     });
   };
 
+  const handleUnestablishedChange = (companyId, checked) => {
+    dispatch({
+      type: 'SR_UNESTABLISHED_SET',
+      payload: {
+        companyId,
+        isUnestablished: checked,
+      },
+    });
+  };
+
   const runStockValidation = () => {
     const validation = buildStockValidationMap(companies, flow.hasIpoShares);
     dispatch({ type: 'SR_VALIDATE_RUN', payload: validation });
@@ -746,11 +843,16 @@ function App() {
         `${invalidCount}社で株式配分に警告があります。警告を残したままORへ進行します。`
       );
     }
+    const establishedIds = getEstablishedCompanyIds(activeCycle.companyOrder, companies);
     dispatch({ type: 'FLOW_STEP_SET', payload: 'orRound' });
-    dispatch({ type: 'COMPANY_SELECT', payload: activeCycle.companyOrder[0] || null });
+    dispatch({ type: 'COMPANY_SELECT', payload: establishedIds[0] || null });
   };
 
   const handleSelectCompany = (companyId) => {
+    if (flow.step === 'orRound') {
+      const targetCompany = companies.find((company) => company.id === companyId);
+      if (!targetCompany || targetCompany.isUnestablished) return;
+    }
     dispatch({ type: 'COMPANY_SELECT', payload: companyId });
   };
 
@@ -772,20 +874,27 @@ function App() {
   };
 
   const handleMarkCompanyDone = (companyId) => {
+    const establishedCompanyIds = getEstablishedCompanyIds(activeCycle.companyOrder, companies);
+    if (establishedCompanyIds.length === 0) return;
+    if (!establishedCompanyIds.includes(companyId)) return;
+
+    const establishedSet = new Set(establishedCompanyIds);
     const currentOR = activeCycle.currentOR;
-    const completed = activeCycle.completedCompanyIdsByOR?.[currentOR] || [];
+    const completed = (activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter((id) =>
+      establishedSet.has(id)
+    );
     if (completed.includes(companyId)) return;
 
     const nextCount = completed.length + 1;
     dispatch({ type: 'OR_COMPANY_MARK_DONE', payload: companyId });
 
-    if (nextCount >= companies.length && currentOR < flow.numORs) {
+    if (nextCount >= establishedCompanyIds.length && currentOR < flow.numORs) {
       dispatch({ type: 'OR_NEXT_ROUND' });
       setModalMessage(`OR${currentOR}が完了しました。OR${currentOR + 1}に進みます。`);
       return;
     }
 
-    if (nextCount >= companies.length && currentOR === flow.numORs) {
+    if (nextCount >= establishedCompanyIds.length && currentOR === flow.numORs) {
       setModalMessage('最終ORが完了しました。「次SR開始」で次サイクルへ進めます。');
     }
   };
@@ -972,6 +1081,7 @@ function App() {
           hasIpoShares={flow.hasIpoShares}
           validation={srValidation}
           handleStockChange={handleStockChange}
+          handleUnestablishedChange={handleUnestablishedChange}
           handleValidate={runStockValidation}
           handleComplete={handleCompleteStockRound}
         />

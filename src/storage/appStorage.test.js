@@ -59,4 +59,30 @@ describe('appStorage', () => {
     expect(migrated.activeCycle.completedCompanyIdsByOR[1]).toEqual([]);
     expect(migrated.flow.step).toBe('orRound');
   });
+
+  test('migrate は isUnestablished 欠損時に株式入力から判定する', () => {
+    const migrated = migrate({
+      schemaVersion: APP_SCHEMA_VERSION,
+      players: [{ id: 'p1', displayName: 'P1' }],
+      companies: [
+        {
+          id: 'c1',
+          name: 'Co1',
+          stockHoldings: [{ playerId: 'p1', percentage: 10 }],
+        },
+        {
+          id: 'c2',
+          name: 'Co2',
+          stockHoldings: [],
+          treasuryStockPercentage: 0,
+          bankPoolPercentage: 0,
+        },
+      ],
+      flow: { step: 'stockRound', setupLocked: true, hasIpoShares: true, numORs: 2 },
+      activeCycle: { cycleNo: 1, companyOrder: ['c1', 'c2'], currentOR: 1 },
+    });
+
+    expect(migrated.companies.find((company) => company.id === 'c1')?.isUnestablished).toBe(false);
+    expect(migrated.companies.find((company) => company.id === 'c2')?.isUnestablished).toBe(true);
+  });
 });

@@ -103,20 +103,44 @@ const OrRoundView = ({
 }) => {
   const currentOR = activeCycle.currentOR;
   const companyOrder = activeCycle.companyOrder || [];
-  const completed = activeCycle.completedCompanyIdsByOR?.[currentOR] || [];
+  const companiesById = new Map(companies.map((company) => [company.id, company]));
+  const knownOrder = companyOrder.filter((companyId) => companiesById.has(companyId));
+  const missingCompanyIds = companies
+    .map((company) => company.id)
+    .filter((companyId) => !knownOrder.includes(companyId));
+  const normalizedOrder = [...knownOrder, ...missingCompanyIds];
+  const establishedCompanyOrder = normalizedOrder.filter(
+    (companyId) => !companiesById.get(companyId)?.isUnestablished
+  );
+  const unestablishedCompanyOrder = normalizedOrder.filter(
+    (companyId) => companiesById.get(companyId)?.isUnestablished
+  );
+  const displayCompanyOrder = [...establishedCompanyOrder, ...unestablishedCompanyOrder];
+  const establishedSet = new Set(establishedCompanyOrder);
+  const completed = (activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter((companyId) =>
+    establishedSet.has(companyId)
+  );
   const selectedCompany = companies.find((company) => company.id === activeCycle.selectedCompanyId);
   const selectedCompanySafe =
-    selectedCompany || companies.find((company) => company.id === companyOrder[0]);
+    selectedCompany && establishedSet.has(selectedCompany.id)
+      ? selectedCompany
+      : companiesById.get(establishedCompanyOrder[0]) || null;
+  const hasEstablishedCompanies = establishedCompanyOrder.length > 0;
   const orderLocked = completed.length > 0;
   const finalORCompleted =
+    hasEstablishedCompanies &&
     flow.numORs > 0 &&
     currentOR === flow.numORs &&
-    (activeCycle.completedCompanyIdsByOR?.[flow.numORs] || []).length === companies.length;
+    (activeCycle.completedCompanyIdsByOR?.[flow.numORs] || []).filter((companyId) =>
+      establishedSet.has(companyId)
+    ).length === establishedCompanyOrder.length;
 
   const [rebalanceMode, setRebalanceMode] = useState(false);
   const [draftRemaining, setDraftRemaining] = useState([]);
 
-  const remainingCompanyIds = companyOrder.filter((companyId) => !completed.includes(companyId));
+  const remainingCompanyIds = establishedCompanyOrder.filter(
+    (companyId) => !completed.includes(companyId)
+  );
 
   useEffect(() => {
     if (rebalanceMode) {
@@ -161,11 +185,17 @@ const OrRoundView = ({
             現在: OR{currentOR} / OR{flow.numORs}
           </p>
           <p className="text-sm text-text-secondary">
-            進捗: {completed.length} / {companies.length}
+            進捗: {completed.length} / {establishedCompanyOrder.length}
           </p>
         </div>
 
-        {orderLocked && !rebalanceMode && !finalORCompleted && (
+        {!hasEstablishedCompanies && (
+          <p className="mb-3 rounded-md border border-status-warning/60 bg-status-warning/10 px-3 py-2 text-sm text-text-secondary">
+            OR対象企業がありません。SRで未設立を解除してください。
+          </p>
+        )}
+
+        {orderLocked && !rebalanceMode && !finalORCompleted && hasEstablishedCompanies && (
           <div className="mb-3 flex justify-end">
             <Button type="button" variant="secondary" onClick={() => setRebalanceMode(true)}>
               順番を再調整
@@ -174,20 +204,31 @@ const OrRoundView = ({
         )}
 
         <div className="space-y-2">
-          {companyOrder.map((companyId, index) => {
-            const company = companies.find((item) => item.id === companyId);
+          {displayCompanyOrder.map((companyId) => {
+            const company = companiesById.get(companyId);
             if (!company) return null;
-            const isDone = completed.includes(companyId);
-            const isSelected = selectedCompanySafe?.id === companyId;
+            const isUnestablished = Boolean(company.isUnestablished);
+            const isDone = !isUnestablished && completed.includes(companyId);
+            const isSelected = !isUnestablished && selectedCompanySafe?.id === companyId;
+            const establishedIndex = establishedCompanyOrder.indexOf(companyId);
 
             return (
               <div
                 key={companyId}
-                className={`flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 ${isSelected ? 'border-brand-accent bg-brand-accent-soft' : 'border-border-subtle bg-surface-muted'}`}
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 ${
+                  isUnestablished
+                    ? 'border-border-subtle bg-surface-muted opacity-60'
+                    : isSelected
+                      ? 'border-brand-accent bg-brand-accent-soft'
+                      : 'border-border-subtle bg-surface-muted'
+                }`}
               >
                 <button
                   type="button"
-                  className="flex min-w-[220px] items-center gap-2 text-left"
+                  className={`flex min-w-[220px] items-center gap-2 text-left ${
+                    isUnestablished ? 'cursor-not-allowed' : ''
+                  }`}
+                  disabled={isUnestablished}
                   onClick={() => handleSelectCompany(companyId)}
                 >
                   <span className={`text-base ${getColorTextClass(getCompanyColor(company))}`}>
@@ -196,17 +237,20 @@ const OrRoundView = ({
                   <span className="font-medium text-text-primary">
                     {getCompanyDisplayName(company)}
                   </span>
+                  {isUnestablished && (
+                    <span className="text-xs font-semibold text-text-secondary">未設立</span>
+                  )}
                   {isDone && (
                     <span className="text-xs font-semibold text-status-success">完了</span>
                   )}
                 </button>
-                {!rebalanceMode && (
+                {!rebalanceMode && !isUnestablished && (
                   <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="secondary"
                       className="px-2 py-1 text-xs"
-                      disabled={orderLocked || index === 0}
+                      disabled={orderLocked || establishedIndex === 0}
                       onClick={() => handleMoveOrderUp(companyId)}
                     >
                       ↑
@@ -215,7 +259,9 @@ const OrRoundView = ({
                       type="button"
                       variant="secondary"
                       className="px-2 py-1 text-xs"
-                      disabled={orderLocked || index === companyOrder.length - 1}
+                      disabled={
+                        orderLocked || establishedIndex === establishedCompanyOrder.length - 1
+                      }
                       onClick={() => handleMoveOrderDown(companyId)}
                     >
                       ↓
@@ -227,12 +273,12 @@ const OrRoundView = ({
           })}
         </div>
 
-        {rebalanceMode && (
+        {rebalanceMode && hasEstablishedCompanies && (
           <div className="mt-4 rounded-md border border-border-subtle bg-surface-muted p-3">
             <p className="mb-2 text-sm text-text-secondary">未処理企業のみ再調整できます。</p>
             <div className="space-y-2">
               {draftRemaining.map((companyId, index) => {
-                const company = companies.find((item) => item.id === companyId);
+                const company = companiesById.get(companyId);
                 if (!company) return null;
                 return (
                   <div
