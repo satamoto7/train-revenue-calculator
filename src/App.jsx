@@ -161,7 +161,7 @@ const getFirstEstablishedCompanyId = (companyOrder, companies) =>
 const getEstablishedCompanyIds = (companyOrder, companies) =>
   splitCompanyOrderByEstablishment(companyOrder, companies).establishedIds;
 
-const baseState = {
+const createBaseState = () => ({
   players: [],
   companies: [],
   flow: {
@@ -180,13 +180,13 @@ const baseState = {
   cycleHistory: [],
   summarySelectedCycleNo: null,
   srValidation: {},
-};
+});
 
 const initAppState = () => {
   try {
-    return loadAppState() || baseState;
+    return loadAppState() || createBaseState();
   } catch (_error) {
-    return baseState;
+    return createBaseState();
   }
 };
 
@@ -659,6 +659,9 @@ function appReducer(state, action) {
     case 'APP_LOAD':
       return action.payload;
 
+    case 'APP_RESET':
+      return createBaseState();
+
     default:
       return state;
   }
@@ -993,6 +996,15 @@ function App() {
     dispatch({ type: 'FLOW_STEP_SET', payload: stepKey });
   };
 
+  const handleResetApp = () => {
+    setConfirmAction(() => () => {
+      dispatch({ type: 'APP_RESET' });
+      setModalMessage('');
+      setConfirmAction(null);
+    });
+    setModalMessage('全データをリセットしますか？この操作は取り消せません。');
+  };
+
   const summaryCycles = useMemo(() => {
     const historyCycles = cycleHistory.map((cycle) => ({
       ...cycle,
@@ -1050,6 +1062,12 @@ function App() {
           />
         ))}
       </nav>
+
+      <div className="mx-auto mb-6 flex max-w-5xl justify-end">
+        <Button type="button" variant="danger" onClick={handleResetApp}>
+          全体リセット
+        </Button>
+      </div>
 
       {flow.step === 'setup' && (
         <SetupView

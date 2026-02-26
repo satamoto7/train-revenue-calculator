@@ -32,7 +32,8 @@ const StockRoundView = ({
 
       <p className="mb-4 rounded-md border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
         企業ごとに株式配置を入力してください。合計が不自然な企業には <strong>!</strong>{' '}
-        を表示します（警告のみ）。
+        を表示します（警告のみ）。入力欄は 10
+        刻み操作が基本ですが、直接入力で自由な値も設定できます。
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-elevated p-3 shadow-md sm:p-4">
@@ -84,6 +85,7 @@ const StockRoundView = ({
                           type="number"
                           min="0"
                           max="100"
+                          step="10"
                           value={holding?.percentage ?? 0}
                           onChange={(e) =>
                             handleStockChange(company.id, {
@@ -103,6 +105,7 @@ const StockRoundView = ({
                       type="number"
                       min="0"
                       max="100"
+                      step="10"
                       value={treasury}
                       onChange={(e) =>
                         handleStockChange(company.id, {
@@ -120,6 +123,7 @@ const StockRoundView = ({
                         type="number"
                         min="0"
                         max="100"
+                        step="10"
                         value={bankInput}
                         onChange={(e) =>
                           handleStockChange(company.id, {

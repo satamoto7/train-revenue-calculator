@@ -75,6 +75,22 @@ describe('SR株式', () => {
     expect(screen.getByRole('checkbox', { name: 'Co1を未設立として扱う' })).not.toBeChecked();
   });
 
+  test('株数入力は10刻みを基本にしつつ自由入力できる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+
+    const input = screen.getByLabelText('Co1のPlayer A保有率');
+    expect(input).toHaveAttribute('step', '10');
+
+    await user.clear(input);
+    await user.type(input, '7');
+
+    expect(input).toHaveValue(7);
+    expect(screen.getByRole('checkbox', { name: 'Co1を未設立として扱う' })).not.toBeChecked();
+  });
+
   test('IPOなしではバンクが自動計算表示になる', async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -214,5 +230,27 @@ describe('サイクルと保存', () => {
 
     expect(saved.schemaVersion).toBe(APP_SCHEMA_VERSION);
     expect(saved.flow.step).toBe('setup');
+  });
+});
+
+describe('全体リセット', () => {
+  test('確認後に全データを初期状態へ戻す', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    expect(screen.getByRole('heading', { name: 'SR株式入力' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '全体リセット' }));
+    expect(
+      screen.getByText('全データをリセットしますか？この操作は取り消せません。')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+
+    expect(screen.getByRole('heading', { name: '設定' })).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Player A')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Co1')).not.toBeInTheDocument();
+    expect(screen.getAllByText('未登録です。')).toHaveLength(2);
   });
 });
