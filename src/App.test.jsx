@@ -125,6 +125,76 @@ describe('SR株式', () => {
 });
 
 describe('OR実行', () => {
+  test('列車の収益地点にサンプル値と自由入力を追加できる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    await user.click(screen.getByRole('button', { name: '列車追加' }));
+    await user.click(screen.getByRole('button', { name: '列車1に10を追加' }));
+
+    expect(screen.getByRole('spinbutton', { name: '列車1の地点1' })).toHaveValue(10);
+
+    const customInput = screen.getByRole('spinbutton', { name: '列車1のカスタム収益値' });
+    await user.type(customInput, '35');
+    await user.click(screen.getByRole('button', { name: '列車1にカスタム値を追加' }));
+
+    expect(screen.getByRole('spinbutton', { name: '列車1の地点2' })).toHaveValue(35);
+  });
+
+  test('列車地点を10刻みで増減でき、0未満にはならない', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    await user.click(screen.getByRole('button', { name: '列車追加' }));
+    await user.click(screen.getByRole('button', { name: '列車1に10を追加' }));
+
+    const stop1Input = screen.getByRole('spinbutton', { name: '列車1の地点1' });
+    expect(stop1Input).toHaveValue(10);
+
+    await user.click(screen.getByRole('button', { name: '列車1の地点1を+10' }));
+    expect(stop1Input).toHaveValue(20);
+
+    await user.click(screen.getByRole('button', { name: '列車1の地点1を-10' }));
+    expect(stop1Input).toHaveValue(10);
+
+    await user.click(screen.getByRole('button', { name: '列車1の地点1を-10' }));
+    await user.click(screen.getByRole('button', { name: '列車1の地点1を-10' }));
+    expect(stop1Input).toHaveValue(0);
+  });
+
+  test('OR収益を10刻みボタンで増減できる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    const or1Input = screen.getByRole('spinbutton', { name: 'OR1' });
+    expect(or1Input).toHaveValue(0);
+
+    await user.click(screen.getByRole('button', { name: 'OR1を+10' }));
+    expect(or1Input).toHaveValue(10);
+
+    await user.click(screen.getByRole('button', { name: 'OR1を+10' }));
+    expect(or1Input).toHaveValue(20);
+
+    await user.click(screen.getByRole('button', { name: 'OR1を-10' }));
+    expect(or1Input).toHaveValue(10);
+
+    await user.click(screen.getByRole('button', { name: 'OR1を-10' }));
+    await user.click(screen.getByRole('button', { name: 'OR1を-10' }));
+    expect(or1Input).toHaveValue(0);
+  });
+
   test('企業完了後は順序変更がロックされる', async () => {
     const user = userEvent.setup();
     render(<App />);

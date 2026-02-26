@@ -22,11 +22,27 @@ const getEntryRevenue = (company, orNum) => {
   return entry?.revenue ?? 0;
 };
 
+const QUICK_STOP_VALUES = [10, 20, 30, 40, 50, 60];
+
 const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) => {
   const stops = train.stops || [];
+  const [customStopValue, setCustomStopValue] = useState('');
+
+  const handleAddStop = (value) => {
+    const parsed = Number.parseInt(`${value}`.trim(), 10);
+    if (Number.isNaN(parsed)) return;
+    onUpdateStops([...stops, Math.max(0, parsed)]);
+  };
+
+  const handleAdjustStop = (stopIndex, delta) => {
+    const nextStops = [...stops];
+    const currentValue = Number.parseInt(`${nextStops[stopIndex] || 0}`, 10) || 0;
+    nextStops[stopIndex] = Math.max(0, currentValue + delta);
+    onUpdateStops(nextStops);
+  };
 
   return (
-    <div className="rounded-lg border border-border-subtle bg-surface-muted p-3">
+    <div className="rounded-xl border-2 border-brand-accent/60 bg-surface-elevated p-3 shadow-ui">
       <div className="mb-2 flex items-center justify-between">
         <p className="font-medium text-text-primary">列車 {trainIndex + 1}</p>
         <Button type="button" variant="danger" className="py-1 text-xs" onClick={onDelete}>
@@ -35,7 +51,19 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
         {stops.map((stop, idx) => (
-          <div key={`${train.id}-${idx}`} className="flex items-center gap-1">
+          <div
+            key={`${train.id}-${idx}`}
+            className="flex items-center gap-1 rounded-md border border-border-subtle bg-surface-muted p-1"
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-2 py-1 text-xs"
+              aria-label={`列車${trainIndex + 1}の地点${idx + 1}を-10`}
+              onClick={() => handleAdjustStop(idx, -10)}
+            >
+              -10
+            </Button>
             <Input
               type="number"
               min="0"
@@ -45,9 +73,18 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
                 nextStops[idx] = Number.parseInt(e.target.value || '0', 10) || 0;
                 onUpdateStops(nextStops);
               }}
-              className="w-20"
+              className="w-20 text-center"
               aria-label={`列車${trainIndex + 1}の地点${idx + 1}`}
             />
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-2 py-1 text-xs"
+              aria-label={`列車${trainIndex + 1}の地点${idx + 1}を+10`}
+              onClick={() => handleAdjustStop(idx, 10)}
+            >
+              +10
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -61,16 +98,52 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
             </Button>
           </div>
         ))}
+        {stops.length === 0 && (
+          <p className="text-sm text-text-muted">
+            地点未追加。下のボタンから収益地点を追加できます。
+          </p>
+        )}
       </div>
+
+      <div className="mb-3 rounded-lg border border-brand-accent bg-gradient-to-r from-brand-accent-soft to-surface-muted p-3">
+        <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {QUICK_STOP_VALUES.map((value) => (
+            <Button
+              key={value}
+              type="button"
+              className="px-2 py-1 text-xs"
+              aria-label={`列車${trainIndex + 1}に${value}を追加`}
+              onClick={() => handleAddStop(value)}
+            >
+              {value}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="number"
+            min="0"
+            value={customStopValue}
+            placeholder="自由入力"
+            className="w-28"
+            aria-label={`列車${trainIndex + 1}のカスタム収益値`}
+            onChange={(e) => setCustomStopValue(e.target.value)}
+          />
+          <Button
+            type="button"
+            className="px-3 py-1 text-xs"
+            aria-label={`列車${trainIndex + 1}にカスタム値を追加`}
+            onClick={() => {
+              handleAddStop(customStopValue);
+              setCustomStopValue('');
+            }}
+          >
+            追加
+          </Button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          className="py-1 text-xs"
-          onClick={() => onUpdateStops([...stops, 0])}
-        >
-          地点追加
-        </Button>
         <Button type="button" variant="danger" className="py-1 text-xs" onClick={onClear}>
           経路クリア
         </Button>
@@ -345,34 +418,66 @@ const OrRoundView = ({
             </Button>
           </div>
 
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: flow.numORs }, (_, index) => {
               const orNum = index + 1;
+              const currentRevenue = getEntryRevenue(selectedCompanySafe, orNum);
               return (
-                <label
+                <div
                   key={orNum}
-                  htmlFor={`or-${orNum}-${selectedCompanySafe.id}`}
-                  className="flex items-center gap-1 text-sm text-text-secondary"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-muted px-2 py-1.5"
                 >
-                  OR{orNum}
-                  <Input
-                    id={`or-${orNum}-${selectedCompanySafe.id}`}
-                    type="number"
-                    min="0"
-                    value={getEntryRevenue(selectedCompanySafe, orNum)}
-                    onChange={(e) =>
-                      handleORRevenueChange(selectedCompanySafe.id, orNum, e.target.value)
-                    }
-                    className="w-24"
-                  />
-                </label>
+                  <label
+                    htmlFor={`or-${orNum}-${selectedCompanySafe.id}`}
+                    className="text-sm font-medium text-text-secondary"
+                  >
+                    OR{orNum}
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="px-2 py-1 text-xs"
+                      aria-label={`OR${orNum}を-10`}
+                      onClick={() =>
+                        handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue - 10)
+                      }
+                    >
+                      -10
+                    </Button>
+                    <Input
+                      id={`or-${orNum}-${selectedCompanySafe.id}`}
+                      type="number"
+                      min="0"
+                      value={currentRevenue}
+                      onChange={(e) =>
+                        handleORRevenueChange(selectedCompanySafe.id, orNum, e.target.value)
+                      }
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="px-2 py-1 text-xs"
+                      aria-label={`OR${orNum}を+10`}
+                      onClick={() =>
+                        handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue + 10)
+                      }
+                    >
+                      +10
+                    </Button>
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          <div className="mb-4 rounded-md border border-border-subtle bg-surface-muted p-3">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-4 rounded-xl border-2 border-brand-accent bg-gradient-to-br from-brand-accent-soft via-surface-elevated to-surface-muted p-4 shadow-ui-lg">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-medium text-brand-primary">列車計算</h4>
+              <div className="h-2.5 w-16 rounded-full bg-brand-accent/70" aria-hidden="true" />
+            </div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex gap-2">
                 <Button
                   type="button"
