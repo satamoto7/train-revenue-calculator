@@ -439,14 +439,14 @@ function App() {
   // ローディング中の表示（ここに挿入）
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-xl text-gray-600">読み込み中...</p>
+      <div className="min-h-screen bg-surface-base flex items-center justify-center">
+        <p className="text-xl text-text-secondary">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-sky-100 p-4 sm:p-8 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-surface-base via-brand-accent-soft to-surface-muted p-4 text-text-primary sm:p-8">
       <Modal
         message={modalMessage}
         onClose={() => {
@@ -465,10 +465,12 @@ function App() {
         {modalContent}
       </Modal>
       <header className="mb-6 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">18xx 収益計算補助</h1>
+        <h1 className="font-serif text-3xl font-bold text-brand-primary sm:text-4xl">
+          18xx 収益計算補助
+        </h1>
       </header>
 
-      <nav className="max-w-4xl mx-auto mb-6 flex justify-center space-x-1 sm:space-x-2 border-b-2 border-indigo-500 pb-px">
+      <nav className="mx-auto mb-6 flex max-w-4xl justify-center space-x-1 border-b-2 border-brand-accent pb-px sm:space-x-2">
         <NavButton viewName="summary" currentView={currentView} setCurrentView={setCurrentView}>
           サマリー
         </NavButton>
@@ -535,8 +537,8 @@ function App() {
         />
       )}
 
-      <footer className="text-center mt-12 py-4 border-t border-slate-300">
-        <p className="text-sm text-slate-600">&copy; 2024-2025 18xx 収益計算ツール</p>
+      <footer className="mt-12 border-t border-border-subtle py-4 text-center">
+        <p className="text-sm text-text-secondary">&copy; 2024-2025 18xx 収益計算ツール</p>
       </footer>
     </div>
   );

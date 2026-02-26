@@ -2,9 +2,9 @@ import React from 'react';
 
 const buttonVariants = {
   primary: 'bg-brand-primary text-white hover:bg-brand-primary-strong',
-  secondary: 'bg-surface-muted text-text-primary hover:bg-slate-300',
-  danger: 'bg-status-danger text-white hover:bg-rose-700',
-  ghost: 'bg-transparent text-brand-primary hover:bg-brand-soft',
+  secondary: 'bg-surface-muted text-text-primary hover:bg-brand-soft',
+  danger: 'bg-status-danger text-white hover:brightness-95',
+  ghost: 'bg-transparent text-brand-primary hover:bg-brand-accent-soft',
 };
 
 const buttonSizes = {
@@ -15,7 +15,7 @@ const buttonSizes = {
 const Button = ({ variant = 'primary', size = 'md', className = '', ...props }) => (
   <button
     {...props}
-    className={`rounded-lg font-semibold shadow-ui transition-colors duration-150 ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
+    className={`rounded-lg border border-transparent font-semibold shadow-ui transition-colors duration-150 ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
   />
 );
 

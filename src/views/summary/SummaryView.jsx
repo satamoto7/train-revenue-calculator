@@ -62,7 +62,7 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
     return (
       <div className="max-w-lg mx-auto p-4 sm:p-6">
         <Card className="border-brand-soft text-center">
-          <SectionHeader size="section" as="h3" className="mb-4 text-indigo-700">
+          <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
             はじめに
           </SectionHeader>
           <p className="text-base text-text-secondary mb-6">
@@ -93,63 +93,65 @@ const SummaryView = ({ players, companies, numORs, onNavigateToManagement }) => 
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      <SectionHeader size="page" className="mb-8 text-center text-slate-700">
+      <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
         サマリー (全 {numORs} OR合計)
       </SectionHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card>
-          <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
+          <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
             プレイヤー別総配当
           </SectionHeader>
-          {players.length === 0 && <p className="text-gray-500 italic">プレイヤーがいません。</p>}
+          {players.length === 0 && <p className="italic text-text-muted">プレイヤーがいません。</p>}
           <ul className="space-y-3">
             {sortedPlayerDividends.map((player) => (
               <li
                 key={player.id}
-                className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-md shadow-sm"
+                className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted p-3 shadow-sm"
               >
-                <span className="font-medium text-slate-800 inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
                   <span
                     className={`text-base leading-none ${getColorTextClass(getPlayerColor(player))}`}
                   >
                     {getPlayerSymbol(player)}
                   </span>
-                  <span className="text-ui-xs text-slate-500">({getPlayerColor(player)})</span>
+                  <span className="text-ui-xs text-text-muted">({getPlayerColor(player)})</span>
                   <span>{getPlayerDisplayName(player)}</span>
                 </span>
-                <span className="font-semibold text-slate-700 text-lg">{player.totalDividend}</span>
+                <span className="text-lg font-semibold text-brand-primary">
+                  {player.totalDividend}
+                </span>
               </li>
             ))}
           </ul>
         </Card>
 
         <Card>
-          <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
+          <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
             企業別総収益
           </SectionHeader>
-          {companies.length === 0 && <p className="text-gray-500 italic">企業がありません。</p>}
+          {companies.length === 0 && <p className="italic text-text-muted">企業がありません。</p>}
           <ul className="space-y-3">
             {companySummaries.map((company) => (
               <li
                 key={company.id}
-                className="p-3 bg-slate-50 border border-slate-200 rounded-md shadow-sm"
+                className="rounded-md border border-border-subtle bg-surface-muted p-3 shadow-sm"
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-slate-800 inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
                     <span
                       className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
                     >
                       {getCompanySymbol(company)}
                     </span>
-                    <span className="text-ui-xs text-slate-500">({getCompanyColor(company)})</span>
+                    <span className="text-ui-xs text-text-muted">({getCompanyColor(company)})</span>
                     <span>{getCompanyDisplayName(company)}</span>
                   </span>
-                  <span className="font-semibold text-slate-700 text-lg">
+                  <span className="text-lg font-semibold text-brand-primary">
                     {company.totalRevenueAcrossORs}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">{company.orDetails}</p>
+                <p className="mt-1 text-sm text-text-muted">{company.orDetails}</p>
               </li>
             ))}
           </ul>

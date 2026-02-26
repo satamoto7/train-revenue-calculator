@@ -60,12 +60,12 @@ const RevenueStopEditor = ({
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-1 p-1 bg-yellow-100 rounded">
+      <div className="flex items-center gap-1 p-1 bg-brand-accent-soft rounded">
         <Input
           type="number"
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          className="w-20 sm:w-16 border-yellow-400 p-1"
+          className="w-20 sm:w-16 border-border-strong p-1"
           aria-label="収益値を編集"
           autoFocus
           onBlur={handleUpdate}
@@ -81,7 +81,7 @@ const RevenueStopEditor = ({
           type="button"
           onClick={handleUpdate}
           size="md"
-          className="px-2 py-1 text-ui-xs bg-status-success hover:bg-green-700"
+          className="px-2 py-1 text-ui-xs bg-status-success hover:brightness-95"
         >
           ✓
         </Button>
@@ -109,7 +109,7 @@ const RevenueStopEditor = ({
           type="button"
           onClick={() => onInsertStopBefore(index)}
           variant="ghost"
-          className={`h-8 w-8 p-0 text-ui-sm text-status-info border border-blue-300 hover:bg-blue-200 rounded-full ${mobileShowClass} ${hoverClass}`}
+          className={`h-8 w-8 p-0 text-ui-sm text-status-info border border-border-strong hover:bg-brand-accent-soft rounded-full ${mobileShowClass} ${hoverClass}`}
           aria-label={`地点${index}の前に挿入`}
         >
           +
@@ -143,7 +143,7 @@ const RevenueStopEditor = ({
         <Button
           type="button"
           onClick={() => quickChange(10)}
-          className="px-1.5 py-0.5 text-ui-xs rounded-full bg-status-success hover:bg-green-700"
+          className="px-1.5 py-0.5 text-ui-xs rounded-full bg-status-success hover:brightness-95"
           aria-label={`${stop} を +10`}
         >
           +10
@@ -177,8 +177,10 @@ const RevenueInput = ({ onAddStop }) => {
   };
 
   return (
-    <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-      <p className="text-ui-sm font-medium text-gray-700 mb-1.5">新しい収益地点を末尾に追加:</p>
+    <div className="mt-2 p-3 bg-brand-accent-soft rounded-md border border-border-strong">
+      <p className="text-ui-sm font-medium text-text-secondary mb-1.5">
+        新しい収益地点を末尾に追加:
+      </p>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-1 mb-2">
         {revenueValues.map((value) => (
           <Button
@@ -241,9 +243,9 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
+    <div className="bg-surface-elevated p-4 sm:p-6 rounded-xl shadow-lg border border-border-subtle">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-xl font-semibold text-indigo-700">列車 {index + 1}</h3>
+        <h3 className="text-xl font-semibold text-brand-primary">列車 {index + 1}</h3>
         <Button
           type="button"
           onClick={() => onDeleteTrain(train.id)}
@@ -255,7 +257,9 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
       </div>
 
       <div className="mb-3 min-h-[60px]">
-        <p className="text-ui-sm font-medium text-gray-600 mb-1">運行経路 (タップ/ホバーで操作):</p>
+        <p className="text-ui-sm font-medium text-text-secondary mb-1">
+          運行経路 (タップ/ホバーで操作):
+        </p>
         {train.stops.length > 0 ? (
           <div className="flex flex-wrap items-start gap-2 sm:gap-3">
             {train.stops.map((stop, idx) => (
@@ -271,13 +275,13 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
                   onSetActiveStop={handleSetActiveStop}
                 />
                 {idx < train.stops.length - 1 && (
-                  <span className="text-gray-400 text-xs self-start mt-3">+</span>
+                  <span className="text-text-muted text-xs self-start mt-3">+</span>
                 )}
               </React.Fragment>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 italic text-sm">地点未追加</p>
+          <p className="text-text-muted italic text-sm">地点未追加</p>
         )}
         <Button
           type="button"
@@ -290,9 +294,9 @@ const TrainCard = ({ train, index, onUpdateTrainStops, onClearTrain, onDeleteTra
         {showRevenueInput && <RevenueInput onAddStop={handleAddStopToEnd} />}
       </div>
 
-      <div className="mb-4 text-lg font-bold text-gray-800">
+      <div className="mb-4 text-lg font-bold text-text-primary">
         計算中の列車収益:{' '}
-        <span className="text-green-600">{calculateTrainRevenue(train.stops)}</span>
+        <span className="text-status-success">{calculateTrainRevenue(train.stops)}</span>
       </div>
       <Button
         type="button"
@@ -345,8 +349,10 @@ const PercentageInputControl = ({ label, value, onChange }) => {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-md shadow-sm">
-      <span className="font-medium text-gray-700 w-full sm:w-auto sm:min-w-[80px]">{label}:</span>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 bg-surface-elevated rounded-md shadow-sm">
+      <span className="font-medium text-text-secondary w-full sm:w-auto sm:min-w-[80px]">
+        {label}:
+      </span>
       <div className="flex items-center gap-1.5 w-full sm:w-auto">
         <Button
           type="button"
@@ -378,7 +384,7 @@ const PercentageInputControl = ({ label, value, onChange }) => {
         <Button type="button" onClick={() => quickSetValue(50)} className="p-1.5 text-ui-xs">
           50%
         </Button>
-        <span className="text-gray-600 text-ui-sm">%</span>
+        <span className="text-text-secondary text-ui-sm">%</span>
       </div>
     </div>
   );
@@ -424,15 +430,17 @@ const CompanyDetailView = ({
   if (!selectedCompany) {
     return (
       <div className="max-w-4xl mx-auto p-4 sm:p-6 text-center">
-        <SectionHeader size="page" className="mb-8 text-slate-700">
+        <SectionHeader size="page" className="mb-8 text-brand-primary">
           企業詳細
         </SectionHeader>
-        <p className="text-gray-600 text-lg">
+        <p className="text-text-secondary text-lg">
           企業が選択されていません。管理画面で企業を選択するか、新しい企業を追加してください。
         </p>
         {companies.length > 0 && (
           <div className="mt-6">
-            <h4 className="text-md font-medium text-gray-700 mb-2">または、ここから企業を選択:</h4>
+            <h4 className="text-md font-medium text-text-secondary mb-2">
+              または、ここから企業を選択:
+            </h4>
             <div className="flex flex-wrap justify-center gap-2">
               {companies.map((company) => (
                 <Button
@@ -440,7 +448,7 @@ const CompanyDetailView = ({
                   key={company.id}
                   onClick={() => handleSelectCompany(company.id)}
                   variant="secondary"
-                  className="py-2 px-4 text-sm text-indigo-700 border border-indigo-300"
+                  className="py-2 px-4 text-sm text-brand-primary border border-border-strong"
                 >
                   <span className="inline-flex items-center gap-1">
                     <span
@@ -448,7 +456,7 @@ const CompanyDetailView = ({
                     >
                       {getCompanySymbol(company)}
                     </span>
-                    <span className="text-ui-xs text-slate-500">({getCompanyColor(company)})</span>
+                    <span className="text-ui-xs text-text-muted">({getCompanyColor(company)})</span>
                     <span>{getCompanyDisplayName(company)}</span>
                   </span>
                 </Button>
@@ -468,7 +476,7 @@ const CompanyDetailView = ({
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      <SectionHeader size="section" as="h3" className="mb-3 text-slate-700">
+      <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
         設定
       </SectionHeader>
       <div className="mb-4 flex flex-wrap justify-center gap-2">
@@ -478,13 +486,14 @@ const CompanyDetailView = ({
           let pillClass;
           let statusLabel;
           if (isSelected) {
-            pillClass = 'bg-indigo-600 text-white shadow-md';
+            pillClass = 'bg-brand-primary text-white shadow-md';
             statusLabel = '選択中';
           } else if (hasRevenue) {
-            pillClass = 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200';
+            pillClass =
+              'bg-surface-muted text-brand-primary border border-border-subtle hover:bg-brand-soft';
             statusLabel = '収益あり';
           } else {
-            pillClass = 'bg-slate-200 text-slate-700 hover:bg-slate-300';
+            pillClass = 'bg-surface-muted text-brand-primary hover:bg-brand-soft';
             statusLabel = '未入力';
           }
           return (
@@ -502,7 +511,7 @@ const CompanyDetailView = ({
                   >
                     {getCompanySymbol(c)}
                   </span>
-                  <span className="text-[10px] sm:text-ui-xs text-slate-500">
+                  <span className="text-[10px] sm:text-ui-xs text-text-muted">
                     ({getCompanyColor(c)})
                   </span>
                   <span>{getCompanyDisplayName(c)}</span>
@@ -530,7 +539,7 @@ const CompanyDetailView = ({
               >
                 ← 前の企業
               </Button>
-              <span className="text-ui-xs sm:text-ui-sm text-gray-600 whitespace-nowrap">
+              <span className="text-ui-xs sm:text-ui-sm text-text-secondary whitespace-nowrap">
                 {currentCompanyIndex + 1} / {companies.length}
               </span>
               <Button
@@ -548,7 +557,7 @@ const CompanyDetailView = ({
           );
         })()}
 
-      <div className="p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
+      <div className="p-4 sm:p-6 bg-surface-elevated rounded-xl shadow-md border border-border-subtle">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-4">
           <div>
             {editingCompanyName ? (
@@ -557,14 +566,14 @@ const CompanyDetailView = ({
                   type="text"
                   value={newCompanyNameInput}
                   onChange={(e) => setNewCompanyNameInput(e.target.value)}
-                  className="border-indigo-300 text-2xl font-semibold"
+                  className="border-border-strong text-2xl font-semibold"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && confirmEditCompanyName()}
                 />
                 <Button
                   type="button"
                   onClick={confirmEditCompanyName}
-                  className="p-2 bg-status-success hover:bg-green-700"
+                  className="p-2 bg-status-success hover:brightness-95"
                 >
                   ✓
                 </Button>
@@ -578,17 +587,17 @@ const CompanyDetailView = ({
                 </Button>
               </div>
             ) : (
-              <h2 className="text-2xl font-semibold text-slate-700 flex items-center gap-2">
+              <h2 className="text-2xl font-semibold text-brand-primary flex items-center gap-2">
                 <span
                   className={`text-xl leading-none ${getColorTextClass(getCompanyColor(selectedCompany))}`}
                   aria-hidden="true"
                 >
                   {getCompanySymbol(selectedCompany)}
                 </span>
-                <span className="font-bold text-indigo-600">
+                <span className="font-bold text-brand-accent">
                   {getCompanyDisplayName(selectedCompany)}
                 </span>
-                <span className="text-ui-xs text-slate-500">
+                <span className="text-ui-xs text-text-muted">
                   ({getCompanyColor(selectedCompany)})
                 </span>
                 <Button
@@ -604,19 +613,19 @@ const CompanyDetailView = ({
                 </Button>
               </h2>
             )}
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-ui-xs text-slate-600 mb-2">
+            <div className="mt-3 rounded-lg border border-border-subtle bg-surface-muted p-3">
+              <p className="text-ui-xs text-text-secondary mb-2">
                 ここで選んだ記号・色は、企業一覧やサマリーにも表示されます。
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="company-symbol" className="text-sm text-gray-600">
+                <label htmlFor="company-symbol" className="text-sm text-text-secondary">
                   記号:
                 </label>
                 <select
                   id="company-symbol"
                   value={selectedCompany.symbol || '○'}
                   onChange={(e) => handleEditCompanySymbol(selectedCompany.id, e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                  className="rounded border border-border-subtle bg-surface-elevated px-2 py-1 text-sm"
                 >
                   {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
                     <option key={symbol} value={symbol}>
@@ -624,14 +633,14 @@ const CompanyDetailView = ({
                     </option>
                   ))}
                 </select>
-                <label htmlFor="company-color" className="text-sm text-gray-600">
+                <label htmlFor="company-color" className="text-sm text-text-secondary">
                   色:
                 </label>
                 <select
                   id="company-color"
                   value={selectedCompany.color || '赤'}
                   onChange={(e) => handleEditCompanyColor(selectedCompany.id, e.target.value)}
-                  className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+                  className="rounded border border-border-subtle bg-surface-elevated px-2 py-1 text-sm"
                 >
                   {COMPANY_COLOR_OPTIONS.map((color) => (
                     <option key={color} value={color}>
@@ -641,9 +650,11 @@ const CompanyDetailView = ({
                 </select>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               記録済OR収益合計:{' '}
-              <span className="font-semibold text-green-700 ml-1">{totalORRevenueForCompany}</span>
+              <span className="font-semibold text-status-success ml-1">
+                {totalORRevenueForCompany}
+              </span>
             </p>
           </div>
         </div>
@@ -658,7 +669,7 @@ const CompanyDetailView = ({
               <div key={orNum} className="flex items-center gap-1">
                 <label
                   htmlFor={`or${orNum}-revenue-${selectedCompany.id}`}
-                  className="text-sm font-medium text-gray-600 whitespace-nowrap"
+                  className="text-sm font-medium text-text-secondary whitespace-nowrap"
                 >
                   OR{orNum}:
                 </label>
@@ -675,22 +686,22 @@ const CompanyDetailView = ({
           })}
         </div>
 
-        <SectionHeader size="section" as="h3" className="mb-3 text-sky-800">
+        <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
           入力
         </SectionHeader>
-        <div className="mb-8 p-4 bg-sky-50 rounded-lg border border-sky-200">
+        <div className="mb-8 p-4 bg-brand-accent-soft rounded-lg border border-border-strong">
           <Button
             type="button"
             onClick={() => setShowTrains((s) => !s)}
             variant="ghost"
             className="flex justify-between items-center w-full mb-1 px-0 shadow-none"
           >
-            <h3 className="text-xl font-semibold text-sky-800">列車運行による収益計算</h3>
-            <span className="text-sm text-sky-600">{showTrains ? '▼' : '▶'}</span>
+            <h3 className="text-xl font-semibold text-brand-primary">列車運行による収益計算</h3>
+            <span className="text-sm text-brand-accent">{showTrains ? '▼' : '▶'}</span>
           </Button>
-          <p className="text-sm text-gray-700 mb-3">
+          <p className="text-sm text-text-secondary mb-3">
             列車計算合計:{' '}
-            <span className="font-bold text-green-600">{currentTrainCalculationRevenue}</span>
+            <span className="font-bold text-status-success">{currentTrainCalculationRevenue}</span>
           </p>
           {showTrains && (
             <>
@@ -705,7 +716,7 @@ const CompanyDetailView = ({
               </div>
               {currentTrainCalculationRevenue > 0 && numORs > 0 && (
                 <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <span className="text-sm text-gray-700">この計算結果を記録:</span>
+                  <span className="text-sm text-text-secondary">この計算結果を記録:</span>
                   {Array.from({ length: numORs }, (_, i) => i + 1).map((orNum) => (
                     <Button
                       type="button"
@@ -717,7 +728,7 @@ const CompanyDetailView = ({
                           currentTrainCalculationRevenue
                         )
                       }
-                      className="py-1.5 px-3 text-sm bg-status-success hover:bg-green-700"
+                      className="py-1.5 px-3 text-sm bg-status-success hover:brightness-95"
                     >
                       OR {orNum}へ
                     </Button>
@@ -725,7 +736,7 @@ const CompanyDetailView = ({
                 </div>
               )}
               {(selectedCompany.trains || []).length === 0 && (
-                <p className="text-center text-gray-500 italic my-4">列車がありません。</p>
+                <p className="text-center text-text-muted italic my-4">列車がありません。</p>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {(selectedCompany.trains || []).map((train, index) => (
@@ -746,17 +757,17 @@ const CompanyDetailView = ({
         </div>
 
         {/* Stock Holdings Section */}
-        <div className="mb-8 p-4 bg-purple-100 rounded-lg">
+        <div className="mb-8 p-4 bg-surface-muted rounded-lg">
           <Button
             type="button"
             onClick={() => setShowStockHoldings((s) => !s)}
             variant="ghost"
             className="flex justify-between items-center w-full mb-1 px-0 shadow-none"
           >
-            <h3 className="text-xl font-semibold text-purple-800">
+            <h3 className="text-xl font-semibold text-brand-primary">
               株式保有状況 ({getCompanyDisplayName(selectedCompany)})
             </h3>
-            <span className="text-sm text-purple-600">{showStockHoldings ? '▼' : '▶'}</span>
+            <span className="text-sm text-brand-accent">{showStockHoldings ? '▼' : '▶'}</span>
           </Button>
           {showStockHoldings && (
             <div className="space-y-2 mt-3">
@@ -785,24 +796,24 @@ const CompanyDetailView = ({
           )}
         </div>
 
-        <SectionHeader size="section" as="h3" className="mb-3 text-green-800">
+        <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
           確認
         </SectionHeader>
         {/* Dividend Display */}
         {totalORRevenueForCompany > 0 &&
           ((selectedCompany.stockHoldings || []).filter((sh) => sh.percentage > 0).length > 0 ||
             (selectedCompany.treasuryStockPercentage || 0) > 0) && (
-            <div className="mb-8 p-4 bg-green-50 rounded-lg">
+            <div className="mb-8 p-4 bg-brand-accent-soft rounded-lg">
               <Button
                 type="button"
                 onClick={() => setShowDividends((s) => !s)}
                 variant="ghost"
                 className="flex justify-between items-center w-full mb-1 px-0 shadow-none"
               >
-                <h3 className="text-xl font-semibold text-green-800">
+                <h3 className="text-xl font-semibold text-brand-primary">
                   配当金 (全{numORs}OR合計より) ({getCompanyDisplayName(selectedCompany)})
                 </h3>
-                <span className="text-sm text-green-600">{showDividends ? '▼' : '▶'}</span>
+                <span className="text-sm text-status-success">{showDividends ? '▼' : '▶'}</span>
               </Button>
               {showDividends && (
                 <ul className="space-y-2 mt-3">
@@ -815,21 +826,21 @@ const CompanyDetailView = ({
                       return (
                         <li
                           key={sh.playerId}
-                          className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm"
+                          className="flex justify-between items-center p-2 bg-surface-elevated rounded-md shadow-sm"
                         >
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-text-secondary">
                             {getPlayerDisplayName(player)} ({sh.percentage}%):
                           </span>
-                          <span className="font-semibold text-green-600">{dividend}</span>
+                          <span className="font-semibold text-status-success">{dividend}</span>
                         </li>
                       );
                     })}
                   {(selectedCompany.treasuryStockPercentage || 0) > 0 && (
-                    <li className="flex justify-between items-center p-2 bg-white rounded-md shadow-sm">
-                      <span className="font-medium text-gray-700">
+                    <li className="flex justify-between items-center p-2 bg-surface-elevated rounded-md shadow-sm">
+                      <span className="font-medium text-text-secondary">
                         自社株 ({selectedCompany.treasuryStockPercentage}%):
                       </span>
-                      <span className="font-semibold text-green-600">
+                      <span className="font-semibold text-status-success">
                         {calculateDividend(
                           totalORRevenueForCompany,
                           selectedCompany.treasuryStockPercentage || 0

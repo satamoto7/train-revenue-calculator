@@ -42,8 +42,11 @@
     "eslint-plugin-react-hooks": "^5.2.0"
   },
   "lint-staged": {
-    "src/**/*.{js,jsx,css}": [
+    "src/**/*.{js,jsx}": [
       "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.css": [
       "prettier --write"
     ],
     "*.{json,md}": [

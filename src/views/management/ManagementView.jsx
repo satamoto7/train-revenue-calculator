@@ -56,23 +56,23 @@ const ManagementView = ({
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
-      <SectionHeader size="page" className="mb-8 text-center text-slate-700">
+      <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
         全般管理
       </SectionHeader>
 
-      <div className="mb-8 p-4 sm:p-6 bg-yellow-50 rounded-xl shadow-md border border-yellow-200">
-        <SectionHeader size="section" as="h3" className="mb-4 text-yellow-700">
+      <div className="mb-8 p-4 sm:p-6 bg-brand-accent-soft rounded-xl shadow-md border border-border-strong">
+        <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           ゲーム設定
         </SectionHeader>
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
-          <label htmlFor="numORs" className="font-medium text-gray-700">
+          <label htmlFor="numORs" className="font-medium text-text-secondary">
             運営ラウンド(OR)の数:
           </label>
           <select
             id="numORs"
             value={numORs}
             onChange={(e) => setNumORs(parseInt(e.target.value))}
-            className="p-2 border border-gray-300 rounded-md shadow-sm"
+            className="p-2 border border-border-subtle rounded-md shadow-sm"
           >
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>
@@ -83,15 +83,15 @@ const ManagementView = ({
         </div>
       </div>
 
-      <div className="mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
-        <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
+      <div className="mb-8 p-4 sm:p-6 bg-surface-elevated rounded-xl shadow-md border border-border-subtle">
+        <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           プレイヤー管理
         </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
           <div>
             <label
               htmlFor="numPlayersToAdd"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-secondary mb-1"
             >
               追加するプレイヤー数:
             </label>
@@ -99,7 +99,7 @@ const ManagementView = ({
               id="numPlayersToAdd"
               value={numPlayersToAdd}
               onChange={(e) => setNumPlayersToAdd(parseInt(e.target.value))}
-              className="p-2 border border-gray-300 rounded-md shadow-sm"
+              className="p-2 border border-border-subtle rounded-md shadow-sm"
             >
               {[2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>
@@ -118,14 +118,14 @@ const ManagementView = ({
         </div>
         {players.length > 0 && (
           <div>
-            <h4 className="text-lg font-medium text-gray-700 mb-2">
+            <h4 className="text-lg font-medium text-text-secondary mb-2">
               登録済みプレイヤー (クリックで名前編集):
             </h4>
             <div className="flex flex-wrap gap-2">
               {players.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-md shadow-sm border border-gray-200"
+                  className="flex items-center gap-1 bg-surface-elevated px-3 py-1.5 rounded-md shadow-sm border border-border-subtle"
                 >
                   {editingPlayerId === player.id ? (
                     <div className="flex items-center gap-1">
@@ -133,7 +133,7 @@ const ManagementView = ({
                         type="text"
                         value={editingPlayerNameInput}
                         onChange={(e) => setEditingPlayerNameInput(e.target.value)}
-                        className="w-32 border-indigo-300"
+                        className="w-32 border-border-strong"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') confirmEditPlayerName();
@@ -147,7 +147,7 @@ const ManagementView = ({
                       <select
                         value={player.symbol || '●'}
                         onChange={(e) => handleEditPlayerSymbol(player.id, e.target.value)}
-                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-sm"
+                        className="rounded border border-border-subtle bg-surface-elevated px-1 py-0.5 text-sm"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の記号`}
                       >
                         {PLAYER_SYMBOL_OPTIONS.map((symbol) => (
@@ -159,7 +159,7 @@ const ManagementView = ({
                       <select
                         value={player.color || '赤'}
                         onChange={(e) => handleEditPlayerColor(player.id, e.target.value)}
-                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-sm"
+                        className="rounded border border-border-subtle bg-surface-elevated px-1 py-0.5 text-sm"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の色`}
                       >
                         {PLAYER_COLOR_OPTIONS.map((color) => (
@@ -172,7 +172,7 @@ const ManagementView = ({
                         type="button"
                         onClick={() => startEditPlayerName(player)}
                         variant="ghost"
-                        className="text-gray-800 p-0 shadow-none hover:bg-transparent hover:text-blue-600"
+                        className="text-text-primary p-0 shadow-none hover:bg-transparent hover:text-brand-accent"
                         aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前を編集`}
                       >
                         <span className={`text-lg leading-none ${getColorTextClass(player.color)}`}>
@@ -212,15 +212,15 @@ const ManagementView = ({
         )}
       </div>
 
-      <div className="mb-8 p-4 sm:p-6 bg-white rounded-xl shadow-md border border-slate-200">
-        <SectionHeader size="section" as="h3" className="mb-4 text-slate-700">
+      <div className="mb-8 p-4 sm:p-6 bg-surface-elevated rounded-xl shadow-md border border-border-subtle">
+        <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           企業管理
         </SectionHeader>
         <div className="flex flex-col sm:flex-row items-end gap-3 mb-6">
           <div>
             <label
               htmlFor="numCompaniesToAdd"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-text-secondary mb-1"
             >
               追加する企業数:
             </label>
@@ -228,7 +228,7 @@ const ManagementView = ({
               id="numCompaniesToAdd"
               value={numCompaniesToAdd}
               onChange={(e) => setNumCompaniesToAdd(parseInt(e.target.value))}
-              className="p-2 border border-gray-300 rounded-md shadow-sm"
+              className="p-2 border border-border-subtle rounded-md shadow-sm"
             >
               {Array.from({ length: 15 }, (_, i) => i + 4).map((n) => (
                 <option key={n} value={n}>
@@ -247,7 +247,7 @@ const ManagementView = ({
         </div>
         {companies.length > 0 && (
           <div>
-            <h4 className="text-lg font-medium text-gray-700 mb-2">
+            <h4 className="text-lg font-medium text-text-secondary mb-2">
               登録済み企業 (クリックで詳細表示):
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -257,7 +257,7 @@ const ManagementView = ({
                     type="button"
                     onClick={() => handleSelectCompany(company.id)}
                     variant={company.id === selectedCompanyId ? 'primary' : 'secondary'}
-                    className={`py-2 px-4 text-sm ${company.id === selectedCompanyId ? 'ring-2 ring-indigo-400' : 'text-indigo-700 border border-indigo-300'}`}
+                    className={`py-2 px-4 text-sm ${company.id === selectedCompanyId ? 'ring-2 ring-brand-accent' : 'text-brand-primary border border-border-strong'}`}
                   >
                     <span className="inline-flex items-center gap-1">
                       <span
@@ -265,7 +265,7 @@ const ManagementView = ({
                       >
                         {getCompanySymbol(company)}
                       </span>
-                      <span className="text-ui-xs text-slate-500">
+                      <span className="text-ui-xs text-text-muted">
                         ({getCompanyColor(company)})
                       </span>
                       <span>{getCompanyDisplayName(company)}</span>
@@ -274,7 +274,7 @@ const ManagementView = ({
                   <select
                     value={company.symbol || '○'}
                     onChange={(e) => handleEditCompanySymbol(company.id, e.target.value)}
-                    className="rounded border border-gray-300 bg-white px-1 py-1 text-sm"
+                    className="rounded border border-border-subtle bg-surface-elevated px-1 py-1 text-sm"
                     aria-label={`企業「${getCompanyDisplayName(company)}」の記号`}
                   >
                     {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
@@ -286,7 +286,7 @@ const ManagementView = ({
                   <select
                     value={company.color || '赤'}
                     onChange={(e) => handleEditCompanyColor(company.id, e.target.value)}
-                    className="rounded border border-gray-300 bg-white px-1 py-1 text-sm"
+                    className="rounded border border-border-subtle bg-surface-elevated px-1 py-1 text-sm"
                     aria-label={`企業「${getCompanyDisplayName(company)}」の色`}
                   >
                     {COMPANY_COLOR_OPTIONS.map((color) => (
@@ -323,15 +323,15 @@ const ManagementView = ({
           </div>
         )}
         {companies.length === 0 && (
-          <p className="text-center text-gray-500 italic">企業がありません。</p>
+          <p className="text-center text-text-muted italic">企業がありません。</p>
         )}
       </div>
 
-      <div className="mt-8 p-4 sm:p-6 bg-rose-50 rounded-xl shadow-md border border-rose-200">
-        <SectionHeader size="section" as="h3" className="mb-3 text-rose-700">
+      <div className="mt-8 p-4 sm:p-6 bg-brand-accent-soft rounded-xl shadow-md border border-border-strong">
+        <SectionHeader size="section" as="h3" className="mb-3 text-status-danger">
           破壊操作（確認あり）
         </SectionHeader>
-        <p className="text-ui-sm text-gray-700 mb-3">
+        <p className="text-ui-sm text-text-secondary mb-3">
           この操作は全企業の OR 収益入力を 0 に戻します。
         </p>
         <Button
