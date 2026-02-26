@@ -2,9 +2,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import App from './App';
-import { APP_SCHEMA_VERSION } from './storage/appStorage';
+import { APP_SCHEMA_VERSION, APP_STORAGE_KEY } from './storage/appStorage';
 
-// crypto.randomUUID のポリフィル（Jest環境用）
 if (!window.crypto?.randomUUID) {
   let counter = 0;
   Object.defineProperty(window, 'crypto', {
@@ -19,172 +18,144 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('アプリ初期表示', () => {
-  test('アプリタイトルが表示される', () => {
-    render(<App />);
-    expect(screen.getByText('18xx 収益計算補助')).toBeInTheDocument();
-  });
+const setupToStockRound = async (user) => {
+  await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
+  await user.click(screen.getByRole('button', { name: '企業を一括追加' }));
+  await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+};
 
-  test('3つのナビゲーションタブが表示される', () => {
+describe('新フロー表示', () => {
+  test('初期表示は設定ステップで、4ステップナビが表示される', () => {
     render(<App />);
+
     const nav = screen.getByRole('navigation');
-    expect(within(nav).getByText('サマリー')).toBeInTheDocument();
-    expect(within(nav).getByText('全般管理')).toBeInTheDocument();
-    expect(within(nav).getByText('企業詳細')).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: '設定' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'SR株式' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'OR実行' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'サマリー' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '設定' })).toBeInTheDocument();
   });
 
-  test('データがない場合は管理画面が初期表示される', () => {
+  test('ゲーム開始後は設定編集が無効化される', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    expect(screen.getByText('ゲーム設定')).toBeInTheDocument();
-    expect(screen.getByText('プレイヤー管理')).toBeInTheDocument();
-  });
 
-  test('データがある場合はサマリー画面が初期表示される', () => {
-    const initialData = {
-      schemaVersion: APP_SCHEMA_VERSION,
-      players: [{ id: 'p1', name: 'テスト' }],
-      companies: [
-        {
-          id: 'c1',
-          name: 'テスト企業',
-          trains: [],
-          stockHoldings: [],
-          orRevenues: [
-            { orNum: 1, revenue: 0 },
-            { orNum: 2, revenue: 0 },
-          ],
-          treasuryStockPercentage: 0,
-        },
-      ],
-      selectedCompanyId: null,
-      numORs: 2,
-    };
-    localStorage.setItem('trainRevenue_18xx_data', JSON.stringify(initialData));
-    render(<App />);
-    expect(screen.getByText(/サマリー \(全/)).toBeInTheDocument();
+    await setupToStockRound(user);
+    await user.click(screen.getByRole('button', { name: '設定' }));
+
+    expect(screen.getByText(/SR開始後は設定変更を禁止しています/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'プレイヤーを一括追加' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '企業を一括追加' })).toBeDisabled();
   });
 });
 
-describe('画面遷移', () => {
-  test('全般管理タブをクリックすると管理画面に遷移する', async () => {
+describe('SR株式', () => {
+  test('IPOなしではバンクが自動計算表示になる', async () => {
     const user = userEvent.setup();
-    // Start from summary view with pre-seeded data
-    const initialData = {
-      schemaVersion: APP_SCHEMA_VERSION,
-      players: [{ id: 'p1', name: 'テスト' }],
-      companies: [
-        {
-          id: 'c1',
-          name: 'テスト企業',
-          trains: [],
-          stockHoldings: [],
-          orRevenues: [
-            { orNum: 1, revenue: 0 },
-            { orNum: 2, revenue: 0 },
-          ],
-          treasuryStockPercentage: 0,
-        },
-      ],
-      selectedCompanyId: null,
-      numORs: 2,
-    };
-    localStorage.setItem('trainRevenue_18xx_data', JSON.stringify(initialData));
     render(<App />);
 
-    const nav = screen.getByRole('navigation');
-    await user.click(within(nav).getByText('全般管理'));
+    await user.selectOptions(screen.getByLabelText('IPO株の有無'), 'no');
+    await setupToStockRound(user);
 
-    expect(screen.getByText('ゲーム設定')).toBeInTheDocument();
-    expect(screen.getByText('プレイヤー管理')).toBeInTheDocument();
-    expect(screen.getByText('企業管理')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/バンクプール/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('100').length).toBeGreaterThan(0);
   });
 
-  test('企業詳細タブをクリックすると企業詳細画面に遷移する', async () => {
+  test('合計異常で ! が表示され、警告のままORへ進める', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = screen.getByRole('navigation');
-    await user.click(within(nav).getByText('企業詳細'));
+    await setupToStockRound(user);
 
+    const playerInput = screen.getByLabelText('Co1のPlayer A保有率');
+    const treasuryInput = screen.getByLabelText('Co1の自社株');
+
+    await user.clear(playerInput);
+    await user.type(playerInput, '90');
+    await user.clear(treasuryInput);
+    await user.type(treasuryInput, '20');
+
+    await user.click(screen.getByRole('button', { name: '妥当性チェック' }));
+    expect(screen.getByTitle('配分合計が100%を超えています。')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+    expect(screen.getByRole('heading', { name: 'OR実行' })).toBeInTheDocument();
+  });
+});
+
+describe('OR実行', () => {
+  test('企業完了後は順序変更がロックされる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    const upButtonsBefore = screen.getAllByRole('button', { name: '↑' });
+    expect(upButtonsBefore.some((button) => !button.hasAttribute('disabled'))).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'この企業を完了' }));
+
+    const upButtonsAfter = screen.getAllByRole('button', { name: '↑' });
+    expect(upButtonsAfter.every((button) => button.hasAttribute('disabled'))).toBe(true);
+    expect(screen.getByRole('button', { name: '順番を再調整' })).toBeInTheDocument();
+  });
+
+  test('全OR完了で次SR開始が表示される', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.selectOptions(screen.getByLabelText('運営ラウンド(OR)数'), '1');
+    await user.selectOptions(screen.getByLabelText('追加企業数'), '1');
+
+    await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
+    await user.click(screen.getByRole('button', { name: '企業を一括追加' }));
+    await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+    await user.click(screen.getByRole('button', { name: 'この企業を完了' }));
+
+    expect(screen.getByRole('button', { name: '次SR開始' })).toBeInTheDocument();
+  });
+});
+
+describe('サイクルと保存', () => {
+  test('次SR開始でサイクル履歴を保持し、サマリーで選択できる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.selectOptions(screen.getByLabelText('運営ラウンド(OR)数'), '1');
+    await user.selectOptions(screen.getByLabelText('追加企業数'), '1');
+
+    await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
+    await user.click(screen.getByRole('button', { name: '企業を一括追加' }));
+    await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+    await user.click(screen.getByRole('button', { name: 'この企業を完了' }));
+    await user.click(screen.getByRole('button', { name: '次SR開始' }));
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+
+    await user.click(screen.getByRole('button', { name: 'サマリー' }));
+
+    const selector = screen.getByLabelText('表示サイクル');
     expect(
-      screen.getByText(
-        '企業が選択されていません。管理画面で企業を選択するか、新しい企業を追加してください。'
-      )
+      within(selector).getByRole('option', { name: /サイクル 1 \(完了\)/ })
     ).toBeInTheDocument();
+    expect(
+      within(selector).getByRole('option', { name: /サイクル 2 \(進行中\)/ })
+    ).toBeInTheDocument();
+    expect(selector).toHaveValue('1');
   });
-});
 
-describe('プレイヤー管理', () => {
-  test('プレイヤーを一括追加できる', async () => {
+  test('保存データは schemaVersion=4 で書き込まれる', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // Already on management view for empty state
-    await user.click(screen.getByText('プレイヤーを一括追加'));
+    await user.click(screen.getByRole('button', { name: 'プレイヤーを一括追加' }));
 
-    expect(screen.getByText(/Player A/)).toBeInTheDocument();
-    expect(screen.getByText(/Player B/)).toBeInTheDocument();
-  });
-});
+    const savedRaw = localStorage.getItem(APP_STORAGE_KEY);
+    const saved = JSON.parse(savedRaw);
 
-describe('企業管理', () => {
-  test('企業を一括追加できる', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    // Already on management view for empty state
-    await user.click(screen.getByText('企業を一括追加 (汎用 Co)'));
-
-    expect(screen.getByText(/Co1/)).toBeInTheDocument();
-    expect(screen.getByText(/Co2/)).toBeInTheDocument();
-  });
-});
-
-describe('localStorage永続化', () => {
-  test('データがlocalStorageに保存される', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    // Already on management view for empty state
-    await user.click(screen.getByText('プレイヤーを一括追加'));
-
-    const savedData = JSON.parse(localStorage.getItem('trainRevenue_18xx_data'));
-    expect(savedData).toBeTruthy();
-    expect(savedData.players).toHaveLength(2);
-    expect(savedData.schemaVersion).toBe(APP_SCHEMA_VERSION);
-  });
-
-  test('localStorageからデータが復元される', async () => {
-    const user = userEvent.setup();
-    const initialData = {
-      schemaVersion: APP_SCHEMA_VERSION,
-      players: [{ id: 'test-1', name: 'テストプレイヤー' }],
-      companies: [],
-      selectedCompanyId: null,
-      numORs: 2,
-    };
-    localStorage.setItem('trainRevenue_18xx_data', JSON.stringify(initialData));
-
-    render(<App />);
-
-    const nav = screen.getByRole('navigation');
-    await user.click(within(nav).getByText('全般管理'));
-    expect(await screen.findByText(/テストプレイヤー/)).toBeInTheDocument();
-  });
-});
-
-describe('アクセシビリティ', () => {
-  test('モーダルにrole="dialog"が設定されている', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    // Already on management view for empty state
-    await user.click(screen.getByText('プレイヤーを一括追加'));
-
-    // プレイヤーを削除してモーダルを表示
-    const deleteButtons = screen.getAllByTitle(/を削除/);
-    await user.click(deleteButtons[0]);
-    const dialog = screen.queryByRole('dialog');
-    expect(dialog).toBeInTheDocument();
+    expect(saved.schemaVersion).toBe(APP_SCHEMA_VERSION);
+    expect(saved.flow.step).toBe('setup');
   });
 });
