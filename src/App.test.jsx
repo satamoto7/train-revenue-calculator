@@ -170,6 +170,27 @@ describe('OR実行', () => {
     expect(stop1Input).toHaveValue(0);
   });
 
+  test('地点削除ボタンは×表示でアクセシブル名を持ち、押下で対象地点を削除できる', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await setupToStockRound(user);
+    await setCompanyHolding(user, 'Co1', 10);
+    await user.click(screen.getByRole('button', { name: 'SR完了してORへ' }));
+
+    await user.click(screen.getByRole('button', { name: '列車追加' }));
+    await user.click(screen.getByRole('button', { name: '列車1に10を追加' }));
+    await user.click(screen.getByRole('button', { name: '列車1に20を追加' }));
+
+    const deleteStopButton = screen.getByRole('button', { name: '列車1の地点1を削除' });
+    expect(deleteStopButton).toHaveTextContent('×');
+
+    await user.click(deleteStopButton);
+
+    expect(screen.queryByRole('spinbutton', { name: '列車1の地点2' })).not.toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: '列車1の地点1' })).toHaveValue(20);
+  });
+
   test('OR収益を10刻みボタンで増減できる', async () => {
     const user = userEvent.setup();
     render(<App />);
