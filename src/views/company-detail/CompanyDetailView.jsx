@@ -413,12 +413,17 @@ const CompanyDetailView = ({
   const [showTrains, setShowTrains] = useState(true);
   const [showStockHoldings, setShowStockHoldings] = useState(false);
   const [showDividends, setShowDividends] = useState(false);
+  const [orRevenueDrafts, setOrRevenueDrafts] = useState({});
 
   useEffect(() => {
     if (selectedCompany) {
       setNewCompanyNameInput(selectedCompany.displayName || '');
     }
   }, [selectedCompany]);
+
+  useEffect(() => {
+    setOrRevenueDrafts({});
+  }, [numORs, selectedCompany?.id]);
 
   const confirmEditCompanyName = () => {
     if (selectedCompany) {
@@ -473,6 +478,39 @@ const CompanyDetailView = ({
     selectedCompany.orRevenues,
     numORs
   );
+  const getORRevenueDraftKey = (companyId, orNum) => `${companyId}:${orNum}`;
+
+  const clearORRevenueDraft = (companyId, orNum) => {
+    const key = getORRevenueDraftKey(companyId, orNum);
+    setOrRevenueDrafts((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const commitORRevenueDraft = (companyId, orNum, currentRevenue) => {
+    const key = getORRevenueDraftKey(companyId, orNum);
+    const raw = key in orRevenueDrafts ? `${orRevenueDrafts[key]}` : `${currentRevenue}`;
+    const trimmed = raw.trim();
+    if (trimmed === '') {
+      clearORRevenueDraft(companyId, orNum);
+      return;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(parsed)) {
+      clearORRevenueDraft(companyId, orNum);
+      return;
+    }
+    handleORRevenueChange(companyId, orNum, Math.max(0, parsed));
+    clearORRevenueDraft(companyId, orNum);
+  };
+
+  const getORRevenueInputValue = (companyId, orNum, currentRevenue) => {
+    const key = getORRevenueDraftKey(companyId, orNum);
+    return key in orRevenueDrafts ? orRevenueDrafts[key] : currentRevenue;
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
@@ -664,7 +702,8 @@ const CompanyDetailView = ({
             const orRevenueEntry = (selectedCompany.orRevenues || []).find(
               (or) => or.orNum === orNum
             );
-            const revenue = orRevenueEntry ? orRevenueEntry.revenue : '';
+            const revenue = orRevenueEntry ? orRevenueEntry.revenue : 0;
+            const draftKey = getORRevenueDraftKey(selectedCompany.id, orNum);
             return (
               <div key={orNum} className="flex items-center gap-1">
                 <label
@@ -676,8 +715,18 @@ const CompanyDetailView = ({
                 <Input
                   type="number"
                   id={`or${orNum}-revenue-${selectedCompany.id}`}
-                  value={revenue}
-                  onChange={(e) => handleORRevenueChange(selectedCompany.id, orNum, e.target.value)}
+                  value={getORRevenueInputValue(selectedCompany.id, orNum, revenue)}
+                  onChange={(e) =>
+                    setOrRevenueDrafts((prev) => ({
+                      ...prev,
+                      [draftKey]: e.target.value,
+                    }))
+                  }
+                  onBlur={() => commitORRevenueDraft(selectedCompany.id, orNum, revenue)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return;
+                    commitORRevenueDraft(selectedCompany.id, orNum, revenue);
+                  }}
                   placeholder="0"
                   className="w-24 text-sm"
                 />

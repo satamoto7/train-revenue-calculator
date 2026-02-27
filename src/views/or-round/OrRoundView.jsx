@@ -263,18 +263,31 @@ const OrRoundView = ({
 
   const getRevenueDraftKey = (companyId, orNum) => `${companyId}:${orNum}`;
 
-  const commitORRevenueDraft = (companyId, orNum, fallbackValue) => {
-    const key = getRevenueDraftKey(companyId, orNum);
-    const raw = key in orRevenueDrafts ? `${orRevenueDrafts[key]}` : `${fallbackValue}`;
-    const parsed = Number.parseInt(raw, 10);
-    const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
-    handleORRevenueChange(companyId, orNum, normalized);
+  const clearORRevenueDraft = (key) => {
     setOrRevenueDrafts((prev) => {
       if (!(key in prev)) return prev;
       const next = { ...prev };
       delete next[key];
       return next;
     });
+  };
+
+  const commitORRevenueDraft = (companyId, orNum, fallbackValue) => {
+    const key = getRevenueDraftKey(companyId, orNum);
+    const raw = key in orRevenueDrafts ? `${orRevenueDrafts[key]}` : `${fallbackValue}`;
+    const trimmed = raw.trim();
+    if (trimmed === '') {
+      clearORRevenueDraft(key);
+      return;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(parsed)) {
+      clearORRevenueDraft(key);
+      return;
+    }
+    const normalized = Math.max(0, parsed);
+    handleORRevenueChange(companyId, orNum, normalized);
+    clearORRevenueDraft(key);
   };
 
   if (companies.length === 0) {

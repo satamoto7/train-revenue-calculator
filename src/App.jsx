@@ -275,14 +275,6 @@ function App() {
   const handleORRevenueChange = (companyId, orNum, value) => {
     const trimmed = `${value}`.trim();
     if (trimmed === '') {
-      dispatch({
-        type: 'OR_REVENUE_SET',
-        payload: {
-          companyId,
-          orNum,
-          revenue: 0,
-        },
-      });
       return;
     }
 
