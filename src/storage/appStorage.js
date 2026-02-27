@@ -210,17 +210,8 @@ export function migrate(saved) {
   };
 }
 
-export function load() {
-  const raw = localStorage.getItem(APP_STORAGE_KEY);
-  if (!raw) return null;
-
-  const parsed = JSON.parse(raw);
-  if (parsed?.schemaVersion !== APP_SCHEMA_VERSION) return null;
-  return migrate(parsed);
-}
-
-export function save(state) {
-  const payload = {
+export function serialize(state) {
+  return {
     schemaVersion: APP_SCHEMA_VERSION,
     players: state.players || [],
     companies: state.companies || [],
@@ -231,6 +222,4 @@ export function save(state) {
     srValidation: state.srValidation || {},
     lastUpdated: new Date().toISOString(),
   };
-
-  localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(payload));
 }
