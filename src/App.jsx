@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
-import { load as loadAppState, save as saveAppState } from './storage/appStorage';
+import { APP_STATE_SESSION_ID, appStorageAdapter } from './storage';
 import Button from './components/ui/Button';
 import Modal from './components/ui/Modal';
 import SetupView from './views/setup/SetupView';
@@ -184,7 +184,7 @@ const createBaseState = () => ({
 
 const initAppState = () => {
   try {
-    return loadAppState() || createBaseState();
+    return appStorageAdapter.load(APP_STATE_SESSION_ID) || createBaseState();
   } catch (_error) {
     return createBaseState();
   }
@@ -698,11 +698,26 @@ function App() {
 
   useEffect(() => {
     try {
-      saveAppState(appState);
+      appStorageAdapter.save(APP_STATE_SESSION_ID, appState);
     } catch (_error) {
       setModalMessage('データの保存に失敗しました。');
     }
   }, [appState]);
+
+  useEffect(() => {
+    const unsubscribe = appStorageAdapter.subscribe(APP_STATE_SESSION_ID, () => {
+      try {
+        const latestState = appStorageAdapter.load(APP_STATE_SESSION_ID);
+        if (latestState) {
+          dispatch({ type: 'APP_LOAD', payload: latestState });
+        }
+      } catch (_error) {
+        setModalMessage('データの同期に失敗しました。');
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const setPlayers = useCallback((nextPlayers) => {
     dispatch({ type: 'PLAYER_SET_ALL', payload: nextPlayers });

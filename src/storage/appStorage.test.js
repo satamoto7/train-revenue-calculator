@@ -1,12 +1,13 @@
-import { APP_SCHEMA_VERSION, APP_STORAGE_KEY, load, migrate, save } from './appStorage';
+import { APP_SCHEMA_VERSION, APP_STORAGE_KEY, migrate, serialize } from './appStorage';
+import { localStorageAdapter } from './localStorageAdapter';
 
 describe('appStorage', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  test('save は schemaVersion=4 を付けて保存する', () => {
-    save({
+  test('serialize は schemaVersion=4 を付ける', () => {
+    const serialized = serialize({
       players: [{ id: 'p1', displayName: 'Player A', seatLabel: 'A' }],
       companies: [],
       flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
@@ -22,15 +23,12 @@ describe('appStorage', () => {
       srValidation: {},
     });
 
-    const raw = localStorage.getItem(APP_STORAGE_KEY);
-    const stored = JSON.parse(raw);
-
-    expect(stored.schemaVersion).toBe(APP_SCHEMA_VERSION);
-    expect(stored.flow.step).toBe('setup');
-    expect(typeof stored.lastUpdated).toBe('string');
+    expect(serialized.schemaVersion).toBe(APP_SCHEMA_VERSION);
+    expect(serialized.flow.step).toBe('setup');
+    expect(typeof serialized.lastUpdated).toBe('string');
   });
 
-  test('load は schemaVersion 不一致データを無視して null を返す', () => {
+  test('localStorageAdapter.load は schemaVersion 不一致データを無視して null を返す', () => {
     const legacyData = {
       schemaVersion: 3,
       players: [{ id: 'p1', name: 'legacy' }],
@@ -40,8 +38,33 @@ describe('appStorage', () => {
 
     localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(legacyData));
 
-    const loaded = load();
+    const loaded = localStorageAdapter.load('default');
     expect(loaded).toBeNull();
+  });
+
+  test('localStorageAdapter.save は localStorage に保存できる', () => {
+    const state = {
+      players: [{ id: 'p1', displayName: 'Player A', seatLabel: 'A' }],
+      companies: [],
+      flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
+      activeCycle: {
+        cycleNo: 1,
+        companyOrder: [],
+        currentOR: 1,
+        completedCompanyIdsByOR: { 1: [], 2: [] },
+        selectedCompanyId: null,
+      },
+      cycleHistory: [],
+      summarySelectedCycleNo: null,
+      srValidation: {},
+    };
+
+    localStorageAdapter.save('default', state);
+
+    const raw = localStorage.getItem(APP_STORAGE_KEY);
+    const stored = JSON.parse(raw);
+    expect(stored.schemaVersion).toBe(APP_SCHEMA_VERSION);
+    expect(stored.players).toHaveLength(1);
   });
 
   test('migrate は schema4 欠損値を補完する', () => {
