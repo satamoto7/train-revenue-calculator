@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SectionHeader from '../../components/ui/SectionHeader';
@@ -20,6 +20,46 @@ const StockRoundView = ({
   handleValidate,
   handleComplete,
 }) => {
+  const [draftValues, setDraftValues] = useState({});
+
+  const getDraftKey = (companyId, target, playerId = '') => `${companyId}:${target}:${playerId}`;
+
+  const setDraft = useCallback((key, value) => {
+    setDraftValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  }, []);
+
+  const clearDraft = useCallback((key) => {
+    setDraftValues((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const commitStockDraft = useCallback(
+    ({ companyId, target, playerId, key, fallbackValue }) => {
+      const raw = key in draftValues ? `${draftValues[key]}` : `${fallbackValue}`;
+      const parsed = Number.parseInt(raw, 10);
+      const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed));
+      handleStockChange(companyId, {
+        target,
+        playerId,
+        value: normalized,
+      });
+      clearDraft(key);
+    },
+    [clearDraft, draftValues, handleStockChange]
+  );
+
+  const getInputValue = useCallback(
+    (key, fallbackValue) => (key in draftValues ? draftValues[key] : fallbackValue),
+    [draftValues]
+  );
+
   const invalidCompanyIds = Object.values(validation || {})
     .filter((entry) => entry?.invalid)
     .map((entry) => entry.companyId);
@@ -79,6 +119,7 @@ const StockRoundView = ({
                     const holding = (company.stockHoldings || []).find(
                       (s) => s.playerId === player.id
                     );
+                    const key = getDraftKey(company.id, 'player', player.id);
                     return (
                       <td key={player.id} className="px-2 py-2">
                         <Input
@@ -86,14 +127,27 @@ const StockRoundView = ({
                           min="0"
                           max="100"
                           step="10"
-                          value={holding?.percentage ?? 0}
-                          onChange={(e) =>
-                            handleStockChange(company.id, {
+                          value={getInputValue(key, holding?.percentage ?? 0)}
+                          onChange={(e) => setDraft(key, e.target.value)}
+                          onBlur={() =>
+                            commitStockDraft({
+                              companyId: company.id,
                               target: 'player',
                               playerId: player.id,
-                              value: e.target.value,
+                              key,
+                              fallbackValue: holding?.percentage ?? 0,
                             })
                           }
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            commitStockDraft({
+                              companyId: company.id,
+                              target: 'player',
+                              playerId: player.id,
+                              key,
+                              fallbackValue: holding?.percentage ?? 0,
+                            });
+                          }}
                           className="w-20"
                           aria-label={`${getCompanyDisplayName(company)}の${getPlayerDisplayName(player)}保有率`}
                         />
@@ -101,39 +155,73 @@ const StockRoundView = ({
                     );
                   })}
                   <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="10"
-                      value={treasury}
-                      onChange={(e) =>
-                        handleStockChange(company.id, {
-                          target: 'treasury',
-                          value: e.target.value,
-                        })
-                      }
-                      className="w-20"
-                      aria-label={`${getCompanyDisplayName(company)}の自社株`}
-                    />
+                    {(() => {
+                      const key = getDraftKey(company.id, 'treasury');
+                      return (
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="10"
+                          value={getInputValue(key, treasury)}
+                          onChange={(e) => setDraft(key, e.target.value)}
+                          onBlur={() =>
+                            commitStockDraft({
+                              companyId: company.id,
+                              target: 'treasury',
+                              key,
+                              fallbackValue: treasury,
+                            })
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            commitStockDraft({
+                              companyId: company.id,
+                              target: 'treasury',
+                              key,
+                              fallbackValue: treasury,
+                            });
+                          }}
+                          className="w-20"
+                          aria-label={`${getCompanyDisplayName(company)}の自社株`}
+                        />
+                      );
+                    })()}
                   </td>
                   <td className="px-2 py-2">
                     {hasIpoShares ? (
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="10"
-                        value={bankInput}
-                        onChange={(e) =>
-                          handleStockChange(company.id, {
-                            target: 'bank',
-                            value: e.target.value,
-                          })
-                        }
-                        className="w-20"
-                        aria-label={`${getCompanyDisplayName(company)}のバンクプール`}
-                      />
+                      (() => {
+                        const key = getDraftKey(company.id, 'bank');
+                        return (
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="10"
+                            value={getInputValue(key, bankInput)}
+                            onChange={(e) => setDraft(key, e.target.value)}
+                            onBlur={() =>
+                              commitStockDraft({
+                                companyId: company.id,
+                                target: 'bank',
+                                key,
+                                fallbackValue: bankInput,
+                              })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key !== 'Enter') return;
+                              commitStockDraft({
+                                companyId: company.id,
+                                target: 'bank',
+                                key,
+                                fallbackValue: bankInput,
+                              });
+                            }}
+                            className="w-20"
+                            aria-label={`${getCompanyDisplayName(company)}のバンクプール`}
+                          />
+                        );
+                      })()
                     ) : (
                       <span className="inline-block rounded bg-surface-muted px-2 py-1 font-semibold text-text-secondary">
                         {autoBank}
