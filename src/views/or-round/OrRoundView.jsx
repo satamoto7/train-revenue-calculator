@@ -237,6 +237,7 @@ const OrRoundView = ({
 
   const [rebalanceMode, setRebalanceMode] = useState(false);
   const [draftRemaining, setDraftRemaining] = useState([]);
+  const [orRevenueDrafts, setOrRevenueDrafts] = useState({});
 
   const remainingCompanyIds = establishedCompanyOrder.filter(
     (companyId) => !completed.includes(companyId)
@@ -256,6 +257,22 @@ const OrRoundView = ({
       if (nextIndex < 0 || nextIndex >= prev.length) return prev;
       const next = [...prev];
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const getRevenueDraftKey = (companyId, orNum) => `${companyId}:${orNum}`;
+
+  const commitORRevenueDraft = (companyId, orNum, fallbackValue) => {
+    const key = getRevenueDraftKey(companyId, orNum);
+    const raw = key in orRevenueDrafts ? `${orRevenueDrafts[key]}` : `${fallbackValue}`;
+    const parsed = Number.parseInt(raw, 10);
+    const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+    handleORRevenueChange(companyId, orNum, normalized);
+    setOrRevenueDrafts((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
       return next;
     });
   };
@@ -449,6 +466,9 @@ const OrRoundView = ({
             {Array.from({ length: flow.numORs }, (_, index) => {
               const orNum = index + 1;
               const currentRevenue = getEntryRevenue(selectedCompanySafe, orNum);
+              const draftKey = getRevenueDraftKey(selectedCompanySafe.id, orNum);
+              const draftValue =
+                draftKey in orRevenueDrafts ? orRevenueDrafts[draftKey] : currentRevenue;
               return (
                 <div
                   key={orNum}
@@ -466,9 +486,18 @@ const OrRoundView = ({
                       variant="secondary"
                       className="px-2 py-1 text-xs"
                       aria-label={`OR${orNum}を-10`}
-                      onClick={() =>
-                        handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue - 10)
-                      }
+                      onClick={() => {
+                        handleORRevenueChange(
+                          selectedCompanySafe.id,
+                          orNum,
+                          Math.max(0, currentRevenue - 10)
+                        );
+                        setOrRevenueDrafts((prev) => {
+                          const next = { ...prev };
+                          delete next[draftKey];
+                          return next;
+                        });
+                      }}
                     >
                       -10
                     </Button>
@@ -476,10 +505,20 @@ const OrRoundView = ({
                       id={`or-${orNum}-${selectedCompanySafe.id}`}
                       type="number"
                       min="0"
-                      value={currentRevenue}
+                      value={draftValue}
                       onChange={(e) =>
-                        handleORRevenueChange(selectedCompanySafe.id, orNum, e.target.value)
+                        setOrRevenueDrafts((prev) => ({
+                          ...prev,
+                          [draftKey]: e.target.value,
+                        }))
                       }
+                      onBlur={() =>
+                        commitORRevenueDraft(selectedCompanySafe.id, orNum, currentRevenue)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        commitORRevenueDraft(selectedCompanySafe.id, orNum, currentRevenue);
+                      }}
                       className="w-20 text-center"
                     />
                     <Button
@@ -487,9 +526,14 @@ const OrRoundView = ({
                       variant="secondary"
                       className="px-2 py-1 text-xs"
                       aria-label={`OR${orNum}を+10`}
-                      onClick={() =>
-                        handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue + 10)
-                      }
+                      onClick={() => {
+                        handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue + 10);
+                        setOrRevenueDrafts((prev) => {
+                          const next = { ...prev };
+                          delete next[draftKey];
+                          return next;
+                        });
+                      }}
                     >
                       +10
                     </Button>
