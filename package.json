@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "https://satamoto7.github.io/train-revenue-calculator",
   "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
