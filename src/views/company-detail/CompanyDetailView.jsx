@@ -6,7 +6,8 @@ import {
   calculateDividend,
 } from '../../lib/calc';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
+import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   COMPANY_COLOR_OPTIONS,
@@ -61,10 +62,13 @@ const RevenueStopEditor = ({
   if (isEditing) {
     return (
       <div className="flex items-center gap-1 p-1 bg-brand-accent-soft rounded">
-        <Input
-          type="number"
+        <CommittedNumberInput
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
+          onCommit={(nextValue) => {
+            onUpdateStop(index, nextValue);
+            setIsEditing(false);
+          }}
           className="w-20 sm:w-16 border-border-strong p-1"
           aria-label="収益値を編集"
           autoFocus
@@ -194,10 +198,10 @@ const RevenueInput = ({ onAddStop }) => {
         ))}
       </div>
       <div className="flex items-center gap-1">
-        <Input
-          type="number"
+        <CommittedNumberInput
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
+          onCommit={(nextValue) => setCustomValue(`${nextValue}`)}
           placeholder="カスタム値"
           aria-label="カスタム収益値"
           className="flex-grow"
@@ -362,12 +366,15 @@ const PercentageInputControl = ({ label, value, onChange }) => {
         >
           -10
         </Button>
-        <Input
-          type="number"
+        <CommittedNumberInput
           min="0"
           max="100"
           value={inputValue}
           onChange={handleInputChange}
+          onCommit={(nextValue) => {
+            onChange(nextValue);
+            setInputValue(nextValue.toString());
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           aria-label={`${label}の保有割合`}
@@ -562,10 +569,10 @@ const CompanyDetailView = ({
           <div>
             {editingCompanyName ? (
               <div className="flex items-center gap-2">
-                <Input
-                  type="text"
+                <CommittedTextInput
                   value={newCompanyNameInput}
                   onChange={(e) => setNewCompanyNameInput(e.target.value)}
+                  onCommit={(nextValue) => setNewCompanyNameInput(nextValue)}
                   className="border-border-strong text-2xl font-semibold"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && confirmEditCompanyName()}
@@ -673,11 +680,12 @@ const CompanyDetailView = ({
                 >
                   OR{orNum}:
                 </label>
-                <Input
-                  type="number"
+                <CommittedNumberInput
                   id={`or${orNum}-revenue-${selectedCompany.id}`}
                   value={revenue}
-                  onChange={(e) => handleORRevenueChange(selectedCompany.id, orNum, e.target.value)}
+                  onCommit={(nextValue) =>
+                    handleORRevenueChange(selectedCompany.id, orNum, nextValue)
+                  }
                   placeholder="0"
                   className="w-24 text-sm"
                 />

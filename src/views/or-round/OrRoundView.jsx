@@ -6,7 +6,7 @@ import {
   calculateTrainRevenue,
 } from '../../lib/calc';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getCompanyDisplayName,
@@ -94,13 +94,12 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
               >
                 -10
               </Button>
-              <Input
-                type="number"
+              <CommittedNumberInput
                 min="0"
                 value={stop}
-                onChange={(e) => {
+                onCommit={(nextValue) => {
                   const nextStops = [...stops];
-                  nextStops[idx] = Number.parseInt(e.target.value || '0', 10) || 0;
+                  nextStops[idx] = nextValue;
                   onUpdateStops(nextStops);
                 }}
                 className="w-24 text-center sm:w-20"
@@ -147,14 +146,16 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
           ))}
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          <Input
-            type="number"
+          <CommittedNumberInput
             min="0"
             value={customStopValue}
             placeholder="自由入力"
             className="w-full sm:w-28"
             aria-label={`列車${trainIndex + 1}のカスタム収益値`}
             onChange={(e) => setCustomStopValue(e.target.value)}
+            onCommit={(nextValue) => setCustomStopValue(`${nextValue}`)}
+            emptyValue={0}
+            formatCommittedValue={(nextValue) => `${nextValue ?? ''}`}
           />
           <Button
             type="button"
@@ -237,8 +238,6 @@ const OrRoundView = ({
 
   const [rebalanceMode, setRebalanceMode] = useState(false);
   const [draftRemaining, setDraftRemaining] = useState([]);
-  const [orRevenueDrafts, setOrRevenueDrafts] = useState({});
-
   const remainingCompanyIds = establishedCompanyOrder.filter(
     (companyId) => !completed.includes(companyId)
   );
@@ -257,22 +256,6 @@ const OrRoundView = ({
       if (nextIndex < 0 || nextIndex >= prev.length) return prev;
       const next = [...prev];
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-      return next;
-    });
-  };
-
-  const getRevenueDraftKey = (companyId, orNum) => `${companyId}:${orNum}`;
-
-  const commitORRevenueDraft = (companyId, orNum, fallbackValue) => {
-    const key = getRevenueDraftKey(companyId, orNum);
-    const raw = key in orRevenueDrafts ? `${orRevenueDrafts[key]}` : `${fallbackValue}`;
-    const parsed = Number.parseInt(raw, 10);
-    const normalized = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
-    handleORRevenueChange(companyId, orNum, normalized);
-    setOrRevenueDrafts((prev) => {
-      if (!(key in prev)) return prev;
-      const next = { ...prev };
-      delete next[key];
       return next;
     });
   };
@@ -466,9 +449,6 @@ const OrRoundView = ({
             {Array.from({ length: flow.numORs }, (_, index) => {
               const orNum = index + 1;
               const currentRevenue = getEntryRevenue(selectedCompanySafe, orNum);
-              const draftKey = getRevenueDraftKey(selectedCompanySafe.id, orNum);
-              const draftValue =
-                draftKey in orRevenueDrafts ? orRevenueDrafts[draftKey] : currentRevenue;
               return (
                 <div
                   key={orNum}
@@ -492,33 +472,17 @@ const OrRoundView = ({
                           orNum,
                           Math.max(0, currentRevenue - 10)
                         );
-                        setOrRevenueDrafts((prev) => {
-                          const next = { ...prev };
-                          delete next[draftKey];
-                          return next;
-                        });
                       }}
                     >
                       -10
                     </Button>
-                    <Input
+                    <CommittedNumberInput
                       id={`or-${orNum}-${selectedCompanySafe.id}`}
-                      type="number"
                       min="0"
-                      value={draftValue}
-                      onChange={(e) =>
-                        setOrRevenueDrafts((prev) => ({
-                          ...prev,
-                          [draftKey]: e.target.value,
-                        }))
+                      value={currentRevenue}
+                      onCommit={(nextValue) =>
+                        handleORRevenueChange(selectedCompanySafe.id, orNum, nextValue)
                       }
-                      onBlur={() =>
-                        commitORRevenueDraft(selectedCompanySafe.id, orNum, currentRevenue)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key !== 'Enter') return;
-                        commitORRevenueDraft(selectedCompanySafe.id, orNum, currentRevenue);
-                      }}
                       className="w-20 text-center"
                     />
                     <Button
@@ -528,11 +492,6 @@ const OrRoundView = ({
                       aria-label={`OR${orNum}を+10`}
                       onClick={() => {
                         handleORRevenueChange(selectedCompanySafe.id, orNum, currentRevenue + 10);
-                        setOrRevenueDrafts((prev) => {
-                          const next = { ...prev };
-                          delete next[draftKey];
-                          return next;
-                        });
                       }}
                     >
                       +10

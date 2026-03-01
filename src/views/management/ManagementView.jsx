@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   COMPANY_COLOR_OPTIONS,
@@ -129,10 +129,10 @@ const ManagementView = ({
                 >
                   {editingPlayerId === player.id ? (
                     <div className="flex items-center gap-1">
-                      <Input
-                        type="text"
+                      <CommittedTextInput
                         value={editingPlayerNameInput}
                         onChange={(e) => setEditingPlayerNameInput(e.target.value)}
+                        onCommit={(nextValue) => setEditingPlayerNameInput(nextValue)}
                         className="w-32 border-border-strong"
                         autoFocus
                         onKeyDown={(e) => {

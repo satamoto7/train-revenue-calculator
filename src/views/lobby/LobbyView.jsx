@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 
 const LobbyView = ({
@@ -15,6 +15,10 @@ const LobbyView = ({
   const [nickname, setNickname] = useState('');
   const [joinGameId, setJoinGameId] = useState(prefilledGameId || '');
   const [joinCode, setJoinCode] = useState('');
+
+  useEffect(() => {
+    setJoinGameId(prefilledGameId || '');
+  }, [prefilledGameId]);
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
@@ -39,11 +43,11 @@ const LobbyView = ({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-text-secondary" htmlFor="nickname">
             ニックネーム
-            <Input
+            <CommittedTextInput
               id="nickname"
-              type="text"
               value={nickname}
               placeholder="例: Player A"
+              onCommit={setNickname}
               onChange={(e) => setNickname(e.target.value)}
               className="mt-1"
               aria-label="ニックネーム"
@@ -51,13 +55,15 @@ const LobbyView = ({
           </label>
           <label className="text-sm text-text-secondary" htmlFor="prefilled-game-id">
             URLのゲームID
-            <Input
+            <CommittedTextInput
               id="prefilled-game-id"
-              type="text"
               value={joinGameId}
               onChange={(e) => {
                 setJoinGameId(e.target.value);
-                onPrefilledGameIdChange(e.target.value);
+              }}
+              onCommit={(nextValue) => {
+                setJoinGameId(nextValue);
+                onPrefilledGameIdChange(nextValue);
               }}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               className="mt-1"
@@ -88,13 +94,15 @@ const LobbyView = ({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-text-secondary" htmlFor="join-game-id">
             ゲームID
-            <Input
+            <CommittedTextInput
               id="join-game-id"
-              type="text"
               value={joinGameId}
               onChange={(e) => {
                 setJoinGameId(e.target.value);
-                onPrefilledGameIdChange(e.target.value);
+              }}
+              onCommit={(nextValue) => {
+                setJoinGameId(nextValue);
+                onPrefilledGameIdChange(nextValue);
               }}
               className="mt-1"
               aria-label="参加用ゲームID"
@@ -102,11 +110,11 @@ const LobbyView = ({
           </label>
           <label className="text-sm text-text-secondary" htmlFor="join-code">
             参加コード（6桁）
-            <Input
+            <CommittedTextInput
               id="join-code"
-              type="text"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
+              onCommit={setJoinCode}
               className="mt-1"
               aria-label="参加コード"
             />

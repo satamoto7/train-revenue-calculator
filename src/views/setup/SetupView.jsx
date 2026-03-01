@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   COMPANY_COLOR_OPTIONS,
@@ -123,11 +123,10 @@ const SetupView = ({
               key={player.id}
               className="grid gap-2 rounded-md border border-border-subtle bg-surface-muted p-3 sm:grid-cols-[1fr_auto_auto_auto]"
             >
-              <Input
-                type="text"
+              <CommittedTextInput
                 value={getPlayerDisplayName(player)}
                 disabled={setupLocked}
-                onChange={(e) => handleEditPlayerName(player.id, e.target.value)}
+                onCommit={(nextValue) => handleEditPlayerName(player.id, nextValue)}
                 aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の名前`}
               />
               <select
@@ -208,11 +207,10 @@ const SetupView = ({
               key={company.id}
               className="grid gap-2 rounded-md border border-border-subtle bg-surface-muted p-3 sm:grid-cols-[1fr_auto_auto_auto]"
             >
-              <Input
-                type="text"
+              <CommittedTextInput
                 value={getCompanyDisplayName(company)}
                 disabled={setupLocked}
-                onChange={(e) => handleEditCompanyName(company.id, e.target.value)}
+                onCommit={(nextValue) => handleEditCompanyName(company.id, nextValue)}
                 aria-label={`企業「${getCompanyDisplayName(company)}」の名前`}
               />
               <select
