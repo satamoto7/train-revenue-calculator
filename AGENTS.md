@@ -9,16 +9,20 @@ GitHub Pages へ自動デプロイ: <https://satamoto7.github.io/train-revenue-c
 
 ## 開発コマンド
 
-| コマンド               | 内容                                  |
-| ---------------------- | ------------------------------------- |
-| `npm ci`               | 依存関係インストール（CI 推奨）       |
-| `npm run dev`          | 開発サーバー起動（localhost:5173）    |
-| `npm run build`        | プロダクションビルド（/dist）         |
-| `npm run lint`         | ESLint チェック（src/\*_/_.{js,jsx}） |
-| `npm run lint:fix`     | ESLint 自動修正                       |
-| `npm run format:check` | Prettier チェック                     |
-| `npm test`             | テスト単発実行（= `vitest run`）      |
-| `npm run test:watch`   | テストウォッチ（開発用）              |
+| コマンド               | 内容                                                 |
+| ---------------------- | ---------------------------------------------------- |
+| `npm ci`               | 依存関係インストール（CI 推奨）                      |
+| `npm run dev`          | 開発サーバー起動（localhost:5173）                   |
+| `npm start`            | 開発サーバー起動（`npm run dev` の別名）             |
+| `npm run build`        | プロダクションビルド（`dist/`）                      |
+| `npm run preview`      | ビルド済みアプリをローカル確認                       |
+| `npm run lint`         | ESLint チェック（`src/**/*.{js,jsx}`）               |
+| `npm run lint:fix`     | ESLint 自動修正                                      |
+| `npm run format`       | Prettier 整形（設定ファイル / 主要ドキュメント対象） |
+| `npm run format:check` | Prettier チェック                                    |
+| `npm run lint-staged`  | lint-staged を手動実行                               |
+| `npm test`             | テスト単発実行（= `vitest run`）                     |
+| `npm run test:watch`   | テストウォッチ（開発用）                             |
 
 ---
 
@@ -80,11 +84,14 @@ Husky + lint-staged が自動実行:
 
 ## デプロイ
 
-`.github/workflows/deploy-pages.yml` が `main` ブランチ push 時に自動実行:
+`.github/workflows/deploy-pages.yml` が `main` ブランチ push 時、または `workflow_dispatch` で自動実行:
 
 1. `npm ci`
-2. `npm run build`
-3. `./dist` を GitHub Pages へデプロイ
+2. `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` を注入して `npm run build`
+3. `./dist` を Pages artifact として upload
+4. GitHub Pages へデプロイ
+
+GitHub Pages / ローカル共同編集確認では Supabase 環境変数が必要。セットアップは `docs/supabase-collab-setup.md` を参照。
 
 ---
 
