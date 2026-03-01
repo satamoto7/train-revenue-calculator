@@ -187,4 +187,63 @@ describe('useCollaborativeGame', () => {
       })
     );
   });
+
+  test('Presence の join/leave で参加者の online/offline が更新される', async () => {
+    let presenceHandlers;
+    mockTrackPresence.mockImplementation(async (_gameId, _profile, handlers) => {
+      presenceHandlers = handlers;
+      return async () => {};
+    });
+
+    const { result } = renderHook(() => useCollaborativeGame());
+    await waitFor(() => expect(result.current.authStatus).toBe('ready'));
+
+    await act(async () => {
+      await result.current.actions.createAndJoinGame({ nickname: 'P1' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.syncMeta.participants[0]).toEqual(
+        expect.objectContaining({ userId: 'user-1', online: false })
+      );
+    });
+
+    act(() => {
+      presenceHandlers.onJoin({
+        userId: 'user-1',
+        profiles: [
+          {
+            userId: 'user-1',
+            nickname: 'P1',
+            onlineAt: '2026-01-01T00:00:20.000Z',
+          },
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.syncMeta.participants[0]).toEqual(
+        expect.objectContaining({ userId: 'user-1', online: true })
+      );
+    });
+
+    act(() => {
+      presenceHandlers.onLeave({
+        userId: 'user-1',
+        profiles: [
+          {
+            userId: 'user-1',
+            nickname: 'P1',
+            onlineAt: '2026-01-01T00:00:20.000Z',
+          },
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.syncMeta.participants[0]).toEqual(
+        expect.objectContaining({ userId: 'user-1', online: false })
+      );
+    });
+  });
 });

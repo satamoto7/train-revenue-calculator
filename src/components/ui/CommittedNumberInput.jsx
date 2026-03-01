@@ -17,6 +17,7 @@ const CommittedNumberInput = ({
   max,
   clamp = defaultClamp,
   parseCommittedValue,
+  shouldCommit,
   formatCommittedValue = (nextValue) => `${nextValue ?? ''}`,
   normalizeDraft,
   onBlur,
@@ -30,6 +31,7 @@ const CommittedNumberInput = ({
     onCommit,
     normalizeDraft,
     formatCommittedValue,
+    shouldCommit,
     parseCommittedValue: (rawValue, previousValue) => {
       if (parseCommittedValue) {
         return parseCommittedValue(rawValue, previousValue);

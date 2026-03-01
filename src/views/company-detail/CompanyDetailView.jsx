@@ -480,7 +480,6 @@ const CompanyDetailView = ({
     selectedCompany.orRevenues,
     numORs
   );
-
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
@@ -671,7 +670,7 @@ const CompanyDetailView = ({
             const orRevenueEntry = (selectedCompany.orRevenues || []).find(
               (or) => or.orNum === orNum
             );
-            const revenue = orRevenueEntry ? orRevenueEntry.revenue : '';
+            const revenue = orRevenueEntry ? orRevenueEntry.revenue : 0;
             return (
               <div key={orNum} className="flex items-center gap-1">
                 <label
@@ -683,6 +682,7 @@ const CompanyDetailView = ({
                 <CommittedNumberInput
                   id={`or${orNum}-revenue-${selectedCompany.id}`}
                   value={revenue}
+                  shouldCommit={(rawValue) => `${rawValue ?? ''}`.trim() !== ''}
                   onCommit={(nextValue) =>
                     handleORRevenueChange(selectedCompany.id, orNum, nextValue)
                   }

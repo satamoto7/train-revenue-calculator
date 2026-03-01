@@ -480,6 +480,7 @@ const OrRoundView = ({
                       id={`or-${orNum}-${selectedCompanySafe.id}`}
                       min="0"
                       value={currentRevenue}
+                      shouldCommit={(rawValue) => `${rawValue ?? ''}`.trim() !== ''}
                       onCommit={(nextValue) =>
                         handleORRevenueChange(selectedCompanySafe.id, orNum, nextValue)
                       }

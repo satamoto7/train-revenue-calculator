@@ -87,6 +87,49 @@ const buildParticipants = (members, presenceProfiles) => {
   });
 };
 
+const buildPresenceProfileKey = (profile) => `${profile.userId}::${profile.onlineAt || ''}`;
+
+const addPresenceProfiles = (currentProfiles, newProfiles) => {
+  const next = [...(currentProfiles || [])];
+  const existing = new Set(next.map(buildPresenceProfileKey));
+
+  (newProfiles || []).forEach((profile) => {
+    if (!profile?.userId) return;
+    const normalized = {
+      userId: profile.userId,
+      nickname: profile.nickname || 'Guest',
+      onlineAt: profile.onlineAt || null,
+    };
+    const key = buildPresenceProfileKey(normalized);
+    if (existing.has(key)) return;
+    existing.add(key);
+    next.push(normalized);
+  });
+
+  return next;
+};
+
+const removePresenceProfiles = (currentProfiles, removedProfiles) => {
+  const removeCounts = new Map();
+  (removedProfiles || []).forEach((profile) => {
+    if (!profile?.userId) return;
+    const normalized = {
+      userId: profile.userId,
+      onlineAt: profile.onlineAt || null,
+    };
+    const key = buildPresenceProfileKey(normalized);
+    removeCounts.set(key, (removeCounts.get(key) || 0) + 1);
+  });
+
+  return (currentProfiles || []).filter((profile) => {
+    const key = buildPresenceProfileKey(profile);
+    const count = removeCounts.get(key) || 0;
+    if (count <= 0) return true;
+    removeCounts.set(key, count - 1);
+    return false;
+  });
+};
+
 const createGuestNickname = () => {
   const suffix = `${Math.floor(1000 + Math.random() * 9000)}`;
   return `Guest-${suffix}`;
@@ -324,10 +367,18 @@ export function useCollaborativeGame() {
               presenceProfilesRef.current = profiles;
               refreshParticipants();
             },
-            onJoin: () => {
+            onJoin: ({ profiles }) => {
+              presenceProfilesRef.current = addPresenceProfiles(
+                presenceProfilesRef.current,
+                profiles
+              );
               refreshParticipants();
             },
-            onLeave: () => {
+            onLeave: ({ profiles }) => {
+              presenceProfilesRef.current = removePresenceProfiles(
+                presenceProfilesRef.current,
+                profiles
+              );
               refreshParticipants();
             },
           }

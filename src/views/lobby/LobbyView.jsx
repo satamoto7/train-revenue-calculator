@@ -12,9 +12,54 @@ const LobbyView = ({
   error,
   createdGame,
 }) => {
+  const normalizedPrefilledGameId = (prefilledGameId || '').trim();
   const [nickname, setNickname] = useState('');
-  const [joinGameId, setJoinGameId] = useState(prefilledGameId || '');
+  const [joinGameId, setJoinGameId] = useState(normalizedPrefilledGameId);
   const [joinCode, setJoinCode] = useState('');
+  const [isManualGameIdVisible, setIsManualGameIdVisible] = useState(!normalizedPrefilledGameId);
+  const [copyStatus, setCopyStatus] = useState('');
+
+  useEffect(() => {
+    if (isManualGameIdVisible) return;
+    setJoinGameId((prefilledGameId || '').trim());
+  }, [isManualGameIdVisible, prefilledGameId]);
+
+  useEffect(() => {
+    setCopyStatus('');
+  }, [createdGame]);
+
+  const resolvedGameId = joinGameId.trim() || normalizedPrefilledGameId;
+  const canJoinGame = Boolean(resolvedGameId && joinCode.trim());
+
+  const clearDraftGameId = () => {
+    setJoinGameId(normalizedPrefilledGameId);
+    onPrefilledGameIdChange(normalizedPrefilledGameId);
+  };
+
+  const handleToggleManualGameId = () => {
+    setIsManualGameIdVisible((prev) => {
+      const next = !prev;
+      if (!next) {
+        clearDraftGameId();
+      }
+      return next;
+    });
+  };
+
+  const handleCopy = async (text, label) => {
+    if (!text) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      setCopyStatus('コピー機能が利用できません。手動でコピーしてください。');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus(`${label}をコピーしました。`);
+    } catch (_error) {
+      setCopyStatus('コピーに失敗しました。手動でコピーしてください。');
+    }
+  };
 
   useEffect(() => {
     setJoinGameId(prefilledGameId || '');
@@ -53,23 +98,28 @@ const LobbyView = ({
               aria-label="ニックネーム"
             />
           </label>
-          <label className="text-sm text-text-secondary" htmlFor="prefilled-game-id">
-            URLのゲームID
-            <CommittedTextInput
-              id="prefilled-game-id"
-              value={joinGameId}
-              onChange={(e) => {
-                setJoinGameId(e.target.value);
-              }}
-              onCommit={(nextValue) => {
-                setJoinGameId(nextValue);
-                onPrefilledGameIdChange(nextValue);
-              }}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="mt-1"
-              aria-label="ゲームID"
-            />
-          </label>
+          <div className="text-sm text-text-secondary">
+            <p className="mb-1">URLのゲームID</p>
+            {normalizedPrefilledGameId ? (
+              <p className="rounded-md border border-border-subtle bg-surface-muted px-3 py-2 font-mono text-xs text-text-primary break-all">
+                {normalizedPrefilledGameId}
+              </p>
+            ) : (
+              <p className="rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-xs text-text-secondary">
+                URLにゲームIDが含まれていません。
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleToggleManualGameId}
+            className="w-full sm:w-auto"
+          >
+            {isManualGameIdVisible ? 'ゲームID入力欄を閉じる' : 'ゲームIDを手入力する'}
+          </Button>
         </div>
       </section>
 
@@ -91,8 +141,8 @@ const LobbyView = ({
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           既存ゲームに参加
         </SectionHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm text-text-secondary" htmlFor="join-game-id">
+        {isManualGameIdVisible && (
+          <label className="mb-4 block text-sm text-text-secondary" htmlFor="join-game-id">
             ゲームID
             <CommittedTextInput
               id="join-game-id"
@@ -104,10 +154,13 @@ const LobbyView = ({
                 setJoinGameId(nextValue);
                 onPrefilledGameIdChange(nextValue);
               }}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               className="mt-1"
               aria-label="参加用ゲームID"
             />
           </label>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-text-secondary" htmlFor="join-code">
             参加コード（6桁）
             <CommittedTextInput
@@ -123,10 +176,10 @@ const LobbyView = ({
         <div className="mt-4">
           <Button
             type="button"
-            disabled={isBusy || !joinGameId || !joinCode}
+            disabled={isBusy || !canJoinGame}
             onClick={() =>
               onJoinGame({
-                gameId: joinGameId.trim(),
+                gameId: resolvedGameId,
                 joinCode: joinCode.trim(),
                 nickname,
               })
@@ -143,9 +196,26 @@ const LobbyView = ({
           <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
             作成完了
           </SectionHeader>
-          <p className="text-sm text-text-secondary">ゲームID: {createdGame.gameId}</p>
+          <p className="text-sm text-text-secondary break-all">ゲームID: {createdGame.gameId}</p>
           <p className="text-sm text-text-secondary">参加コード: {createdGame.joinCode}</p>
           <p className="text-sm text-text-secondary break-all">招待URL: {createdGame.shareUrl}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleCopy(createdGame.shareUrl, '招待URL')}
+            >
+              招待URLをコピー
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleCopy(createdGame.joinCode, '参加コード')}
+            >
+              参加コードをコピー
+            </Button>
+          </div>
+          {copyStatus && <p className="mt-2 text-xs text-text-secondary">{copyStatus}</p>}
         </section>
       )}
     </div>

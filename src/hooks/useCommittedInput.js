@@ -9,6 +9,7 @@ export function useCommittedInput({
   formatCommittedValue = defaultFormatCommittedValue,
   parseCommittedValue = identity,
   normalizeDraft = identity,
+  shouldCommit = () => true,
 }) {
   const [draftValue, setDraftValue] = useState(() => formatCommittedValue(committedValue));
   const [isDirty, setIsDirty] = useState(false);
@@ -44,9 +45,12 @@ export function useCommittedInput({
     draftValueRef.current = nextFormattedValue;
     setDraftValue(nextFormattedValue);
     setIsDirty(false);
+    if (!shouldCommit(rawValue, parsedValue, committedValue)) {
+      return false;
+    }
     onCommit(parsedValue);
     return true;
-  }, [committedValue, formatCommittedValue, onCommit, parseCommittedValue]);
+  }, [committedValue, formatCommittedValue, onCommit, parseCommittedValue, shouldCommit]);
 
   const onChange = useCallback(
     (event) => {
