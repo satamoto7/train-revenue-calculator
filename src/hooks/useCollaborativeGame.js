@@ -114,7 +114,6 @@ export function useCollaborativeGame() {
 
   const saveTimerRef = useRef(null);
   const skipNextSaveRef = useRef(false);
-  const appStateRef = useRef(createBaseState());
   const lastVersionRef = useRef(0);
   const joinTokenRef = useRef(0);
   const membersRef = useRef([]);
@@ -164,6 +163,33 @@ export function useCollaborativeGame() {
     dispatch({ type: 'APP_LOAD', payload: normalizeAppState(nextState) });
   }, []);
 
+  const applyRemoteSnapshot = useCallback(
+    ({ state, version, force = false, targetGameId }) => {
+      if (state == null) return false;
+
+      const normalizedRemoteState = normalizeAppState(state);
+      const remoteVersion = Number(version || 0);
+
+      // Passive sync follows monotonic server versions so stale payloads never overwrite
+      // unsaved local edits during the debounce window.
+      if (!force && remoteVersion <= lastVersionRef.current) {
+        return false;
+      }
+
+      if (remoteVersion > 0) {
+        lastVersionRef.current = remoteVersion;
+      }
+      setSyncStatus('synced');
+      setSyncError('');
+      applyRemoteState(normalizedRemoteState);
+      if (targetGameId) {
+        saveLocalCache(targetGameId, normalizedRemoteState);
+      }
+      return true;
+    },
+    [applyRemoteState]
+  );
+
   const startRemotePolling = useCallback(
     (targetGameId) => {
       if (!targetGameId) return;
@@ -173,26 +199,17 @@ export function useCollaborativeGame() {
       pollTimerRef.current = setInterval(async () => {
         try {
           const remote = await loadGameState(targetGameId);
-          if (!remote?.version) return;
-          const remoteVersion = Number(remote.version || 0);
-          const normalizedRemoteState = normalizeAppState(remote.state);
-          const hasDifferentState =
-            JSON.stringify(normalizedRemoteState) !== JSON.stringify(appStateRef.current);
-          const shouldApply = remoteVersion > lastVersionRef.current || hasDifferentState;
-
-          if (!shouldApply) return;
-
-          lastVersionRef.current = remoteVersion;
-          setSyncStatus('synced');
-          setSyncError('');
-          applyRemoteState(normalizedRemoteState);
-          saveLocalCache(targetGameId, normalizedRemoteState);
+          applyRemoteSnapshot({
+            state: remote?.state,
+            version: remote?.version,
+            targetGameId,
+          });
         } catch (_error) {
           // Realtime の補助目的なので、ポーリング失敗時は静かに継続する
         }
       }, REMOTE_POLL_MS);
     },
-    [applyRemoteState]
+    [applyRemoteSnapshot]
   );
 
   const connectToGame = useCallback(
@@ -240,12 +257,15 @@ export function useCollaborativeGame() {
 
       if (joinTokenRef.current !== token) return;
 
-      lastVersionRef.current = loadedVersion;
       setGameId(targetGameId);
       setPrefilledGameId(targetGameId);
       replaceGameIdInUrl(targetGameId);
-      applyRemoteState(loadedState);
-      saveLocalCache(targetGameId, loadedState);
+      applyRemoteSnapshot({
+        state: loadedState,
+        version: loadedVersion,
+        force: true,
+        targetGameId,
+      });
       setHasDraft(hasUnsyncedDraft(targetGameId));
       if (!loadedFromLocalCache) {
         setSyncStatus('synced');
@@ -262,18 +282,11 @@ export function useCollaborativeGame() {
 
       try {
         unsubscribeStateRef.current = await subscribeGameState(targetGameId, (remote) => {
-          if (!remote?.version) return;
-          const remoteVersion = Number(remote.version || 0);
-          const normalizedRemoteState = normalizeAppState(remote.state);
-          const hasDifferentState =
-            JSON.stringify(normalizedRemoteState) !== JSON.stringify(appStateRef.current);
-          const shouldApply = remoteVersion > lastVersionRef.current || hasDifferentState;
-          if (!shouldApply) return;
-          lastVersionRef.current = remoteVersion;
-          setSyncStatus('synced');
-          setSyncError('');
-          applyRemoteState(normalizedRemoteState);
-          saveLocalCache(targetGameId, normalizedRemoteState);
+          applyRemoteSnapshot({
+            state: remote?.state,
+            version: remote?.version,
+            targetGameId,
+          });
         });
       } catch (_error) {
         // Realtime購読に失敗してもポーリングで同期する
@@ -287,7 +300,7 @@ export function useCollaborativeGame() {
         // 参加者表示だけ失敗。ゲーム同期は継続する
       }
     },
-    [applyRemoteState, cleanupRealtime, refreshMembers, startRemotePolling]
+    [applyRemoteSnapshot, cleanupRealtime, refreshMembers, startRemotePolling]
   );
 
   const createAndJoinGame = useCallback(
@@ -365,38 +378,40 @@ export function useCollaborativeGame() {
     try {
       const result = await saveGameState(gameId, draft.state);
       lastVersionRef.current = Number(result.version || lastVersionRef.current);
-      applyRemoteState(draft.state);
-      saveLocalCache(gameId, draft.state);
+      applyRemoteSnapshot({
+        state: draft.state,
+        version: result.version || lastVersionRef.current,
+        force: true,
+        targetGameId: gameId,
+      });
       clearUnsyncedDraft(gameId);
       setHasDraft(false);
-      setSyncStatus('synced');
-      setSyncError('');
       return true;
     } catch (error) {
       setSyncStatus('error');
       setSyncError(error.message || '未同期下書きの再送に失敗しました。');
       return false;
     }
-  }, [applyRemoteState, gameId]);
+  }, [applyRemoteSnapshot, gameId]);
 
   const reloadFromServer = useCallback(async () => {
     if (!gameId) return false;
     setSyncStatus('syncing');
     try {
       const remote = await loadGameState(gameId);
-      lastVersionRef.current = Number(remote.version || lastVersionRef.current);
-      const normalized = normalizeAppState(remote.state);
-      applyRemoteState(normalized);
-      saveLocalCache(gameId, normalized);
-      setSyncStatus('synced');
-      setSyncError('');
+      applyRemoteSnapshot({
+        state: remote.state,
+        version: remote.version,
+        force: true,
+        targetGameId: gameId,
+      });
       return true;
     } catch (error) {
       setSyncStatus('error');
       setSyncError(error.message || 'サーバー再読込に失敗しました。');
       return false;
     }
-  }, [applyRemoteState, gameId]);
+  }, [applyRemoteSnapshot, gameId]);
 
   const shareRoom = useCallback(async () => {
     const shareUrl = buildShareUrl(gameId);
@@ -515,10 +530,6 @@ export function useCollaborativeGame() {
       );
     });
   }, [authStatus, connectToGame, gameId]);
-
-  useEffect(() => {
-    appStateRef.current = appState;
-  }, [appState]);
 
   useEffect(() => {
     if (!gameId) return;

@@ -13,6 +13,22 @@ const mockListGameMembers = vi.fn();
 const mockSubscribeGameMembers = vi.fn();
 const mockHasSupabaseEnv = vi.fn();
 
+const buildBaseState = () => ({
+  players: [],
+  companies: [],
+  flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
+  activeCycle: {
+    cycleNo: 1,
+    companyOrder: [],
+    currentOR: 1,
+    completedCompanyIdsByOR: { 1: [], 2: [] },
+    selectedCompanyId: null,
+  },
+  cycleHistory: [],
+  summarySelectedCycleNo: null,
+  srValidation: {},
+});
+
 vi.mock('../collab/gameRepository', () => ({
   createGame: (...args) => mockCreateGame(...args),
   joinGame: (...args) => mockJoinGame(...args),
@@ -28,22 +44,6 @@ vi.mock('../collab/gameRepository', () => ({
 vi.mock('../collab/supabaseClient', () => ({
   hasSupabaseEnv: (...args) => mockHasSupabaseEnv(...args),
 }));
-
-const defaultRemoteState = {
-  players: [],
-  companies: [],
-  flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
-  activeCycle: {
-    cycleNo: 1,
-    companyOrder: [],
-    currentOR: 1,
-    completedCompanyIdsByOR: { 1: [], 2: [] },
-    selectedCompanyId: null,
-  },
-  cycleHistory: [],
-  summarySelectedCycleNo: null,
-  srValidation: {},
-};
 
 describe('useCollaborativeGame', () => {
   beforeEach(() => {
@@ -69,19 +69,19 @@ describe('useCollaborativeGame', () => {
       updatedBy: 'user-1',
     });
     mockLoadGameState.mockResolvedValue({
-      state: defaultRemoteState,
+      state: buildBaseState(),
       version: 1,
     });
     mockCreateGame.mockResolvedValue({
       gameId: 'game-1',
       joinCode: '123456',
       version: 1,
-      state: defaultRemoteState,
+      state: buildBaseState(),
     });
     mockJoinGame.mockResolvedValue({
       gameId: 'game-1',
       version: 1,
-      state: defaultRemoteState,
+      state: buildBaseState(),
     });
 
     Object.defineProperty(navigator, 'share', {
@@ -321,5 +321,150 @@ describe('useCollaborativeGame', () => {
       status: 'cancelled',
       message: '',
     });
+  });
+
+  test('同一 version の stale realtime payload では未保存ローカル変更を上書きしない', async () => {
+    vi.useFakeTimers();
+    let stateSubscriptionHandler;
+    mockSubscribeGameState.mockImplementation(async (_gameId, handler) => {
+      stateSubscriptionHandler = handler;
+      return () => {};
+    });
+
+    const { result } = renderHook(() => useCollaborativeGame());
+    await waitFor(() => expect(result.current.authStatus).toBe('ready'));
+
+    await act(async () => {
+      await result.current.actions.createAndJoinGame({ nickname: 'P1' });
+    });
+
+    act(() => {
+      result.current.dispatch({
+        type: 'PLAYER_SET_ALL',
+        payload: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
+      });
+    });
+
+    expect(result.current.appState.players).toEqual([
+      expect.objectContaining({ id: 'p1', name: 'Player A' }),
+    ]);
+
+    act(() => {
+      stateSubscriptionHandler({
+        version: 1,
+        state: buildBaseState(),
+      });
+    });
+
+    expect(result.current.appState.players).toEqual([
+      expect.objectContaining({ id: 'p1', name: 'Player A' }),
+    ]);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+
+    expect(mockSaveGameState).toHaveBeenCalledWith(
+      'game-1',
+      expect.objectContaining({
+        players: [expect.objectContaining({ id: 'p1', name: 'Player A' })],
+      })
+    );
+  });
+
+  test('同一 version の stale poll payload では未保存ローカル変更を上書きしない', async () => {
+    vi.useFakeTimers();
+    mockLoadGameState
+      .mockResolvedValueOnce({
+        state: buildBaseState(),
+        version: 1,
+      })
+      .mockResolvedValue({
+        state: buildBaseState(),
+        version: 1,
+      });
+
+    const { result } = renderHook(() => useCollaborativeGame());
+    await waitFor(() => expect(result.current.authStatus).toBe('ready'));
+
+    await act(async () => {
+      await result.current.actions.createAndJoinGame({ nickname: 'P1' });
+    });
+
+    act(() => {
+      result.current.dispatch({
+        type: 'PLAYER_SET_ALL',
+        payload: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
+      });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(result.current.appState.players).toEqual([
+      expect.objectContaining({ id: 'p1', name: 'Player A' }),
+    ]);
+  });
+
+  test('新しい version の remote payload は適用される', async () => {
+    let stateSubscriptionHandler;
+    mockSubscribeGameState.mockImplementation(async (_gameId, handler) => {
+      stateSubscriptionHandler = handler;
+      return () => {};
+    });
+
+    const { result } = renderHook(() => useCollaborativeGame());
+    await waitFor(() => expect(result.current.authStatus).toBe('ready'));
+
+    await act(async () => {
+      await result.current.actions.createAndJoinGame({ nickname: 'P1' });
+    });
+
+    act(() => {
+      stateSubscriptionHandler({
+        version: 2,
+        state: {
+          ...buildBaseState(),
+          players: [{ id: 'p2', name: 'Player B', displayName: 'Player B' }],
+        },
+      });
+    });
+
+    expect(result.current.appState.players).toEqual([
+      expect.objectContaining({ id: 'p2', name: 'Player B' }),
+    ]);
+  });
+
+  test('reloadFromServer は同一 version でも明示的にサーバー状態を再適用できる', async () => {
+    const { result } = renderHook(() => useCollaborativeGame());
+    await waitFor(() => expect(result.current.authStatus).toBe('ready'));
+
+    await act(async () => {
+      await result.current.actions.createAndJoinGame({ nickname: 'P1' });
+    });
+
+    act(() => {
+      result.current.dispatch({
+        type: 'PLAYER_SET_ALL',
+        payload: [{ id: 'p1', name: 'Local Player', displayName: 'Local Player' }],
+      });
+    });
+
+    mockLoadGameState.mockResolvedValueOnce({
+      version: 1,
+      state: {
+        ...buildBaseState(),
+        players: [{ id: 'p2', name: 'Remote Player', displayName: 'Remote Player' }],
+      },
+    });
+
+    await act(async () => {
+      await result.current.actions.reloadFromServer();
+    });
+
+    expect(result.current.appState.players).toEqual([
+      expect.objectContaining({ id: 'p2', name: 'Remote Player' }),
+    ]);
   });
 });
