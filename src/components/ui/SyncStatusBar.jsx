@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Button from './Button';
 
 const SYNC_STATUS_LABEL = {
@@ -14,10 +14,28 @@ const SyncStatusBar = ({
   syncStatus,
   syncError,
   participants,
+  shareUrl,
   hasUnsyncedDraft,
   onResendUnsyncedDraft,
   onReloadFromServer,
+  onShareRoom,
 }) => {
+  const [shareStatusMessage, setShareStatusMessage] = useState('');
+
+  useEffect(() => {
+    setShareStatusMessage('');
+  }, [gameId, joinCode, shareUrl]);
+
+  const handleShareRoom = async () => {
+    if (!onShareRoom) return;
+    try {
+      const result = await onShareRoom();
+      setShareStatusMessage(result?.message || '');
+    } catch (_error) {
+      setShareStatusMessage('共有に失敗しました。手動でURLと参加コードを共有してください。');
+    }
+  };
+
   return (
     <section className="mx-auto mb-6 max-w-6xl rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -63,11 +81,17 @@ const SyncStatusBar = ({
       )}
 
       <div>
-        <div className="mb-2 flex justify-end">
+        <div className="mb-2 flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={handleShareRoom}>
+            この部屋を共有
+          </Button>
           <Button type="button" variant="secondary" onClick={onReloadFromServer}>
             サーバー再読込
           </Button>
         </div>
+        {shareStatusMessage && (
+          <p className="mb-2 text-sm text-text-secondary">{shareStatusMessage}</p>
+        )}
         <p className="mb-2 text-sm font-medium text-text-secondary">参加者</p>
         <ul className="flex flex-wrap gap-2">
           {(participants || []).map((participant) => (
@@ -75,13 +99,7 @@ const SyncStatusBar = ({
               key={participant.userId}
               className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-muted px-3 py-1 text-xs text-text-primary"
             >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  participant.online ? 'bg-status-success' : 'bg-status-warning'
-                }`}
-              />
               <span>{participant.nickname || 'Guest'}</span>
-              <span className="text-text-muted">{participant.online ? 'online' : 'offline'}</span>
             </li>
           ))}
           {(participants || []).length === 0 && (

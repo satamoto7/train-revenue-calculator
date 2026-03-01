@@ -462,9 +462,11 @@ function App() {
         syncStatus={syncMeta.syncStatus}
         syncError={syncMeta.syncError}
         participants={syncMeta.participants}
+        shareUrl={syncMeta.shareUrl}
         hasUnsyncedDraft={syncMeta.hasUnsyncedDraft}
         onResendUnsyncedDraft={actions.resendUnsyncedDraft}
         onReloadFromServer={actions.reloadFromServer}
+        onShareRoom={actions.shareRoom}
       />
 
       <nav
