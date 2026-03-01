@@ -202,6 +202,16 @@ function App() {
     });
   };
 
+  const handlePresidentChange = (companyId, presidentPlayerId) => {
+    dispatch({
+      type: 'SR_PRESIDENT_SET',
+      payload: {
+        companyId,
+        presidentPlayerId,
+      },
+    });
+  };
+
   const runStockValidation = () => {
     const validation = buildStockValidationMap(companies, flow.hasIpoShares);
     dispatch({ type: 'SR_VALIDATE_RUN', payload: validation });
@@ -219,14 +229,6 @@ function App() {
     const establishedIds = getEstablishedCompanyIds(activeCycle.companyOrder, companies);
     dispatch({ type: 'COMPANY_SELECT', payload: establishedIds[0] || null });
     setCurrentViewStep('orRound');
-  };
-
-  const handleSelectCompany = (companyId) => {
-    if (currentViewStep === 'orRound') {
-      const targetCompany = companies.find((company) => company.id === companyId);
-      if (!targetCompany || targetCompany.isUnestablished) return;
-    }
-    dispatch({ type: 'COMPANY_SELECT', payload: companyId });
   };
 
   const handleMoveOrderUp = (companyId) => {
@@ -462,9 +464,11 @@ function App() {
         syncStatus={syncMeta.syncStatus}
         syncError={syncMeta.syncError}
         participants={syncMeta.participants}
+        shareUrl={syncMeta.shareUrl}
         hasUnsyncedDraft={syncMeta.hasUnsyncedDraft}
         onResendUnsyncedDraft={actions.resendUnsyncedDraft}
         onReloadFromServer={actions.reloadFromServer}
+        onShareRoom={actions.shareRoom}
       />
 
       <nav
@@ -518,6 +522,7 @@ function App() {
           hasIpoShares={flow.hasIpoShares}
           validation={srValidation}
           handleStockChange={handleStockChange}
+          handlePresidentChange={handlePresidentChange}
           handleUnestablishedChange={handleUnestablishedChange}
           handleValidate={runStockValidation}
           handleComplete={handleCompleteStockRound}
@@ -530,7 +535,6 @@ function App() {
           companies={companies}
           flow={flow}
           activeCycle={activeCycle}
-          handleSelectCompany={handleSelectCompany}
           handleMoveOrderUp={handleMoveOrderUp}
           handleMoveOrderDown={handleMoveOrderDown}
           handleRebalanceRemaining={handleRebalanceRemaining}

@@ -36,6 +36,8 @@ const baseHookState = () => ({
     createAndJoinGame: vi.fn(),
     joinExistingGame: vi.fn(),
     resendUnsyncedDraft: vi.fn(),
+    reloadFromServer: vi.fn(),
+    shareRoom: vi.fn().mockResolvedValue({ status: 'shared', message: '招待情報を共有しました。' }),
     setPrefilledGameId: vi.fn(),
   },
 });
@@ -72,7 +74,7 @@ describe('App (collab mode)', () => {
       joinCode: '123456',
       syncStatus: 'synced',
       syncError: '',
-      participants: [{ userId: 'u1', nickname: 'P1', online: true }],
+      participants: [{ userId: 'u1', nickname: 'P1' }],
       hasUnsyncedDraft: false,
       shareUrl: 'https://example.com/?game=game-1',
     };
@@ -83,6 +85,27 @@ describe('App (collab mode)', () => {
     expect(screen.getByText(/ゲームID:/)).toBeInTheDocument();
     expect(screen.getByText('P1')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '設定' })).toBeInTheDocument();
+  });
+
+  test('共有ボタン押下で shareRoom を呼ぶ', async () => {
+    const user = userEvent.setup();
+    const state = baseHookState();
+    state.isLobbyVisible = false;
+    state.syncMeta = {
+      gameId: 'game-1',
+      joinCode: '123456',
+      syncStatus: 'synced',
+      syncError: '',
+      participants: [{ userId: 'u1', nickname: 'P1' }],
+      hasUnsyncedDraft: false,
+      shareUrl: 'https://example.com/?game=game-1',
+    };
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'この部屋を共有' }));
+
+    expect(state.actions.shareRoom).toHaveBeenCalled();
   });
 
   test('未同期下書きがある場合に再送ボタンを押せる', async () => {

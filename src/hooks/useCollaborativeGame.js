@@ -11,7 +11,6 @@ import {
   subscribeGameState,
 } from '../collab/gameRepository';
 import { hasSupabaseEnv } from '../collab/supabaseClient';
-import { trackPresence } from '../collab/presenceRepository';
 import { appReducer } from '../state/appReducer';
 import { createBaseState, normalizeAppState } from '../state/appState';
 import { load as loadLocalCache, save as saveLocalCache } from '../storage/appStorage';
@@ -49,91 +48,30 @@ const buildShareUrl = (gameId) => {
   return url.toString();
 };
 
-const buildParticipants = (members, presenceProfiles) => {
-  const onlineSet = new Set((presenceProfiles || []).map((profile) => profile.userId));
-  const byUserId = new Map();
-
-  (members || []).forEach((member) => {
-    byUserId.set(member.userId, {
-      ...member,
-      online: onlineSet.has(member.userId),
+const buildParticipants = (members) =>
+  [...(members || [])]
+    .map((member) => ({
+      userId: member.userId,
+      nickname: member.nickname || 'Guest',
+      joinedAt: member.joinedAt || null,
+      lastSeenAt: member.lastSeenAt || null,
+    }))
+    .sort((a, b) => {
+      const left = a.joinedAt || '';
+      const right = b.joinedAt || '';
+      return left.localeCompare(right);
     });
-  });
-
-  (presenceProfiles || []).forEach((profile) => {
-    if (!byUserId.has(profile.userId)) {
-      byUserId.set(profile.userId, {
-        userId: profile.userId,
-        nickname: profile.nickname || 'Guest',
-        joinedAt: null,
-        lastSeenAt: null,
-        online: true,
-      });
-      return;
-    }
-
-    const existing = byUserId.get(profile.userId);
-    byUserId.set(profile.userId, {
-      ...existing,
-      nickname: existing.nickname || profile.nickname || 'Guest',
-      online: true,
-    });
-  });
-
-  return [...byUserId.values()].sort((a, b) => {
-    const left = a.joinedAt || '';
-    const right = b.joinedAt || '';
-    return left.localeCompare(right);
-  });
-};
-
-const buildPresenceProfileKey = (profile) => `${profile.userId}::${profile.onlineAt || ''}`;
-
-const addPresenceProfiles = (currentProfiles, newProfiles) => {
-  const next = [...(currentProfiles || [])];
-  const existing = new Set(next.map(buildPresenceProfileKey));
-
-  (newProfiles || []).forEach((profile) => {
-    if (!profile?.userId) return;
-    const normalized = {
-      userId: profile.userId,
-      nickname: profile.nickname || 'Guest',
-      onlineAt: profile.onlineAt || null,
-    };
-    const key = buildPresenceProfileKey(normalized);
-    if (existing.has(key)) return;
-    existing.add(key);
-    next.push(normalized);
-  });
-
-  return next;
-};
-
-const removePresenceProfiles = (currentProfiles, removedProfiles) => {
-  const removeCounts = new Map();
-  (removedProfiles || []).forEach((profile) => {
-    if (!profile?.userId) return;
-    const normalized = {
-      userId: profile.userId,
-      onlineAt: profile.onlineAt || null,
-    };
-    const key = buildPresenceProfileKey(normalized);
-    removeCounts.set(key, (removeCounts.get(key) || 0) + 1);
-  });
-
-  return (currentProfiles || []).filter((profile) => {
-    const key = buildPresenceProfileKey(profile);
-    const count = removeCounts.get(key) || 0;
-    if (count <= 0) return true;
-    removeCounts.set(key, count - 1);
-    return false;
-  });
-};
 
 const createGuestNickname = () => {
   const suffix = `${Math.floor(1000 + Math.random() * 9000)}`;
   return `Guest-${suffix}`;
 };
+
+const buildInviteMessage = ({ shareUrl, joinCode }) =>
+  `18xx 収益計算補助の共同ゲームに参加してください。\n招待URL: ${shareUrl}\n参加コード: ${joinCode}`;
+
+const isShareCanceledError = (error) =>
+  error?.name === 'AbortError' || error?.name === 'NotAllowedError';
 
 const isMissingAuthSessionError = (error) => {
   const message = `${error?.message || ''}`;
@@ -174,17 +112,13 @@ export function useCollaborativeGame() {
   const [createdGame, setCreatedGame] = useState(null);
   const [hasDraft, setHasDraft] = useState(false);
 
-  const activeNicknameRef = useRef(createGuestNickname());
   const saveTimerRef = useRef(null);
   const skipNextSaveRef = useRef(false);
-  const appStateRef = useRef(createBaseState());
   const lastVersionRef = useRef(0);
   const joinTokenRef = useRef(0);
   const membersRef = useRef([]);
-  const presenceProfilesRef = useRef([]);
   const unsubscribeStateRef = useRef(null);
   const unsubscribeMembersRef = useRef(null);
-  const stopPresenceRef = useRef(null);
   const pollTimerRef = useRef(null);
   const autoJoinAttemptedRef = useRef(new Set());
 
@@ -204,11 +138,6 @@ export function useCollaborativeGame() {
       unsubscribeMembersRef.current();
       unsubscribeMembersRef.current = null;
     }
-    if (stopPresenceRef.current) {
-      const stop = stopPresenceRef.current;
-      stopPresenceRef.current = null;
-      Promise.resolve(stop()).catch(() => {});
-    }
     if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
@@ -216,7 +145,7 @@ export function useCollaborativeGame() {
   }, []);
 
   const refreshParticipants = useCallback(() => {
-    setParticipants(buildParticipants(membersRef.current, presenceProfilesRef.current));
+    setParticipants(buildParticipants(membersRef.current));
   }, []);
 
   const refreshMembers = useCallback(
@@ -234,6 +163,33 @@ export function useCollaborativeGame() {
     dispatch({ type: 'APP_LOAD', payload: normalizeAppState(nextState) });
   }, []);
 
+  const applyRemoteSnapshot = useCallback(
+    ({ state, version, force = false, targetGameId }) => {
+      if (state == null) return false;
+
+      const normalizedRemoteState = normalizeAppState(state);
+      const remoteVersion = Number(version || 0);
+
+      // Passive sync follows monotonic server versions so stale payloads never overwrite
+      // unsaved local edits during the debounce window.
+      if (!force && remoteVersion <= lastVersionRef.current) {
+        return false;
+      }
+
+      if (remoteVersion > 0) {
+        lastVersionRef.current = remoteVersion;
+      }
+      setSyncStatus('synced');
+      setSyncError('');
+      applyRemoteState(normalizedRemoteState);
+      if (targetGameId) {
+        saveLocalCache(targetGameId, normalizedRemoteState);
+      }
+      return true;
+    },
+    [applyRemoteState]
+  );
+
   const startRemotePolling = useCallback(
     (targetGameId) => {
       if (!targetGameId) return;
@@ -243,36 +199,29 @@ export function useCollaborativeGame() {
       pollTimerRef.current = setInterval(async () => {
         try {
           const remote = await loadGameState(targetGameId);
-          if (!remote?.version) return;
-          const remoteVersion = Number(remote.version || 0);
-          const normalizedRemoteState = normalizeAppState(remote.state);
-          const hasDifferentState =
-            JSON.stringify(normalizedRemoteState) !== JSON.stringify(appStateRef.current);
-          const shouldApply = remoteVersion > lastVersionRef.current || hasDifferentState;
-
-          if (!shouldApply) return;
-
-          lastVersionRef.current = remoteVersion;
-          setSyncStatus('synced');
-          setSyncError('');
-          applyRemoteState(normalizedRemoteState);
-          saveLocalCache(targetGameId, normalizedRemoteState);
+          applyRemoteSnapshot({
+            state: remote?.state,
+            version: remote?.version,
+            targetGameId,
+          });
         } catch (_error) {
           // Realtime の補助目的なので、ポーリング失敗時は静かに継続する
         }
       }, REMOTE_POLL_MS);
     },
-    [applyRemoteState]
+    [applyRemoteSnapshot]
   );
 
   const connectToGame = useCallback(
-    async ({ targetGameId, nickname, seedState, seedVersion }) => {
+    async ({ targetGameId, seedState, seedVersion }) => {
       if (!targetGameId) {
         throw new Error('gameId が指定されていません。');
       }
 
       const token = ++joinTokenRef.current;
       cleanupRealtime();
+      membersRef.current = [];
+      setParticipants([]);
 
       setSyncStatus('syncing');
       setSyncError('');
@@ -308,12 +257,15 @@ export function useCollaborativeGame() {
 
       if (joinTokenRef.current !== token) return;
 
-      lastVersionRef.current = loadedVersion;
       setGameId(targetGameId);
       setPrefilledGameId(targetGameId);
       replaceGameIdInUrl(targetGameId);
-      applyRemoteState(loadedState);
-      saveLocalCache(targetGameId, loadedState);
+      applyRemoteSnapshot({
+        state: loadedState,
+        version: loadedVersion,
+        force: true,
+        targetGameId,
+      });
       setHasDraft(hasUnsyncedDraft(targetGameId));
       if (!loadedFromLocalCache) {
         setSyncStatus('synced');
@@ -330,18 +282,11 @@ export function useCollaborativeGame() {
 
       try {
         unsubscribeStateRef.current = await subscribeGameState(targetGameId, (remote) => {
-          if (!remote?.version) return;
-          const remoteVersion = Number(remote.version || 0);
-          const normalizedRemoteState = normalizeAppState(remote.state);
-          const hasDifferentState =
-            JSON.stringify(normalizedRemoteState) !== JSON.stringify(appStateRef.current);
-          const shouldApply = remoteVersion > lastVersionRef.current || hasDifferentState;
-          if (!shouldApply) return;
-          lastVersionRef.current = remoteVersion;
-          setSyncStatus('synced');
-          setSyncError('');
-          applyRemoteState(normalizedRemoteState);
-          saveLocalCache(targetGameId, normalizedRemoteState);
+          applyRemoteSnapshot({
+            state: remote?.state,
+            version: remote?.version,
+            targetGameId,
+          });
         });
       } catch (_error) {
         // Realtime購読に失敗してもポーリングで同期する
@@ -354,47 +299,8 @@ export function useCollaborativeGame() {
       } catch (_error) {
         // 参加者表示だけ失敗。ゲーム同期は継続する
       }
-
-      try {
-        stopPresenceRef.current = await trackPresence(
-          targetGameId,
-          {
-            userId: user.id,
-            nickname,
-          },
-          {
-            onSync: (profiles) => {
-              presenceProfilesRef.current = profiles;
-              refreshParticipants();
-            },
-            onJoin: ({ profiles }) => {
-              presenceProfilesRef.current = addPresenceProfiles(
-                presenceProfilesRef.current,
-                profiles
-              );
-              refreshParticipants();
-            },
-            onLeave: ({ profiles }) => {
-              presenceProfilesRef.current = removePresenceProfiles(
-                presenceProfilesRef.current,
-                profiles
-              );
-              refreshParticipants();
-            },
-          }
-        );
-      } catch (_error) {
-        // Presence失敗でも本体同期は継続する
-      }
     },
-    [
-      applyRemoteState,
-      cleanupRealtime,
-      refreshMembers,
-      refreshParticipants,
-      startRemotePolling,
-      user,
-    ]
+    [applyRemoteSnapshot, cleanupRealtime, refreshMembers, startRemotePolling]
   );
 
   const createAndJoinGame = useCallback(
@@ -407,7 +313,6 @@ export function useCollaborativeGame() {
       setIsLobbyBusy(true);
       setLobbyError('');
       try {
-        activeNicknameRef.current = trimmedName;
         const created = await createGame({
           initialState: createBaseState(),
           nickname: trimmedName,
@@ -420,7 +325,6 @@ export function useCollaborativeGame() {
         });
         await connectToGame({
           targetGameId: created.gameId,
-          nickname: trimmedName,
           seedState: created.state,
           seedVersion: created.version,
         });
@@ -444,7 +348,6 @@ export function useCollaborativeGame() {
       setIsLobbyBusy(true);
       setLobbyError('');
       try {
-        activeNicknameRef.current = trimmedName;
         const joined = await joinGame({
           gameId: nextGameId,
           joinCode: nextJoinCode,
@@ -453,7 +356,6 @@ export function useCollaborativeGame() {
         setJoinCode(nextJoinCode);
         await connectToGame({
           targetGameId: joined.gameId,
-          nickname: trimmedName,
           seedState: joined.state,
           seedVersion: joined.version,
         });
@@ -476,38 +378,93 @@ export function useCollaborativeGame() {
     try {
       const result = await saveGameState(gameId, draft.state);
       lastVersionRef.current = Number(result.version || lastVersionRef.current);
-      applyRemoteState(draft.state);
-      saveLocalCache(gameId, draft.state);
+      applyRemoteSnapshot({
+        state: draft.state,
+        version: result.version || lastVersionRef.current,
+        force: true,
+        targetGameId: gameId,
+      });
       clearUnsyncedDraft(gameId);
       setHasDraft(false);
-      setSyncStatus('synced');
-      setSyncError('');
       return true;
     } catch (error) {
       setSyncStatus('error');
       setSyncError(error.message || '未同期下書きの再送に失敗しました。');
       return false;
     }
-  }, [applyRemoteState, gameId]);
+  }, [applyRemoteSnapshot, gameId]);
 
   const reloadFromServer = useCallback(async () => {
     if (!gameId) return false;
     setSyncStatus('syncing');
     try {
       const remote = await loadGameState(gameId);
-      lastVersionRef.current = Number(remote.version || lastVersionRef.current);
-      const normalized = normalizeAppState(remote.state);
-      applyRemoteState(normalized);
-      saveLocalCache(gameId, normalized);
-      setSyncStatus('synced');
-      setSyncError('');
+      applyRemoteSnapshot({
+        state: remote.state,
+        version: remote.version,
+        force: true,
+        targetGameId: gameId,
+      });
       return true;
     } catch (error) {
       setSyncStatus('error');
       setSyncError(error.message || 'サーバー再読込に失敗しました。');
       return false;
     }
-  }, [applyRemoteState, gameId]);
+  }, [applyRemoteSnapshot, gameId]);
+
+  const shareRoom = useCallback(async () => {
+    const shareUrl = buildShareUrl(gameId);
+    if (!shareUrl || !joinCode) {
+      return {
+        status: 'error',
+        message: '共有に失敗しました。手動でURLと参加コードを共有してください。',
+      };
+    }
+
+    const text = buildInviteMessage({ shareUrl, joinCode });
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: '18xx 収益計算補助',
+          text,
+          url: shareUrl,
+        });
+        return {
+          status: 'shared',
+          message: '招待情報を共有しました。',
+        };
+      } catch (error) {
+        if (isShareCanceledError(error)) {
+          return {
+            status: 'cancelled',
+            message: '',
+          };
+        }
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return {
+          status: 'copied',
+          message: '招待情報をコピーしました。',
+        };
+      } catch (_error) {
+        return {
+          status: 'error',
+          message: '共有に失敗しました。手動でURLと参加コードを共有してください。',
+        };
+      }
+    }
+
+    return {
+      status: 'error',
+      message: '共有に失敗しました。手動でURLと参加コードを共有してください。',
+    };
+  }, [gameId, joinCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -567,17 +524,12 @@ export function useCollaborativeGame() {
     autoJoinAttemptedRef.current.add(autoJoinGameId);
     connectToGame({
       targetGameId: autoJoinGameId,
-      nickname: activeNicknameRef.current,
     }).catch(() => {
       setLobbyError(
         'URLのゲームに自動参加できませんでした。参加コードを入力して参加してください。'
       );
     });
   }, [authStatus, connectToGame, gameId]);
-
-  useEffect(() => {
-    appStateRef.current = appState;
-  }, [appState]);
 
   useEffect(() => {
     if (!gameId) return;
@@ -649,6 +601,7 @@ export function useCollaborativeGame() {
       joinExistingGame,
       resendUnsyncedDraft,
       reloadFromServer,
+      shareRoom,
       setPrefilledGameId,
     },
   };
