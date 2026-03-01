@@ -324,7 +324,6 @@ describe('useCollaborativeGame', () => {
   });
 
   test('同一 version の stale realtime payload では未保存ローカル変更を上書きしない', async () => {
-    vi.useFakeTimers();
     let stateSubscriptionHandler;
     mockSubscribeGameState.mockImplementation(async (_gameId, handler) => {
       stateSubscriptionHandler = handler;
@@ -361,7 +360,7 @@ describe('useCollaborativeGame', () => {
     ]);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await new Promise((resolve) => setTimeout(resolve, 450));
     });
 
     expect(mockSaveGameState).toHaveBeenCalledWith(
@@ -370,10 +369,9 @@ describe('useCollaborativeGame', () => {
         players: [expect.objectContaining({ id: 'p1', name: 'Player A' })],
       })
     );
-  });
+  }, 10000);
 
   test('同一 version の stale poll payload では未保存ローカル変更を上書きしない', async () => {
-    vi.useFakeTimers();
     mockLoadGameState
       .mockResolvedValueOnce({
         state: buildBaseState(),
@@ -399,13 +397,13 @@ describe('useCollaborativeGame', () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
+      await new Promise((resolve) => setTimeout(resolve, 2200));
     });
 
     expect(result.current.appState.players).toEqual([
       expect.objectContaining({ id: 'p1', name: 'Player A' }),
     ]);
-  });
+  }, 10000);
 
   test('新しい version の remote payload は適用される', async () => {
     let stateSubscriptionHandler;
