@@ -68,6 +68,7 @@ export const createCompany = (index, numORs) => ({
   icon: null,
   trains: [],
   stockHoldings: [],
+  presidentPlayerId: null,
   isUnestablished: true,
   treasuryStockPercentage: 0,
   bankPoolPercentage: 0,
@@ -83,6 +84,8 @@ export const cloneCompanies = (companies) =>
       stops: [...(train.stops || [])],
     })),
     stockHoldings: (company.stockHoldings || []).map((holding) => ({ ...holding })),
+    presidentPlayerId:
+      typeof company.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
     orRevenues: (company.orRevenues || []).map((orRevenue) => ({ ...orRevenue })),
   }));
 
@@ -218,6 +221,8 @@ const normalizeCompany = (company, index, numORs, hasIpoShares) => {
     ipoPercentage: Number.isFinite(company?.ipoPercentage) ? company.ipoPercentage : 0,
     trains: Array.isArray(company?.trains) ? company.trains : [],
     stockHoldings: Array.isArray(company?.stockHoldings) ? company.stockHoldings : [],
+    presidentPlayerId:
+      typeof company?.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
     orRevenues: buildORRevenues(
       numORs,
       Array.isArray(company?.orRevenues) ? company.orRevenues : []

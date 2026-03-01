@@ -24,6 +24,8 @@ export function appReducer(state, action) {
     case 'COMPANY_SET_ALL': {
       const companies = action.payload.map((company) => ({
         ...company,
+        presidentPlayerId:
+          typeof company?.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
         isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
       }));
@@ -187,6 +189,24 @@ export function appReducer(state, action) {
         ...state,
         companies: state.companies.map((company) =>
           company.id === companyId ? { ...company, isUnestablished } : company
+        ),
+      };
+    }
+
+    case 'SR_PRESIDENT_SET': {
+      const { companyId, presidentPlayerId } = action.payload;
+      return {
+        ...state,
+        companies: state.companies.map((company) =>
+          company.id === companyId
+            ? {
+                ...company,
+                presidentPlayerId:
+                  typeof presidentPlayerId === 'string' && presidentPlayerId.trim()
+                    ? presidentPlayerId
+                    : null,
+              }
+            : company
         ),
       };
     }

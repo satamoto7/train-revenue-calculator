@@ -83,4 +83,25 @@ describe('appReducer', () => {
     expect(next.cycleHistory).toHaveLength(1);
     expect(next.flow.step).toBe('stockRound');
   });
+
+  test('SR_PRESIDENT_SET で対象会社の社長指定だけ更新する', () => {
+    const initial = {
+      ...createBaseState(),
+      companies: [
+        { id: 'c1', name: 'Co1', displayName: '', stockHoldings: [], trains: [], presidentPlayerId: null },
+        { id: 'c2', name: 'Co2', displayName: '', stockHoldings: [], trains: [], presidentPlayerId: 'p9' },
+      ],
+    };
+
+    const next = appReducer(initial, {
+      type: 'SR_PRESIDENT_SET',
+      payload: {
+        companyId: 'c1',
+        presidentPlayerId: 'p1',
+      },
+    });
+
+    expect(next.companies[0].presidentPlayerId).toBe('p1');
+    expect(next.companies[1].presidentPlayerId).toBe('p9');
+  });
 });

@@ -20,22 +20,38 @@ const buildCompany = () => ({
   ],
 });
 
+const buildSecondCompany = () => ({
+  id: 'c2',
+  name: 'Co2',
+  displayName: '会社B',
+  genericIndex: 2,
+  color: '青',
+  symbol: '△',
+  isUnestablished: false,
+  trains: [],
+  stockHoldings: [],
+  treasuryStockPercentage: 0,
+  orRevenues: [
+    { orNum: 1, revenue: 50 },
+    { orNum: 2, revenue: 10 },
+  ],
+});
+
 const buildProps = (overrides = {}) => ({
   players: [],
-  companies: [buildCompany()],
+  companies: [buildCompany(), buildSecondCompany()],
   flow: {
     numORs: 2,
   },
   activeCycle: {
     currentOR: 1,
-    companyOrder: ['c1'],
+    companyOrder: ['c1', 'c2'],
     selectedCompanyId: 'c1',
     completedCompanyIdsByOR: {
       1: [],
       2: [],
     },
   },
-  handleSelectCompany: vi.fn(),
   handleMoveOrderUp: vi.fn(),
   handleMoveOrderDown: vi.fn(),
   handleRebalanceRemaining: vi.fn(),
@@ -56,7 +72,7 @@ describe('OrRoundView OR revenue draft', () => {
     const props = buildProps();
     render(<OrRoundView {...props} />);
 
-    const input = screen.getByRole('spinbutton', { name: /OR1/ });
+    const input = screen.getByRole('spinbutton', { name: 'Co1の現在OR1収益' });
     await user.clear(input);
     await user.tab();
 
@@ -68,11 +84,24 @@ describe('OrRoundView OR revenue draft', () => {
     const props = buildProps();
     render(<OrRoundView {...props} />);
 
-    const input = screen.getByRole('spinbutton', { name: /OR1/ });
+    const input = screen.getByRole('spinbutton', { name: 'Co1の現在OR1収益' });
     await user.clear(input);
     await user.type(input, '250');
     await user.keyboard('{Enter}');
 
     expect(props.handleORRevenueChange).toHaveBeenCalledWith('c1', 1, 250);
+  });
+
+  test('別企業の詳細を開くとその企業だけ詳細表示になる', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByText('実行企業: Co1')).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: '詳細を開く' })[0]);
+
+    expect(screen.getByText('実行企業: 会社B')).toBeInTheDocument();
+    expect(screen.queryByText('実行企業: Co1')).not.toBeInTheDocument();
   });
 });
