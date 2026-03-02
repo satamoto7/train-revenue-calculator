@@ -3,6 +3,7 @@ import {
   createGame,
   joinGame,
   listGameMembers,
+  loadGameShareMeta,
   loadGameState,
   saveGameState,
   subscribeGameState,
@@ -83,6 +84,23 @@ describe('gameRepository', () => {
     expect(mockSupabase.from).toHaveBeenCalledWith('game_states');
     expect(result.version).toBe(3);
     expect(result.updatedBy).toBe('user-1');
+  });
+
+  test('loadGameShareMeta は games から join_code を読み込む', async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        join_code: '123456',
+      },
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ single });
+    const select = vi.fn().mockReturnValue({ eq });
+    mockSupabase.from.mockReturnValue({ select });
+
+    const result = await loadGameShareMeta('game-1');
+
+    expect(mockSupabase.from).toHaveBeenCalledWith('games');
+    expect(result).toEqual({ joinCode: '123456' });
   });
 
   test('saveGameState は save_game_state RPC を使う', async () => {

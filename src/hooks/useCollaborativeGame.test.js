@@ -5,6 +5,7 @@ import { useCollaborativeGame } from './useCollaborativeGame';
 const mockCreateGame = vi.fn();
 const mockJoinGame = vi.fn();
 const mockLoadGameState = vi.fn();
+const mockLoadGameShareMeta = vi.fn();
 const mockSaveGameState = vi.fn();
 const mockSignInAnonymously = vi.fn();
 const mockGetCurrentUser = vi.fn();
@@ -33,6 +34,7 @@ vi.mock('../collab/gameRepository', () => ({
   createGame: (...args) => mockCreateGame(...args),
   joinGame: (...args) => mockJoinGame(...args),
   loadGameState: (...args) => mockLoadGameState(...args),
+  loadGameShareMeta: (...args) => mockLoadGameShareMeta(...args),
   saveGameState: (...args) => mockSaveGameState(...args),
   signInAnonymously: (...args) => mockSignInAnonymously(...args),
   getCurrentUser: (...args) => mockGetCurrentUser(...args),
@@ -49,6 +51,8 @@ describe('useCollaborativeGame', () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    localStorage.clear();
+    window.history.replaceState({}, '', '/');
 
     mockHasSupabaseEnv.mockReturnValue(true);
     mockGetCurrentUser.mockResolvedValue({ id: 'user-1' });
@@ -71,6 +75,9 @@ describe('useCollaborativeGame', () => {
     mockLoadGameState.mockResolvedValue({
       state: buildBaseState(),
       version: 1,
+    });
+    mockLoadGameShareMeta.mockResolvedValue({
+      joinCode: '123456',
     });
     mockCreateGame.mockResolvedValue({
       gameId: 'game-1',
@@ -134,9 +141,58 @@ describe('useCollaborativeGame', () => {
     await waitFor(() => {
       expect(result.current.isLobbyVisible).toBe(false);
       expect(result.current.syncMeta.gameId).toBe('game-1');
+      expect(result.current.syncMeta.joinCode).toBe('123456');
     });
 
     expect(mockCreateGame).toHaveBeenCalled();
+  });
+
+  test('URL 自動参加時はサーバーから joinCode を復元する', async () => {
+    window.history.replaceState({}, '', '/?game=game-1');
+
+    const { result } = renderHook(() => useCollaborativeGame());
+
+    await waitFor(() => {
+      expect(result.current.syncMeta.gameId).toBe('game-1');
+      expect(result.current.syncMeta.joinCode).toBe('123456');
+    });
+
+    expect(mockLoadGameShareMeta).toHaveBeenCalledWith('game-1');
+  });
+
+  test('URL 自動参加時はローカル保存済み joinCode を共有に使える', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    window.history.replaceState({}, '', '/?game=game-1');
+    localStorage.setItem(
+      'collab_session_game-1',
+      JSON.stringify({
+        joinCode: '654321',
+        savedAt: '2026-01-01T00:00:00.000Z',
+      })
+    );
+    mockLoadGameShareMeta.mockRejectedValue(new Error('join code unavailable'));
+
+    const { result } = renderHook(() => useCollaborativeGame());
+
+    await waitFor(() => {
+      expect(result.current.syncMeta.gameId).toBe('game-1');
+      expect(result.current.syncMeta.joinCode).toBe('654321');
+    });
+
+    let response;
+    await act(async () => {
+      response = await result.current.actions.shareRoom();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('参加コード: 654321'));
+    expect(response).toEqual({
+      status: 'copied',
+      message: '招待情報をコピーしました。',
+    });
   });
 
   test('ローカル dispatch 後に debounce 保存が走る', async () => {

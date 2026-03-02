@@ -100,6 +100,24 @@ export async function loadGameState(gameId) {
   };
 }
 
+export async function loadGameShareMeta(gameId) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('games')
+    .select('join_code')
+    .eq('id', gameId)
+    .single();
+
+  if (error) throw error;
+
+  const joinCode = `${data?.join_code || ''}`.trim();
+  if (!joinCode) {
+    throw new Error('games.join_code の取得に失敗しました。');
+  }
+
+  return { joinCode };
+}
+
 const isMissingSaveRpcError = (error) => {
   const message = `${error?.message || ''}`;
   return (
