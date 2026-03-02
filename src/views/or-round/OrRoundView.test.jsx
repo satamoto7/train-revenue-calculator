@@ -12,7 +12,7 @@ const buildCompany = () => ({
   symbol: '○',
   isUnestablished: false,
   trains: [],
-  stockHoldings: [],
+  stockHoldings: [{ playerId: 'p1', percentage: 60 }],
   treasuryStockPercentage: 0,
   orRevenues: [
     { orNum: 1, revenue: 100 },
@@ -38,7 +38,10 @@ const buildSecondCompany = () => ({
 });
 
 const buildProps = (overrides = {}) => ({
-  players: [],
+  players: [
+    { id: 'p1', displayName: 'Alice', name: 'Alice', color: '緑', symbol: '●' },
+    { id: 'p2', displayName: 'Bob', name: 'Bob', color: '黄', symbol: '▲' },
+  ],
   companies: [buildCompany(), buildSecondCompany()],
   flow: {
     numORs: 2,
@@ -103,5 +106,19 @@ describe('OrRoundView OR revenue draft', () => {
 
     expect(screen.getByText('実行企業: 会社B')).toBeInTheDocument();
     expect(screen.queryByText('実行企業: Co1')).not.toBeInTheDocument();
+  });
+
+  test('会社カードと配当行に色アクセントを表示する', () => {
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByRole('heading', { name: 'Co1' }).closest('article')).toHaveClass(
+      'border-l-8',
+      'border-l-red-500'
+    );
+    expect(screen.getByText('● Alice (60%)').closest('span')).toHaveClass(
+      'border-l-4',
+      'border-l-emerald-300'
+    );
   });
 });

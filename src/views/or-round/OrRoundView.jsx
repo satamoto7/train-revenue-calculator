@@ -9,10 +9,13 @@ import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
+  getCompanyAccentEdgeClass,
   getColorTextClass,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
+  getPlayerAccentEdgeClass,
+  getPlayerColor,
   getPlayerDisplayName,
   getPlayerSymbol,
 } from '../../lib/labels';
@@ -279,7 +282,7 @@ const CompanyCard = ({
             : isSelected
               ? 'border-brand-accent bg-brand-accent-soft/60'
               : 'border-border-subtle bg-surface-elevated'
-      }`}
+      } border-l-8 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
@@ -453,7 +456,11 @@ const CompanyCard = ({
                 const dividend = calculateDividend(totalRevenue, percentage);
                 return (
                   <li key={player.id} className="flex items-center justify-between gap-2">
-                    <span>
+                    <span
+                      className={`flex-1 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 border-l-4 ${getPlayerAccentEdgeClass(
+                        getPlayerColor(player)
+                      )}`}
+                    >
                       {getPlayerSymbol(player)} {getPlayerDisplayName(player)} ({percentage}%)
                     </span>
                     <span className="font-semibold text-status-success">{dividend}</span>
@@ -606,9 +613,16 @@ const OrRoundView = ({
                 return (
                   <div
                     key={companyId}
-                    className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-elevated p-2"
+                    className={`flex items-center justify-between rounded-md border border-border-subtle bg-surface-elevated p-2 border-l-4 ${getCompanyAccentEdgeClass(
+                      getCompanyColor(company)
+                    )}`}
                   >
-                    <span className="text-sm text-text-primary">{getCompanyDisplayName(company)}</span>
+                    <span className="text-sm text-text-primary">
+                      <span className={getColorTextClass(getCompanyColor(company))}>
+                        {getCompanySymbol(company)}
+                      </span>{' '}
+                      {getCompanyDisplayName(company)}
+                    </span>
                     <div className="flex items-center gap-1">
                       <Button
                         type="button"

@@ -5,14 +5,16 @@ import StockRoundView from './StockRoundView';
 
 const baseProps = () => ({
   players: [
-    { id: 'p1', displayName: 'Player A', name: 'Player A', symbol: '●' },
-    { id: 'p2', displayName: 'Player B', name: 'Player B', symbol: '▲' },
+    { id: 'p1', displayName: 'Player A', name: 'Player A', color: '赤', symbol: '●' },
+    { id: 'p2', displayName: 'Player B', name: 'Player B', color: '青', symbol: '▲' },
   ],
   companies: [
     {
       id: 'c1',
       displayName: '会社A',
       name: 'Co1',
+      color: '赤',
+      symbol: '○',
       stockHoldings: [
         { playerId: 'p1', percentage: 20 },
         { playerId: 'p2', percentage: 10 },
@@ -80,5 +82,19 @@ describe('StockRoundView committed number inputs', () => {
     await user.click(screen.getByLabelText('会社AのPlayer Bを社長にする'));
 
     expect(props.handlePresidentChange).toHaveBeenCalledWith('c1', 'p2');
+  });
+
+  test('会社カードと保有チップに色アクセントを表示する', () => {
+    const props = baseProps();
+    render(<StockRoundView {...props} />);
+
+    expect(screen.getByRole('heading', { name: '会社A' }).closest('article')).toHaveClass(
+      'border-l-8',
+      'border-l-red-500'
+    );
+    expect(screen.getByText('● Player A').closest('div.rounded-xl')).toHaveClass(
+      'border-l-4',
+      'border-l-rose-300'
+    );
   });
 });

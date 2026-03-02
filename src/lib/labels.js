@@ -35,6 +35,38 @@ const COLOR_TEXT_MAP = {
   無色: 'text-slate-500',
 };
 
+const COMPANY_ACCENT_EDGE_MAP = {
+  赤: 'border-l-red-500',
+  青: 'border-l-blue-500',
+  緑: 'border-l-green-500',
+  黄: 'border-l-yellow-400',
+  紫: 'border-l-purple-500',
+  橙: 'border-l-orange-500',
+  黒: 'border-l-slate-900',
+  白: 'border-l-slate-400',
+  桃: 'border-l-pink-500',
+  茶: 'border-l-amber-600',
+  空: 'border-l-sky-500',
+  灰: 'border-l-gray-500',
+  無色: 'border-l-slate-300',
+};
+
+const PLAYER_ACCENT_EDGE_MAP = {
+  赤: 'border-l-rose-300',
+  青: 'border-l-sky-300',
+  緑: 'border-l-emerald-300',
+  黄: 'border-l-amber-300',
+  紫: 'border-l-fuchsia-300',
+  橙: 'border-l-orange-300',
+  黒: 'border-l-slate-500',
+  白: 'border-l-slate-200',
+  桃: 'border-l-pink-300',
+  茶: 'border-l-amber-300',
+  空: 'border-l-sky-300',
+  灰: 'border-l-gray-300',
+  無色: 'border-l-slate-200',
+};
+
 export const PLAYER_SYMBOL_OPTIONS = PLAYER_SYMBOLS;
 export const COMPANY_SYMBOL_OPTIONS = COMPANY_SYMBOLS;
 export const PLAYER_COLOR_OPTIONS = PLAYER_COLORS;
@@ -56,6 +88,10 @@ export const isKnownCompanyColor = (color) => COMPANY_COLORS.includes(color);
 
 export const getColorStyleClass = (color) => COLOR_STYLE_MAP[color] || COLOR_STYLE_MAP.無色;
 export const getColorTextClass = (color) => COLOR_TEXT_MAP[color] || COLOR_TEXT_MAP.無色;
+export const getCompanyAccentEdgeClass = (color) =>
+  COMPANY_ACCENT_EDGE_MAP[color] || COMPANY_ACCENT_EDGE_MAP.無色;
+export const getPlayerAccentEdgeClass = (color) =>
+  PLAYER_ACCENT_EDGE_MAP[color] || PLAYER_ACCENT_EDGE_MAP.無色;
 
 export const getPlayerDisplayName = (player) =>
   player?.displayName ||

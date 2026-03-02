@@ -3,10 +3,13 @@ import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
+  getCompanyAccentEdgeClass,
   getColorTextClass,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
+  getPlayerAccentEdgeClass,
+  getPlayerColor,
   getPlayerDisplayName,
   getPlayerSymbol,
 } from '../../lib/labels';
@@ -28,7 +31,9 @@ const StatusBadge = ({ className, children }) => (
 
 const SummaryHoldingChip = ({ player, percentage, isPresident, isManualPresident }) => (
   <div
-    className={`rounded-xl border px-3 py-2 text-sm ${
+    className={`rounded-xl border px-3 py-2 text-sm border-l-4 ${getPlayerAccentEdgeClass(
+      getPlayerColor(player)
+    )} ${
       isPresident
         ? 'border-brand-accent bg-brand-accent-soft text-text-primary'
         : 'border-border-subtle bg-surface-muted text-text-secondary'
@@ -88,7 +93,7 @@ const CompanyCard = ({
         validation?.invalid
           ? 'border-status-danger/70 bg-status-danger/5'
           : 'border-border-subtle bg-surface-elevated'
-      }`}
+      } border-l-8 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
@@ -159,7 +164,9 @@ const CompanyCard = ({
               return (
                 <div
                   key={player.id}
-                  className={`rounded-xl border p-3 ${
+                  className={`rounded-xl border p-3 border-l-4 ${getPlayerAccentEdgeClass(
+                    getPlayerColor(player)
+                  )} ${
                     effectivePresidentIds.has(player.id)
                       ? 'border-brand-accent bg-brand-accent-soft'
                       : 'border-border-subtle bg-surface-muted'
