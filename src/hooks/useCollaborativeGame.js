@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   joinGame,
   listGameMembers,
+  loadGameShareMeta,
   loadGameState,
   saveGameState,
   signInAnonymously,
@@ -20,6 +21,7 @@ import {
   loadUnsyncedDraft,
   saveUnsyncedDraft,
 } from '../storage/collabDraftStorage';
+import { loadCollabSession, saveCollabSession } from '../storage/collabSessionStorage';
 
 const SAVE_DEBOUNCE_MS = 400;
 const REMOTE_POLL_MS = 2000;
@@ -219,15 +221,19 @@ export function useCollaborativeGame() {
       }
 
       const token = ++joinTokenRef.current;
+      const cachedSession = loadCollabSession(targetGameId);
+      const cachedJoinCode = cachedSession?.joinCode || '';
       cleanupRealtime();
       membersRef.current = [];
       setParticipants([]);
+      setJoinCode(cachedJoinCode);
 
       setSyncStatus('syncing');
       setSyncError('');
       setLobbyError('');
       setCreatedGame(null);
 
+      const shareMetaPromise = loadGameShareMeta(targetGameId).catch(() => null);
       let loadedState = seedState || null;
       let loadedVersion = Number(seedVersion || 0);
       let loadedFromLocalCache = false;
@@ -269,6 +275,13 @@ export function useCollaborativeGame() {
       setHasDraft(hasUnsyncedDraft(targetGameId));
       if (!loadedFromLocalCache) {
         setSyncStatus('synced');
+      }
+
+      const shareMeta = await shareMetaPromise;
+      if (joinTokenRef.current !== token) return;
+      if (shareMeta?.joinCode) {
+        setJoinCode(shareMeta.joinCode);
+        saveCollabSession(targetGameId, { joinCode: shareMeta.joinCode });
       }
 
       startRemotePolling(targetGameId);
@@ -318,6 +331,7 @@ export function useCollaborativeGame() {
           nickname: trimmedName,
         });
         setJoinCode(created.joinCode);
+        saveCollabSession(created.gameId, { joinCode: created.joinCode });
         setCreatedGame({
           gameId: created.gameId,
           joinCode: created.joinCode,
@@ -354,6 +368,7 @@ export function useCollaborativeGame() {
           nickname: trimmedName,
         });
         setJoinCode(nextJoinCode);
+        saveCollabSession(joined.gameId, { joinCode: nextJoinCode });
         await connectToGame({
           targetGameId: joined.gameId,
           seedState: joined.state,
