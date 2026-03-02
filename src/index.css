@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 
 /* TailwindCSSのディレクティブを最初に追加 */
 @tailwind base;
@@ -13,19 +13,55 @@ body {
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  background-color: #f8f3e7;
-  color: #2a2f36;
+  background-color: #f9fafb;
+  color: #1f2937;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: 'Noto Serif JP', 'Times New Roman', serif;
+:root {
+  color-scheme: light;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer base {
+  * {
+    border-color: theme('colors.border.subtle');
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-sans text-text-primary;
+  }
+}
+
+@layer components {
+  .ui-select {
+    @apply min-h-11 rounded-lg border border-border-subtle bg-surface-elevated px-3 py-2.5 text-sm text-text-primary shadow-sm transition focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-text-muted;
+  }
+
+  .ui-note {
+    @apply rounded-xl border border-border-subtle bg-surface-elevated px-4 py-3 text-sm text-text-secondary shadow-ui;
+  }
+
+  .ui-note-danger {
+    @apply rounded-xl border border-status-danger/20 bg-status-danger/5 px-4 py-3 text-sm text-status-danger;
+  }
+
+  .ui-note-warning {
+    @apply rounded-xl border border-status-warning/20 bg-status-warning/10 px-4 py-3 text-sm text-text-secondary;
+  }
+
+  .ui-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-muted px-3 py-1.5 text-xs font-medium text-text-secondary;
+  }
 }
 
 code {

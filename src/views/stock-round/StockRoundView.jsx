@@ -26,12 +26,16 @@ const getNumeric = (value) => {
 };
 
 const StatusBadge = ({ className, children }) => (
-  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${className}`}>{children}</span>
+  <span
+    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
+  >
+    {children}
+  </span>
 );
 
 const SummaryHoldingChip = ({ player, percentage, isPresident, isManualPresident }) => (
   <div
-    className={`rounded-xl border px-3 py-2 text-sm border-l-4 ${getPlayerAccentEdgeClass(
+    className={`rounded-lg border px-4 py-3 text-sm border-l-4 ${getPlayerAccentEdgeClass(
       getPlayerColor(player)
     )} ${
       isPresident
@@ -48,7 +52,9 @@ const SummaryHoldingChip = ({ player, percentage, isPresident, isManualPresident
     {isPresident && (
       <div className="mt-1">
         <StatusBadge
-          className={isManualPresident ? 'bg-brand-primary text-white' : 'bg-white text-brand-primary'}
+          className={
+            isManualPresident ? 'bg-brand-primary text-white' : 'bg-white text-brand-primary'
+          }
         >
           {isManualPresident ? '社長(手動)' : '最大株主'}
         </StatusBadge>
@@ -89,11 +95,11 @@ const CompanyCard = ({
 
   return (
     <article
-      className={`rounded-2xl border p-4 shadow-md ${
+      className={`rounded-xl border p-5 shadow-ui ${
         validation?.invalid
-          ? 'border-status-danger/70 bg-status-danger/5'
+          ? 'border-status-danger/20 bg-status-danger/5'
           : 'border-border-subtle bg-surface-elevated'
-      } border-l-8 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
+      } border-l-4 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
@@ -107,21 +113,35 @@ const CompanyCard = ({
           </div>
           <div className="flex flex-wrap gap-2">
             {company.isUnestablished ? (
-              <StatusBadge className="bg-surface-muted text-text-secondary">未設立</StatusBadge>
-            ) : (
-              <StatusBadge className="bg-status-success/15 text-status-success">設立済み</StatusBadge>
-            )}
-            {validation?.invalid ? (
-              <StatusBadge className="bg-status-danger text-white">警告あり</StatusBadge>
-            ) : (
-              <StatusBadge className="bg-status-success/15 text-status-success">入力良好</StatusBadge>
-            )}
-            {effectivePresidentIds.size > 0 ? (
-              <StatusBadge className="bg-brand-accent-soft text-brand-primary">
-                {isManualPresident ? '社長手動指定中' : leadingPlayerIds.size > 1 ? '最大株主同率' : '最大株主あり'}
+              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+                未設立
               </StatusBadge>
             ) : (
-              <StatusBadge className="bg-surface-muted text-text-secondary">株式未入力</StatusBadge>
+              <StatusBadge className="border-status-success/20 bg-status-success/10 text-status-success">
+                設立済み
+              </StatusBadge>
+            )}
+            {validation?.invalid ? (
+              <StatusBadge className="border-status-danger/20 bg-status-danger/10 text-status-danger">
+                警告あり
+              </StatusBadge>
+            ) : (
+              <StatusBadge className="border-status-success/20 bg-status-success/10 text-status-success">
+                入力良好
+              </StatusBadge>
+            )}
+            {effectivePresidentIds.size > 0 ? (
+              <StatusBadge className="border-brand-accent/20 bg-brand-accent-soft text-brand-primary">
+                {isManualPresident
+                  ? '社長手動指定中'
+                  : leadingPlayerIds.size > 1
+                    ? '最大株主同率'
+                    : '最大株主あり'}
+              </StatusBadge>
+            ) : (
+              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+                株式未入力
+              </StatusBadge>
             )}
           </div>
         </div>
@@ -136,7 +156,7 @@ const CompanyCard = ({
         </Button>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {players.map((player) => {
           const percentage = getHoldingPercentage(company, player.id);
           return (
@@ -156,7 +176,7 @@ const CompanyCard = ({
       ) : null}
 
       {isExpanded ? (
-        <div className="mt-4 space-y-4 border-t border-border-subtle pt-4">
+        <div className="mt-5 space-y-4 border-t border-border-subtle pt-5">
           <div className="grid gap-3 lg:grid-cols-2">
             {players.map((player) => {
               const percentage = getHoldingPercentage(company, player.id);
@@ -164,7 +184,7 @@ const CompanyCard = ({
               return (
                 <div
                   key={player.id}
-                  className={`rounded-xl border p-3 border-l-4 ${getPlayerAccentEdgeClass(
+                  className={`rounded-lg border p-4 border-l-4 ${getPlayerAccentEdgeClass(
                     getPlayerColor(player)
                   )} ${
                     effectivePresidentIds.has(player.id)
@@ -178,7 +198,7 @@ const CompanyCard = ({
                       helper={`現在 ${percentage}%`}
                     />
                     {leadingPlayerIds.has(player.id) ? (
-                      <StatusBadge className="bg-white text-brand-primary">
+                      <StatusBadge className="border-border-subtle bg-surface-elevated text-brand-primary">
                         {leadingPlayerIds.size > 1 ? '同率首位' : '首位'}
                       </StatusBadge>
                     ) : null}
@@ -218,7 +238,7 @@ const CompanyCard = ({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
+            <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
               <DetailLabel title="自社株" helper="手元保有分" />
               <CommittedNumberInput
                 min="0"
@@ -233,7 +253,7 @@ const CompanyCard = ({
               />
             </div>
 
-            <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
+            <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
               <DetailLabel
                 title="バンク"
                 helper={hasIpoShares ? '手入力で調整' : 'IPO なし時は自動計算'}
@@ -251,24 +271,26 @@ const CompanyCard = ({
                   aria-label={`${getCompanyDisplayName(company)}のバンクプール`}
                 />
               ) : (
-                <p className="mt-3 rounded-lg bg-surface-elevated px-3 py-3 text-center text-base font-semibold text-text-primary">
+                <p className="mt-3 rounded-lg border border-border-subtle bg-surface-elevated px-3 py-3 text-center text-base font-semibold text-text-primary">
                   {autoBank}%
                 </p>
               )}
             </div>
 
-            <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
+            <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
               <DetailLabel title="IPO" helper="残り自動計算" />
               <p
-                className={`mt-3 rounded-lg px-3 py-3 text-center text-base font-semibold ${
-                  autoIpo < 0 ? 'bg-status-danger text-white' : 'bg-surface-elevated text-text-primary'
+                className={`mt-3 rounded-lg border px-3 py-3 text-center text-base font-semibold ${
+                  autoIpo < 0
+                    ? 'border-status-danger/20 bg-status-danger/10 text-status-danger'
+                    : 'border-border-subtle bg-surface-elevated text-text-primary'
                 }`}
               >
                 {autoIpo}%
               </p>
             </div>
 
-            <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
+            <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
               <DetailLabel title="未設立扱い" helper="OR 対象外にする" />
               <label className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm text-text-secondary">
                 <input
@@ -305,12 +327,12 @@ const StockRoundView = ({
   const [expandedCompanyId, setExpandedCompanyId] = useState(null);
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
       <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
-        SR株式入力
+        SR
       </SectionHeader>
 
-      <p className="mb-4 rounded-md border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+      <p className="mb-5 rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(39,68,93,0.96))] px-5 py-4 text-sm text-slate-200 shadow-ui-lg">
         会社ごとに保有率を確認し、必要な会社だけ詳細を開いて調整します。最大株主は自動強調され、
         例外だけ手動で社長指定できます。
       </p>
@@ -334,9 +356,10 @@ const StockRoundView = ({
         ))}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-4 shadow-ui-lg">
         <p className="text-sm text-text-secondary">
-          警告企業数: <span className="font-semibold text-status-danger">{invalidCompanyIds.length}</span>
+          <span className="text-slate-300">警告企業数:</span>{' '}
+          <span className="font-semibold text-red-300">{invalidCompanyIds.length}</span>
         </p>
         <div className="flex gap-2">
           <Button type="button" variant="secondary" onClick={handleValidate}>

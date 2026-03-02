@@ -20,17 +20,84 @@ import SetupView from './views/setup/SetupView';
 import StockRoundView from './views/stock-round/StockRoundView';
 import SummaryView from './views/summary/SummaryView';
 
+const StepIcon = ({ stepKey }) => {
+  const commonProps = {
+    'aria-hidden': 'true',
+    className: 'h-4 w-4 shrink-0',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    strokeWidth: '1.8',
+    viewBox: '0 0 24 24',
+  };
+
+  if (stepKey === 'setup') {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 7h10" />
+        <path d="M18 7h2" />
+        <path d="M4 17h2" />
+        <path d="M10 17h10" />
+        <circle cx="16" cy="7" r="2" />
+        <circle cx="8" cy="17" r="2" />
+      </svg>
+    );
+  }
+
+  if (stepKey === 'stockRound') {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 18V9" />
+        <path d="M12 18V5" />
+        <path d="M19 18v-7" />
+        <path d="M3 18h18" />
+      </svg>
+    );
+  }
+
+  if (stepKey === 'orRound') {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 16c2 0 3-8 7-8s5 8 7 8" />
+        <path d="M6 16v2" />
+        <path d="M18 16v2" />
+        <path d="M8 10h8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...commonProps}>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M4 10h16" />
+      <path d="M10 10v9" />
+    </svg>
+  );
+};
+
 const StepButton = ({ stepKey, label, currentStep, onClick }) => {
   const isActive = currentStep === stepKey;
   return (
-    <Button
+    <button
+      id={`view-tab-${stepKey}`}
       type="button"
+      role="tab"
+      aria-selected={isActive}
+      aria-controls={`view-panel-${stepKey}`}
+      tabIndex={isActive ? 0 : -1}
       onClick={() => onClick(stepKey)}
-      variant={isActive ? 'primary' : 'secondary'}
-      className="min-w-[120px] rounded-full px-4 py-2 text-sm"
+      className={`relative min-h-11 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-soft ${
+        isActive
+          ? 'border-brand-accent text-white'
+          : 'border-transparent text-slate-300 hover:text-white'
+      }`}
     >
-      {label}
-    </Button>
+      <span className="inline-flex items-center gap-2">
+        <StepIcon stepKey={stepKey} />
+        <span>{label}</span>
+      </span>
+    </button>
   );
 };
 
@@ -399,7 +466,7 @@ function App() {
 
   if (authStatus === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-base via-brand-accent-soft to-surface-muted p-4">
+      <div className="flex min-h-screen items-center justify-center bg-surface-base p-4">
         <p className="text-sm text-text-secondary">匿名ログインを準備中です...</p>
       </div>
     );
@@ -407,8 +474,8 @@ function App() {
 
   if (authStatus === 'error') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-base via-brand-accent-soft to-surface-muted p-4">
-        <div className="max-w-xl rounded-xl border border-status-danger bg-surface-elevated p-6 shadow-md">
+      <div className="flex min-h-screen items-center justify-center bg-surface-base p-4">
+        <div className="max-w-xl rounded-xl border border-status-danger/20 bg-surface-elevated p-6 shadow-ui">
           <h1 className="mb-3 text-lg font-semibold text-status-danger">起動エラー</h1>
           <p className="text-sm text-text-secondary">{authError}</p>
         </div>
@@ -418,11 +485,14 @@ function App() {
 
   if (isLobbyVisible) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-surface-base via-brand-accent-soft to-surface-muted p-4 text-text-primary sm:p-8">
-        <header className="mb-6 text-center">
-          <h1 className="font-serif text-3xl font-bold text-brand-primary sm:text-4xl">
-            18xx 収益計算補助
+      <div className="min-h-screen bg-surface-base px-4 py-6 text-text-primary sm:px-8 sm:py-10">
+        <header className="mx-auto mb-8 max-w-6xl text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-brand-primary sm:text-4xl">
+            18xx収益計算
           </h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            共同プレイ中の SR / OR 進行を軽く整理できます。
+          </p>
         </header>
 
         <LobbyView
@@ -439,7 +509,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-base via-brand-accent-soft to-surface-muted p-4 text-text-primary sm:p-8">
+    <div className="min-h-screen bg-surface-base px-4 py-6 text-text-primary sm:px-8 sm:py-10">
       <Modal
         message={modalMessage}
         onClose={() => {
@@ -452,116 +522,137 @@ function App() {
         }}
       />
 
-      <header className="mb-6 text-center">
-        <h1 className="font-serif text-3xl font-bold text-brand-primary sm:text-4xl">
-          18xx 収益計算補助
-        </h1>
+      <header className="mx-auto mb-6 max-w-6xl rounded-2xl border border-brand-accent/20 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.18),_transparent_35%),linear-gradient(135deg,_#102033,_#1b2f45_55%,_#27445D)] px-6 py-6 text-center shadow-ui-lg lg:px-8 lg:py-7 lg:text-left">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-brand-accent/90">
+              Revenue Companion
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              18xx収益計算
+            </h1>
+            <p className="mt-2 text-sm text-slate-300">
+              設定から SR、OR、サマリーまでを一つの画面で追えます。
+            </p>
+          </div>
+          <div className="flex justify-center lg:justify-end">
+            <Button type="button" variant="danger" onClick={handleResetApp}>
+              全体リセット
+            </Button>
+          </div>
+        </div>
       </header>
 
-      <SyncStatusBar
-        gameId={syncMeta.gameId}
-        joinCode={syncMeta.joinCode}
-        syncStatus={syncMeta.syncStatus}
-        syncError={syncMeta.syncError}
-        participants={syncMeta.participants}
-        shareUrl={syncMeta.shareUrl}
-        hasUnsyncedDraft={syncMeta.hasUnsyncedDraft}
-        onResendUnsyncedDraft={actions.resendUnsyncedDraft}
-        onReloadFromServer={actions.reloadFromServer}
-        onShareRoom={actions.shareRoom}
-      />
-
-      <nav
-        className="mx-auto mb-6 flex max-w-5xl flex-wrap items-center justify-center gap-2"
-        role="navigation"
+      <div
+        className="mx-auto mb-8 max-w-6xl overflow-x-auto rounded-xl border border-brand-accent/15 bg-[linear-gradient(180deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] shadow-ui-lg"
+        role="tablist"
+        aria-label="画面切り替え"
       >
-        {STEP_CONFIG.map((step) => (
-          <StepButton
-            key={step.key}
-            stepKey={step.key}
-            label={step.label}
-            currentStep={currentViewStep}
-            onClick={handleStepChange}
-          />
-        ))}
-      </nav>
-
-      <div className="mx-auto mb-6 flex max-w-5xl justify-end">
-        <Button type="button" variant="danger" onClick={handleResetApp}>
-          全体リセット
-        </Button>
+        <div className="flex min-w-max items-center gap-2 px-3">
+          {STEP_CONFIG.map((step) => (
+            <StepButton
+              key={step.key}
+              stepKey={step.key}
+              label={step.label}
+              currentStep={currentViewStep}
+              onClick={handleStepChange}
+            />
+          ))}
+        </div>
       </div>
 
-      {currentViewStep === 'setup' && (
-        <SetupView
-          players={players}
-          companies={companies}
-          numORs={flow.numORs}
-          hasIpoShares={flow.hasIpoShares}
-          setupLocked={flow.setupLocked}
-          handleAddMultiplePlayers={handleAddMultiplePlayers}
-          handleDeletePlayer={handleDeletePlayer}
-          handleEditPlayerName={handleEditPlayerName}
-          handleEditPlayerSymbol={handleEditPlayerSymbol}
-          handleEditPlayerColor={handleEditPlayerColor}
-          handleAddMultipleCompanies={handleAddMultipleCompanies}
-          handleDeleteCompany={handleDeleteCompany}
-          handleEditCompanyName={handleEditCompanyName}
-          handleEditCompanySymbol={handleEditCompanySymbol}
-          handleEditCompanyColor={handleEditCompanyColor}
-          handleSetNumORs={handleSetNumORs}
-          handleSetHasIpoShares={handleSetHasIpoShares}
-          handleStartGame={handleStartGame}
+      <div className="mx-auto max-w-6xl">
+        <SyncStatusBar
+          gameId={syncMeta.gameId}
+          joinCode={syncMeta.joinCode}
+          syncStatus={syncMeta.syncStatus}
+          syncError={syncMeta.syncError}
+          participants={syncMeta.participants}
+          shareUrl={syncMeta.shareUrl}
+          hasUnsyncedDraft={syncMeta.hasUnsyncedDraft}
+          onResendUnsyncedDraft={actions.resendUnsyncedDraft}
+          onReloadFromServer={actions.reloadFromServer}
+          onShareRoom={actions.shareRoom}
         />
-      )}
+      </div>
 
-      {currentViewStep === 'stockRound' && (
-        <StockRoundView
-          players={players}
-          companies={companies}
-          hasIpoShares={flow.hasIpoShares}
-          validation={srValidation}
-          handleStockChange={handleStockChange}
-          handlePresidentChange={handlePresidentChange}
-          handleUnestablishedChange={handleUnestablishedChange}
-          handleValidate={runStockValidation}
-          handleComplete={handleCompleteStockRound}
-        />
-      )}
+      <div
+        id={`view-panel-${currentViewStep}`}
+        role="tabpanel"
+        aria-labelledby={`view-tab-${currentViewStep}`}
+        className="mx-auto max-w-6xl"
+      >
+        {currentViewStep === 'setup' && (
+          <SetupView
+            players={players}
+            companies={companies}
+            numORs={flow.numORs}
+            hasIpoShares={flow.hasIpoShares}
+            setupLocked={flow.setupLocked}
+            handleAddMultiplePlayers={handleAddMultiplePlayers}
+            handleDeletePlayer={handleDeletePlayer}
+            handleEditPlayerName={handleEditPlayerName}
+            handleEditPlayerSymbol={handleEditPlayerSymbol}
+            handleEditPlayerColor={handleEditPlayerColor}
+            handleAddMultipleCompanies={handleAddMultipleCompanies}
+            handleDeleteCompany={handleDeleteCompany}
+            handleEditCompanyName={handleEditCompanyName}
+            handleEditCompanySymbol={handleEditCompanySymbol}
+            handleEditCompanyColor={handleEditCompanyColor}
+            handleSetNumORs={handleSetNumORs}
+            handleSetHasIpoShares={handleSetHasIpoShares}
+            handleStartGame={handleStartGame}
+          />
+        )}
 
-      {currentViewStep === 'orRound' && (
-        <OrRoundView
-          players={players}
-          companies={companies}
-          flow={flow}
-          activeCycle={activeCycle}
-          handleMoveOrderUp={handleMoveOrderUp}
-          handleMoveOrderDown={handleMoveOrderDown}
-          handleRebalanceRemaining={handleRebalanceRemaining}
-          handleMarkCompanyDone={handleMarkCompanyDone}
-          handleORRevenueChange={handleORRevenueChange}
-          handleAddTrain={handleAddTrain}
-          handleUpdateTrainStops={handleUpdateTrainStops}
-          handleClearTrain={handleClearTrain}
-          handleDeleteTrain={handleDeleteTrain}
-          handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
-          handleStartNextCycle={handleStartNextCycle}
-        />
-      )}
+        {currentViewStep === 'stockRound' && (
+          <StockRoundView
+            players={players}
+            companies={companies}
+            hasIpoShares={flow.hasIpoShares}
+            validation={srValidation}
+            handleStockChange={handleStockChange}
+            handlePresidentChange={handlePresidentChange}
+            handleUnestablishedChange={handleUnestablishedChange}
+            handleValidate={runStockValidation}
+            handleComplete={handleCompleteStockRound}
+          />
+        )}
 
-      {currentViewStep === 'summary' && (
-        <SummaryView
-          cycles={summaryCycles}
-          selectedCycleNo={resolvedSummaryCycleNo}
-          handleSelectCycle={(cycleNo) =>
-            dispatch({ type: 'SUMMARY_CYCLE_SELECT', payload: cycleNo })
-          }
-          numORs={flow.numORs}
-        />
-      )}
+        {currentViewStep === 'orRound' && (
+          <OrRoundView
+            players={players}
+            companies={companies}
+            flow={flow}
+            activeCycle={activeCycle}
+            handleMoveOrderUp={handleMoveOrderUp}
+            handleMoveOrderDown={handleMoveOrderDown}
+            handleRebalanceRemaining={handleRebalanceRemaining}
+            handleMarkCompanyDone={handleMarkCompanyDone}
+            handleORRevenueChange={handleORRevenueChange}
+            handleAddTrain={handleAddTrain}
+            handleUpdateTrainStops={handleUpdateTrainStops}
+            handleClearTrain={handleClearTrain}
+            handleDeleteTrain={handleDeleteTrain}
+            handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
+            handleStartNextCycle={handleStartNextCycle}
+          />
+        )}
 
-      <footer className="mt-12 border-t border-border-subtle py-4 text-center">
-        <p className="text-sm text-text-secondary">&copy; 2024-2026 18xx 収益計算ツール</p>
+        {currentViewStep === 'summary' && (
+          <SummaryView
+            cycles={summaryCycles}
+            selectedCycleNo={resolvedSummaryCycleNo}
+            handleSelectCycle={(cycleNo) =>
+              dispatch({ type: 'SUMMARY_CYCLE_SELECT', payload: cycleNo })
+            }
+            numORs={flow.numORs}
+          />
+        )}
+      </div>
+
+      <footer className="mx-auto mt-12 max-w-6xl border-t border-border-subtle py-4 text-center">
+        <p className="text-sm text-text-muted">&copy; 2024-2026 18xx収益計算</p>
       </footer>
     </div>
   );

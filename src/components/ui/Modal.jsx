@@ -19,11 +19,11 @@ const Modal = ({
       aria-modal="true"
       aria-labelledby={message ? 'modal-message' : undefined}
     >
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl sm:p-8">
+      <div className="w-full max-w-md rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui-lg sm:p-8">
         {message && (
           <p
             id="modal-message"
-            className="mb-6 text-center text-lg text-gray-700 whitespace-pre-wrap"
+            className="mb-6 whitespace-pre-wrap text-center text-lg text-text-secondary"
           >
             {message}
           </p>
@@ -31,7 +31,7 @@ const Modal = ({
         {children}
         <div className="mt-6 flex justify-center gap-4">
           {showConfirm && (
-            <Button onClick={onConfirm} variant="danger" className="px-6">
+            <Button onClick={onConfirm} variant="dangerSolid" className="px-6">
               {confirmText}
             </Button>
           )}

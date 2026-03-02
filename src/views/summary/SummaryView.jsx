@@ -17,7 +17,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
 
   if (!selectedCycle) {
     return (
-      <div className="mx-auto max-w-4xl p-4 sm:p-6">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
           サマリー
         </SectionHeader>
@@ -64,12 +64,12 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
     .sort((a, b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs);
 
   return (
-    <div className="mx-auto max-w-4xl p-4 sm:p-6">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6">
       <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
         サマリー
       </SectionHeader>
 
-      <div className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md">
+      <div className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-5 shadow-ui">
         <label
           className="flex flex-wrap items-center gap-3 text-sm text-text-secondary"
           htmlFor="summary-cycle"
@@ -79,7 +79,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
             id="summary-cycle"
             value={selectedCycle.cycleNo}
             onChange={(e) => handleSelectCycle(Number.parseInt(e.target.value, 10))}
-            className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+            className="ui-select"
           >
             {cycles.map((cycle) => (
               <option key={cycle.cycleNo} value={cycle.cycleNo}>
@@ -100,7 +100,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
             {sortedPlayerDividends.map((player) => (
               <li
                 key={player.id}
-                className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted p-3 shadow-sm"
+                className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-muted p-4"
               >
                 <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
                   <span
@@ -128,7 +128,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
             {companySummaries.map((company) => (
               <li
                 key={company.id}
-                className="rounded-md border border-border-subtle bg-surface-muted p-3 shadow-sm"
+                className="rounded-lg border border-border-subtle bg-surface-muted p-4"
               >
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">

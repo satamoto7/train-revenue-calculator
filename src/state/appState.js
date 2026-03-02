@@ -14,8 +14,8 @@ export const MAX_ORS = 5;
 
 export const STEP_CONFIG = [
   { key: 'setup', label: '設定' },
-  { key: 'stockRound', label: 'SR株式' },
-  { key: 'orRound', label: 'OR実行' },
+  { key: 'stockRound', label: 'SR' },
+  { key: 'orRound', label: 'OR' },
   { key: 'summary', label: 'サマリー' },
 ];
 

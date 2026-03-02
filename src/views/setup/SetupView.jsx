@@ -11,6 +11,10 @@ import {
   getPlayerDisplayName,
 } from '../../lib/labels';
 
+const panelClass = 'rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui';
+const rowClass =
+  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_auto_auto_auto]';
+
 const SetupView = ({
   players,
   companies,
@@ -35,18 +39,18 @@ const SetupView = ({
   const [numCompaniesToAdd, setNumCompaniesToAdd] = useState(4);
 
   return (
-    <div className="mx-auto max-w-5xl p-4 sm:p-6">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
       <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
         設定
       </SectionHeader>
 
       {setupLocked && (
-        <p className="mb-4 rounded-md border border-status-danger bg-brand-accent-soft p-3 text-sm text-text-secondary">
+        <p className="ui-note-warning mb-4">
           SR開始後は設定変更を禁止しています。次SR以降も同じ設定で進行します。
         </p>
       )}
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className={`mb-6 ${panelClass}`}>
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           ゲーム設定
         </SectionHeader>
@@ -58,7 +62,7 @@ const SetupView = ({
               disabled={setupLocked}
               value={numORs}
               onChange={(e) => handleSetNumORs(parseInt(e.target.value, 10))}
-              className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+              className="ui-select"
             >
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -77,7 +81,7 @@ const SetupView = ({
               disabled={setupLocked}
               value={hasIpoShares ? 'yes' : 'no'}
               onChange={(e) => handleSetHasIpoShares(e.target.value === 'yes')}
-              className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+              className="ui-select"
             >
               <option value="yes">あり</option>
               <option value="no">なし</option>
@@ -86,7 +90,7 @@ const SetupView = ({
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className={`mb-6 ${panelClass}`}>
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           プレイヤー
         </SectionHeader>
@@ -99,7 +103,7 @@ const SetupView = ({
             disabled={setupLocked}
             value={numPlayersToAdd}
             onChange={(e) => setNumPlayersToAdd(parseInt(e.target.value, 10))}
-            className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+            className="ui-select"
           >
             {[2, 3, 4, 5, 6].map((n) => (
               <option key={n} value={n}>
@@ -119,10 +123,7 @@ const SetupView = ({
 
         <div className="space-y-2">
           {players.map((player) => (
-            <div
-              key={player.id}
-              className="grid gap-2 rounded-md border border-border-subtle bg-surface-muted p-3 sm:grid-cols-[1fr_auto_auto_auto]"
-            >
+            <div key={player.id} className={rowClass}>
               <CommittedTextInput
                 value={getPlayerDisplayName(player)}
                 disabled={setupLocked}
@@ -133,7 +134,7 @@ const SetupView = ({
                 value={player.symbol || '●'}
                 disabled={setupLocked}
                 onChange={(e) => handleEditPlayerSymbol(player.id, e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+                className="ui-select"
                 aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の記号`}
               >
                 {PLAYER_SYMBOL_OPTIONS.map((symbol) => (
@@ -146,7 +147,7 @@ const SetupView = ({
                 value={player.color || '赤'}
                 disabled={setupLocked}
                 onChange={(e) => handleEditPlayerColor(player.id, e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+                className="ui-select"
                 aria-label={`プレイヤー「${getPlayerDisplayName(player)}」の色`}
               >
                 {PLAYER_COLOR_OPTIONS.map((color) => (
@@ -170,7 +171,7 @@ const SetupView = ({
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className={`mb-6 ${panelClass}`}>
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           企業
         </SectionHeader>
@@ -183,7 +184,7 @@ const SetupView = ({
             disabled={setupLocked}
             value={numCompaniesToAdd}
             onChange={(e) => setNumCompaniesToAdd(parseInt(e.target.value, 10))}
-            className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+            className="ui-select"
           >
             {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
@@ -203,10 +204,7 @@ const SetupView = ({
 
         <div className="space-y-2">
           {companies.map((company) => (
-            <div
-              key={company.id}
-              className="grid gap-2 rounded-md border border-border-subtle bg-surface-muted p-3 sm:grid-cols-[1fr_auto_auto_auto]"
-            >
+            <div key={company.id} className={rowClass}>
               <CommittedTextInput
                 value={getCompanyDisplayName(company)}
                 disabled={setupLocked}
@@ -217,7 +215,7 @@ const SetupView = ({
                 value={company.symbol || '○'}
                 disabled={setupLocked}
                 onChange={(e) => handleEditCompanySymbol(company.id, e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+                className="ui-select"
                 aria-label={`企業「${getCompanyDisplayName(company)}」の記号`}
               >
                 {COMPANY_SYMBOL_OPTIONS.map((symbol) => (
@@ -230,7 +228,7 @@ const SetupView = ({
                 value={company.color || '赤'}
                 disabled={setupLocked}
                 onChange={(e) => handleEditCompanyColor(company.id, e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-elevated px-2 py-1.5 text-sm"
+                className="ui-select"
                 aria-label={`企業「${getCompanyDisplayName(company)}」の色`}
               >
                 {COMPANY_COLOR_OPTIONS.map((color) => (
@@ -254,7 +252,7 @@ const SetupView = ({
         </div>
       </section>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-2">
         <Button
           type="button"
           size="lg"

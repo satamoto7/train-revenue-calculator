@@ -29,7 +29,11 @@ const getEntryRevenue = (company, orNum) => {
 const QUICK_STOP_VALUES = [10, 20, 30, 40, 50, 60];
 
 const StatusBadge = ({ className, children }) => (
-  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${className}`}>{children}</span>
+  <span
+    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
+  >
+    {children}
+  </span>
 );
 
 const RevenueControl = ({
@@ -49,7 +53,9 @@ const RevenueControl = ({
   const inputId = `${inputIdPrefix}-${orNum}-${company.id}`;
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? 'flex-wrap sm:flex-nowrap' : 'justify-between'}`}>
+    <div
+      className={`flex items-center gap-2 ${compact ? 'flex-wrap sm:flex-nowrap' : 'justify-between'}`}
+    >
       {!compact ? (
         <label htmlFor={inputId} className="text-sm font-medium text-text-secondary">
           OR{orNum}
@@ -107,7 +113,7 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
   };
 
   return (
-    <div className="rounded-xl border-2 border-brand-accent/60 bg-surface-elevated p-3 shadow-ui">
+    <div className="rounded-xl border border-brand-accent/20 bg-surface-elevated p-4 shadow-ui">
       <div className="mb-2 flex items-center justify-between">
         <p className="font-medium text-text-primary">列車 {trainIndex + 1}</p>
         <Button type="button" variant="danger" className="py-1 text-xs" onClick={onDelete}>
@@ -119,15 +125,15 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
         <p className="mb-1 text-xs font-medium text-text-secondary">経路プレビュー:</p>
         {stops.length > 0 ? (
           <div className="overflow-x-auto pb-1">
-            <div className="inline-flex min-w-max items-center rounded-lg border border-border-subtle bg-surface-muted p-2">
+            <div className="inline-flex min-w-max items-center rounded-lg border border-border-subtle bg-surface-muted p-3">
               {stops.map((stop, idx) => (
                 <React.Fragment key={`${train.id}-preview-${idx}`}>
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-surface-elevated text-sm font-semibold text-text-primary shadow-sm">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface-elevated text-sm font-semibold text-text-primary shadow-sm">
                     {stop}
                   </div>
                   {idx < stops.length - 1 ? (
                     <div
-                      className="mx-1 h-1.5 w-8 shrink-0 rounded-full bg-black sm:w-10"
+                      className="mx-1 h-1.5 w-8 shrink-0 rounded-full bg-border-strong sm:w-10"
                       aria-hidden="true"
                     />
                   ) : null}
@@ -136,7 +142,9 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-text-muted">地点未追加。下のボタンから収益地点を追加できます。</p>
+          <p className="text-sm text-text-muted">
+            地点未追加。下のボタンから収益地点を追加できます。
+          </p>
         )}
       </div>
 
@@ -144,7 +152,7 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
         {stops.map((stop, idx) => (
           <div
             key={`${train.id}-${idx}`}
-            className="rounded-md border border-border-subtle bg-surface-muted p-2"
+            className="rounded-lg border border-border-subtle bg-surface-muted p-3"
           >
             <p className="mb-1 text-xs font-medium text-text-secondary">地点 {idx + 1}</p>
             <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
@@ -194,7 +202,7 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
         ))}
       </div>
 
-      <div className="mb-3 rounded-lg border border-brand-accent bg-gradient-to-r from-brand-accent-soft to-surface-muted p-3">
+      <div className="mb-4 rounded-lg border border-brand-accent/20 bg-brand-accent-soft/50 p-4">
         <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
           {QUICK_STOP_VALUES.map((value) => (
             <Button
@@ -240,7 +248,8 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
         </Button>
       </div>
       <p className="mt-2 text-sm text-text-secondary">
-        列車収益: <span className="font-semibold text-status-success">{calculateTrainRevenue(stops)}</span>
+        列車収益:{' '}
+        <span className="font-semibold text-status-success">{calculateTrainRevenue(stops)}</span>
       </p>
     </div>
   );
@@ -274,15 +283,15 @@ const CompanyCard = ({
 
   return (
     <article
-      className={`rounded-2xl border p-4 shadow-md ${
+      className={`rounded-xl border p-5 shadow-ui ${
         isUnestablished
-          ? 'border-border-subtle bg-surface-muted opacity-70'
+          ? 'border-border-subtle bg-surface-muted opacity-80'
           : isDone
-            ? 'border-status-success/50 bg-status-success/5'
+            ? 'border-status-success/20 bg-status-success/5'
             : isSelected
-              ? 'border-brand-accent bg-brand-accent-soft/60'
+              ? 'border-brand-accent/30 bg-brand-accent-soft/60'
               : 'border-border-subtle bg-surface-elevated'
-      } border-l-8 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
+      } border-l-4 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
@@ -296,14 +305,20 @@ const CompanyCard = ({
           </div>
           <div className="flex flex-wrap gap-2">
             {isUnestablished ? (
-              <StatusBadge className="bg-surface-elevated text-text-secondary">未設立</StatusBadge>
+              <StatusBadge className="border-border-subtle bg-surface-elevated text-text-secondary">
+                未設立
+              </StatusBadge>
             ) : null}
             {isDone ? (
-              <StatusBadge className="bg-status-success text-white">完了</StatusBadge>
+              <StatusBadge className="border-status-success/20 bg-status-success/10 text-status-success">
+                完了
+              </StatusBadge>
             ) : (
-              <StatusBadge className="bg-brand-accent-soft text-brand-primary">処理中</StatusBadge>
+              <StatusBadge className="border-brand-accent/20 bg-brand-accent-soft text-brand-primary">
+                処理中
+              </StatusBadge>
             )}
-            <StatusBadge className="bg-surface-muted text-text-secondary">
+            <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
               総収益 {totalRevenue}
             </StatusBadge>
           </div>
@@ -346,7 +361,7 @@ const CompanyCard = ({
       </div>
 
       <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="rounded-xl border border-border-subtle bg-surface-muted p-3">
+        <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
           <p className="mb-2 text-sm font-medium text-text-secondary">現在の OR{currentOR} 収益</p>
           <RevenueControl
             company={company}
@@ -360,24 +375,27 @@ const CompanyCard = ({
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[240px]">
-          <div className="rounded-xl border border-border-subtle bg-surface-muted px-3 py-2 text-sm">
+          <div className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
             <p className="text-text-secondary">列車計算</p>
             <p className="font-semibold text-status-success">
               {calculateCompanyTrainRevenue(company.trains || [])}
             </p>
           </div>
-          <div className="rounded-xl border border-border-subtle bg-surface-muted px-3 py-2 text-sm">
+          <div className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
             <p className="text-text-secondary">保有株主数</p>
             <p className="font-semibold text-text-primary">
-              {(company.stockHoldings || []).filter((holding) => getHoldingPercentage(company, holding.playerId) > 0)
-                .length}
+              {
+                (company.stockHoldings || []).filter(
+                  (holding) => getHoldingPercentage(company, holding.playerId) > 0
+                ).length
+              }
             </p>
           </div>
         </div>
       </div>
 
       {isSelected ? (
-        <div className="mt-4 space-y-4 border-t border-border-subtle pt-4">
+        <div className="mt-5 space-y-4 border-t border-border-subtle pt-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-base font-semibold text-brand-primary">
               実行企業: {getCompanyDisplayName(company)}
@@ -397,7 +415,7 @@ const CompanyCard = ({
               return (
                 <div
                   key={orNum}
-                  className="rounded-lg border border-border-subtle bg-surface-muted px-3 py-2"
+                  className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3"
                 >
                   <RevenueControl
                     company={company}
@@ -410,11 +428,15 @@ const CompanyCard = ({
             })}
           </div>
 
-          <div className="rounded-xl border-2 border-brand-accent bg-gradient-to-br from-brand-accent-soft via-surface-elevated to-surface-muted p-4 shadow-ui-lg">
+          <div className="rounded-xl border border-brand-accent/20 bg-surface-muted p-5 shadow-ui">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h5 className="font-medium text-brand-primary">列車計算</h5>
               <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={() => handleAddTrain(company.id)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleAddTrain(company.id)}
+                >
                   列車追加
                 </Button>
                 <Button type="button" onClick={() => handleSetTrainRevenueToCurrentOR(company.id)}>
@@ -429,7 +451,7 @@ const CompanyCard = ({
               </span>
             </p>
             {(company.trains || []).length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+              <p className="rounded-lg border border-dashed border-border-subtle bg-surface-elevated p-4 text-sm text-text-secondary">
                 まだ列車がありません。列車追加から経路入力を始めてください。
               </p>
             ) : (
@@ -439,7 +461,9 @@ const CompanyCard = ({
                     key={train.id}
                     train={train}
                     trainIndex={trainIndex}
-                    onUpdateStops={(newStops) => handleUpdateTrainStops(company.id, train.id, newStops)}
+                    onUpdateStops={(newStops) =>
+                      handleUpdateTrainStops(company.id, train.id, newStops)
+                    }
                     onClear={() => handleClearTrain(company.id, train.id)}
                     onDelete={() => handleDeleteTrain(company.id, train.id)}
                   />
@@ -448,7 +472,7 @@ const CompanyCard = ({
             )}
           </div>
 
-          <div className="rounded-md border border-border-subtle bg-surface-muted p-3">
+          <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
             <p className="mb-2 text-sm text-text-secondary">配当試算（全OR合計ベース）</p>
             <ul className="space-y-1 text-sm">
               {players.map((player) => {
@@ -529,10 +553,11 @@ const OrRoundView = ({
   const remainingCompanyIds = establishedCompanyOrder.filter(
     (companyId) => !completed.includes(companyId)
   );
-  const preferredLocalSelectedCompanyId =
-    remainingCompanyIds.includes(activeCycle.selectedCompanyId)
-      ? activeCycle.selectedCompanyId
-      : remainingCompanyIds[0] || null;
+  const preferredLocalSelectedCompanyId = remainingCompanyIds.includes(
+    activeCycle.selectedCompanyId
+  )
+    ? activeCycle.selectedCompanyId
+    : remainingCompanyIds[0] || null;
   const [localSelectedCompanyId, setLocalSelectedCompanyId] = useState(
     preferredLocalSelectedCompanyId
   );
@@ -564,39 +589,55 @@ const OrRoundView = ({
 
   if (companies.length === 0) {
     return (
-      <div className="mx-auto max-w-5xl p-4 sm:p-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeader size="page" className="mb-4 text-center text-brand-primary">
-          OR実行
+          OR
         </SectionHeader>
-        <p className="text-center text-text-secondary">企業が未登録です。設定で企業を追加してください。</p>
+        <p className="text-center text-text-secondary">
+          企業が未登録です。設定で企業を追加してください。
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
       <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
-        OR実行
+        OR
       </SectionHeader>
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-text-secondary">
-            現在: OR{currentOR} / OR{flow.numORs}
-          </p>
-          <p className="text-sm text-text-secondary">
-            進捗: {completed.length} / {establishedCompanyOrder.length}
-          </p>
+      <section className="mb-6 rounded-xl border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.16),_transparent_28%),linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-6 shadow-ui-lg">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">
+              現在ラウンド
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">
+              OR{currentOR} / OR{flow.numORs}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">進捗</p>
+            <p className="mt-2 text-sm font-semibold text-white">
+              {completed.length} / {establishedCompanyOrder.length}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">
+              未処理企業
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">{remainingCompanyIds.length}</p>
+          </div>
         </div>
 
         {!hasEstablishedCompanies ? (
-          <p className="mb-3 rounded-md border border-status-warning/60 bg-status-warning/10 px-3 py-2 text-sm text-text-secondary">
+          <p className="mt-4 rounded-xl border border-status-warning/25 bg-status-warning/10 px-4 py-3 text-sm text-slate-100">
             OR対象企業がありません。SRで未設立を解除してください。
           </p>
         ) : null}
 
         {orderLocked && !rebalanceMode && !finalORCompleted && hasEstablishedCompanies ? (
-          <div className="mb-3 flex justify-end">
+          <div className="mt-4 flex justify-end">
             <Button type="button" variant="secondary" onClick={() => setRebalanceMode(true)}>
               順番を再調整
             </Button>
@@ -604,8 +645,8 @@ const OrRoundView = ({
         ) : null}
 
         {rebalanceMode && hasEstablishedCompanies ? (
-          <div className="mt-4 rounded-md border border-border-subtle bg-surface-muted p-3">
-            <p className="mb-2 text-sm text-text-secondary">未処理企業のみ再調整できます。</p>
+          <div className="mt-4 rounded-lg border border-border-subtle bg-surface-muted p-4">
+            <p className="mb-3 text-sm text-text-secondary">未処理企業のみ再調整できます。</p>
             <div className="space-y-2">
               {draftRemaining.map((companyId, index) => {
                 const company = companiesById.get(companyId);
@@ -613,7 +654,7 @@ const OrRoundView = ({
                 return (
                   <div
                     key={companyId}
-                    className={`flex items-center justify-between rounded-md border border-border-subtle bg-surface-elevated p-2 border-l-4 ${getCompanyAccentEdgeClass(
+                    className={`flex items-center justify-between rounded-lg border border-border-subtle bg-surface-elevated p-3 border-l-4 ${getCompanyAccentEdgeClass(
                       getCompanyColor(company)
                     )}`}
                   >

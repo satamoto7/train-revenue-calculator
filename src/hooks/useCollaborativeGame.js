@@ -70,7 +70,7 @@ const createGuestNickname = () => {
 };
 
 const buildInviteMessage = ({ shareUrl, joinCode }) =>
-  `18xx 収益計算補助の共同ゲームに参加してください。\n招待URL: ${shareUrl}\n参加コード: ${joinCode}`;
+  `18xx収益計算の共同ゲームに参加してください。\n招待URL: ${shareUrl}\n参加コード: ${joinCode}`;
 
 const isShareCanceledError = (error) =>
   error?.name === 'AbortError' || error?.name === 'NotAllowedError';
@@ -442,7 +442,7 @@ export function useCollaborativeGame() {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
         await navigator.share({
-          title: '18xx 収益計算補助',
+          title: '18xx収益計算',
           text,
           url: shareUrl,
         });

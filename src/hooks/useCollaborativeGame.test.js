@@ -315,7 +315,7 @@ describe('useCollaborativeGame', () => {
 
     expect(share).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: '18xx 収益計算補助',
+        title: '18xx収益計算',
         text: expect.stringContaining('参加コード: 123456'),
         url: expect.stringContaining('?game=game-1'),
       })

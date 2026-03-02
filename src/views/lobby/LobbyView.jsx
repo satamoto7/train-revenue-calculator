@@ -66,22 +66,18 @@ const LobbyView = ({
   }, [prefilledGameId]);
 
   return (
-    <div className="mx-auto max-w-3xl p-4 sm:p-6">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6">
       <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
         共同ゲームロビー
       </SectionHeader>
 
-      <p className="mb-6 rounded-md border border-border-subtle bg-surface-elevated p-3 text-sm text-text-secondary">
+      <p className="ui-note mb-6">
         匿名ログイン済みです。ニックネームを入力してゲームを作成または参加してください。
       </p>
 
-      {error && (
-        <p className="mb-4 rounded-md border border-status-danger bg-status-danger/10 px-3 py-2 text-sm text-status-danger">
-          {error}
-        </p>
-      )}
+      {error && <p className="ui-note-danger mb-4">{error}</p>}
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui sm:p-8">
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           参加情報
         </SectionHeader>
@@ -101,11 +97,11 @@ const LobbyView = ({
           <div className="text-sm text-text-secondary">
             <p className="mb-1">URLのゲームID</p>
             {normalizedPrefilledGameId ? (
-              <p className="rounded-md border border-border-subtle bg-surface-muted px-3 py-2 font-mono text-xs text-text-primary break-all">
+              <p className="rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 font-mono text-xs text-text-primary break-all">
                 {normalizedPrefilledGameId}
               </p>
             ) : (
-              <p className="rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-xs text-text-secondary">
+              <p className="rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-xs text-text-secondary">
                 URLにゲームIDが含まれていません。
               </p>
             )}
@@ -123,10 +119,13 @@ const LobbyView = ({
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui sm:p-8">
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           新規作成
         </SectionHeader>
+        <p className="mb-5 text-sm text-text-secondary">
+          参加コードつきの新しい部屋を作成し、そのまま入室します。
+        </p>
         <Button
           type="button"
           disabled={isBusy}
@@ -137,7 +136,7 @@ const LobbyView = ({
         </Button>
       </section>
 
-      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-md sm:p-6">
+      <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui sm:p-8">
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
           既存ゲームに参加
         </SectionHeader>
@@ -192,13 +191,21 @@ const LobbyView = ({
       </section>
 
       {createdGame && (
-        <section className="rounded-xl border border-status-success/60 bg-status-success/10 p-4 shadow-md sm:p-6">
+        <section className="rounded-xl border border-status-success/20 bg-surface-elevated p-6 shadow-ui sm:p-8">
           <SectionHeader size="section" as="h3" className="mb-3 text-brand-primary">
             作成完了
           </SectionHeader>
-          <p className="text-sm text-text-secondary break-all">ゲームID: {createdGame.gameId}</p>
-          <p className="text-sm text-text-secondary">参加コード: {createdGame.joinCode}</p>
-          <p className="text-sm text-text-secondary break-all">招待URL: {createdGame.shareUrl}</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <p className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm text-text-secondary break-all">
+              ゲームID: {createdGame.gameId}
+            </p>
+            <p className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm text-text-secondary">
+              参加コード: {createdGame.joinCode}
+            </p>
+            <p className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm text-text-secondary break-all">
+              招待URL: {createdGame.shareUrl}
+            </p>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               type="button"

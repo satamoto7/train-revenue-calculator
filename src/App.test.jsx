@@ -61,6 +61,7 @@ describe('App (collab mode)', () => {
     mockUseCollaborativeGame.mockReturnValue(baseHookState());
     render(<App />);
 
+    expect(screen.getByRole('heading', { name: '18xx収益計算' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '共同ゲームロビー' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ゲームを新規作成' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '参加する' })).toBeInTheDocument();
@@ -82,9 +83,16 @@ describe('App (collab mode)', () => {
 
     render(<App />);
 
-    expect(screen.getByText(/ゲームID:/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '18xx収益計算' })).toBeInTheDocument();
+    expect(screen.getByText('ゲームID')).toBeInTheDocument();
     expect(screen.getByText('P1')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '設定' })).toBeInTheDocument();
+    const tablist = screen.getByRole('tablist', { name: '画面切り替え' });
+    expect(tablist).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '設定', selected: true })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'SR' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'OR' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'サマリー' })).toBeInTheDocument();
   });
 
   test('共有ボタン押下で shareRoom を呼ぶ', async () => {

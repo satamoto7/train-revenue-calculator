@@ -113,7 +113,7 @@ describe('OrRoundView OR revenue draft', () => {
     render(<OrRoundView {...props} />);
 
     expect(screen.getByRole('heading', { name: 'Co1' }).closest('article')).toHaveClass(
-      'border-l-8',
+      'border-l-4',
       'border-l-red-500'
     );
     expect(screen.getByText('● Alice (60%)').closest('span')).toHaveClass(
