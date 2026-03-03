@@ -278,37 +278,45 @@ const CompanyCard = ({
   handleDeleteTrain,
   handleSetTrainRevenueToCurrentOR,
   onExpand,
+  handleCompanyPeriodicIncomeChange,
 }) => {
-  const totalRevenue = calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs);
-  const currentORRevenue = getEntryRevenue(company, currentOR);
-  const bankPoolDividendRecipient =
-    flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
-  const distributionPatterns = [
-    {
-      key: 'full',
-      label: '配当',
-      summary: '収益をすべて配当原資にする',
-    },
-    {
-      key: 'withhold',
-      label: '無配',
-      summary: '収益をすべて会社が受け取る',
-    },
-    {
-      key: 'half',
-      label: '半配当',
-      summary: '収益を配当分と会社受取分に分ける',
-    },
-  ].map((pattern) => ({
-    ...pattern,
-    distribution: calculateORRevenueDistribution({
-      company,
-      players,
-      totalRevenue: currentORRevenue,
-      mode: pattern.key,
-      bankPoolDividendRecipient,
-    }),
-  }));
+const periodicIncome = company.periodicIncome ?? 0;
+
+const totalRevenue =
+  calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs) +
+  periodicIncome * flow.numORs;
+
+const currentORRevenue = getEntryRevenue(company, currentOR) + periodicIncome;
+
+const bankPoolDividendRecipient =
+  flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
+
+const distributionPatterns = [
+  {
+    key: 'full',
+    label: '配当',
+    summary: '収益をすべて配当原資にする',
+  },
+  {
+    key: 'withhold',
+    label: '無配',
+    summary: '収益をすべて会社が受け取る',
+  },
+  {
+    key: 'half',
+    label: '半配当',
+    summary: '収益を配当分と会社受取分に分ける',
+  },
+].map((pattern) => ({
+  ...pattern,
+  distribution: calculateORRevenueDistribution({
+    company,
+    players,
+    totalRevenue: currentORRevenue,
+    mode: pattern.key,
+    bankPoolDividendRecipient,
+  }),
+}));
 
   return (
     <article
@@ -349,6 +357,9 @@ const CompanyCard = ({
             )}
             <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
               総収益 {totalRevenue}
+            </StatusBadge>
+            <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+              定期 +{periodicIncome}/OR
             </StatusBadge>
           </div>
         </div>
@@ -400,6 +411,18 @@ const CompanyCard = ({
             inputIdPrefix="or-summary"
             labelMode="summary"
             handleORRevenueChange={handleORRevenueChange}
+          />
+        </div>
+
+        <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
+          <p className="mb-2 text-sm font-medium text-text-secondary">企業定期収入（ORごと）</p>
+          <CommittedNumberInput
+            min="0"
+            value={periodicIncome}
+            onCommit={(nextValue) => handleCompanyPeriodicIncomeChange(company.id, nextValue)}
+            className="min-h-11 w-28 text-center text-base"
+            aria-label={`${getCompanyDisplayName(company)}の企業定期収入`}
+            disabled={isUnestablished}
           />
         </div>
 
@@ -591,6 +614,8 @@ const OrRoundView = ({
   handleDeleteTrain,
   handleSetTrainRevenueToCurrentOR,
   handleStartNextCycle,
+  handlePlayerPeriodicIncomeChange,
+  handleCompanyPeriodicIncomeChange,
 }) => {
   const currentOR = activeCycle.currentOR;
   const companyOrder = activeCycle.companyOrder || [];
@@ -683,6 +708,31 @@ const OrRoundView = ({
       </SectionHeader>
 
       <section className="mb-6 rounded-xl border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.16),_transparent_28%),linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-6 shadow-ui-lg">
+        <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">
+          <p className="mb-3 text-sm font-medium text-text-primary">プレイヤー定期収入（ORごと）</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {players.map((player) => (
+              <div
+                key={player.id}
+                className={`rounded-lg border border-border-subtle bg-surface-muted p-3 border-l-4 ${getPlayerAccentEdgeClass(
+                  getPlayerColor(player)
+                )}`}
+              >
+                <p className="mb-2 text-sm font-medium text-text-primary">
+                  {getPlayerSymbol(player)} {getPlayerDisplayName(player)}
+                </p>
+                <CommittedNumberInput
+                  min="0"
+                  value={player.periodicIncome || 0}
+                  onCommit={(nextValue) => handlePlayerPeriodicIncomeChange(player.id, nextValue)}
+                  className="min-h-11 w-full text-center text-base"
+                  aria-label={`${getPlayerDisplayName(player)}の定期収入`}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">
@@ -817,6 +867,7 @@ const OrRoundView = ({
               handleClearTrain={handleClearTrain}
               handleDeleteTrain={handleDeleteTrain}
               handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
+              handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
               onExpand={() => setLocalSelectedCompanyId(companyId)}
             />
           );

@@ -348,6 +348,32 @@ function App() {
     }
   };
 
+  const parsePeriodicIncome = (value, errorMessage) => {
+    const trimmed = `${value}`.trim();
+    if (trimmed === '') return 0;
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(parsed)) {
+      setModalMessage(errorMessage);
+      return null;
+    }
+    return Math.max(0, parsed);
+  };
+
+  const handlePlayerPeriodicIncomeChange = (playerId, value) => {
+    const periodicIncome = parsePeriodicIncome(
+      value,
+      'プレイヤー定期収入には数値を入力してください。'
+    );
+    if (periodicIncome === null) return;
+    dispatch({ type: 'PLAYER_PERIODIC_INCOME_SET', payload: { playerId, periodicIncome } });
+  };
+
+  const handleCompanyPeriodicIncomeChange = (companyId, value) => {
+    const periodicIncome = parsePeriodicIncome(value, '企業定期収入には数値を入力してください。');
+    if (periodicIncome === null) return;
+    dispatch({ type: 'COMPANY_PERIODIC_INCOME_SET', payload: { companyId, periodicIncome } });
+  };
+
   const handleORRevenueChange = (companyId, orNum, value) => {
     const trimmed = `${value}`.trim();
     if (trimmed === '') {
@@ -625,6 +651,8 @@ function App() {
             handleUnestablishedChange={handleUnestablishedChange}
             handleValidate={runStockValidation}
             handleComplete={handleCompleteStockRound}
+            handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
+            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
           />
         )}
 
@@ -645,6 +673,8 @@ function App() {
             handleDeleteTrain={handleDeleteTrain}
             handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
             handleStartNextCycle={handleStartNextCycle}
+            handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
+            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
           />
         )}
 

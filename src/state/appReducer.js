@@ -231,6 +231,26 @@ export function appReducer(state, action) {
       };
     }
 
+    case 'PLAYER_PERIODIC_INCOME_SET': {
+      const { playerId, periodicIncome } = action.payload;
+      return {
+        ...state,
+        players: state.players.map((player) =>
+          player.id === playerId ? { ...player, periodicIncome } : player
+        ),
+      };
+    }
+
+    case 'COMPANY_PERIODIC_INCOME_SET': {
+      const { companyId, periodicIncome } = action.payload;
+      return {
+        ...state,
+        companies: state.companies.map((company) =>
+          company.id === companyId ? { ...company, periodicIncome } : company
+        ),
+      };
+    }
+
     case 'OR_ORDER_MOVE_UP': {
       const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
         state.activeCycle.companyOrder,
