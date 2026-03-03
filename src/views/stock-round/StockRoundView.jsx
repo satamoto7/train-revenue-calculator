@@ -80,6 +80,7 @@ const CompanyCard = ({
   handleStockChange,
   handlePresidentChange,
   handleUnestablishedChange,
+  handleCompanyPeriodicIncomeChange,
 }) => {
   const bankInput = getNumeric(company.bankPoolPercentage || 0);
   const treasury = getNumeric(company.treasuryStockPercentage || 0);
@@ -145,15 +146,27 @@ const CompanyCard = ({
             )}
           </div>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          className="min-h-11 px-4"
-          onClick={onToggle}
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? '詳細を閉じる' : '詳細を開く'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="min-w-44 rounded-lg border border-border-subtle bg-surface-muted p-3">
+            <DetailLabel title="企業定期収入" helper="ORごとに加算" />
+            <CommittedNumberInput
+              min="0"
+              value={company.periodicIncome || 0}
+              onCommit={(normalized) => handleCompanyPeriodicIncomeChange(company.id, normalized)}
+              className="mt-2 min-h-11 w-full text-center text-base"
+              aria-label={`${getCompanyDisplayName(company)}の企業定期収入`}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-11 px-4"
+            onClick={onToggle}
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? '詳細を閉じる' : '詳細を開く'}
+          </Button>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -320,6 +333,8 @@ const StockRoundView = ({
   handleUnestablishedChange,
   handleValidate,
   handleComplete,
+  handlePlayerPeriodicIncomeChange,
+  handleCompanyPeriodicIncomeChange,
 }) => {
   const invalidCompanyIds = Object.values(validation || {})
     .filter((entry) => entry?.invalid)
@@ -337,6 +352,31 @@ const StockRoundView = ({
         例外だけ手動で社長指定できます。
       </p>
 
+      <section className="mb-5 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">
+        <p className="mb-3 text-sm font-medium text-text-primary">プレイヤー定期収入（ORごと）</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {players.map((player) => (
+            <div
+              key={player.id}
+              className={`rounded-lg border border-border-subtle bg-surface-muted p-3 border-l-4 ${getPlayerAccentEdgeClass(
+                getPlayerColor(player)
+              )}`}
+            >
+              <p className="mb-2 text-sm font-medium text-text-primary">
+                {getPlayerSymbol(player)} {getPlayerDisplayName(player)}
+              </p>
+              <CommittedNumberInput
+                min="0"
+                value={player.periodicIncome || 0}
+                onCommit={(normalized) => handlePlayerPeriodicIncomeChange(player.id, normalized)}
+                className="min-h-11 w-full text-center text-base"
+                aria-label={`${getPlayerDisplayName(player)}の定期収入`}
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="space-y-4">
         {companies.map((company) => (
           <CompanyCard
@@ -352,6 +392,7 @@ const StockRoundView = ({
             handleStockChange={handleStockChange}
             handlePresidentChange={handlePresidentChange}
             handleUnestablishedChange={handleUnestablishedChange}
+            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
           />
         ))}
       </div>

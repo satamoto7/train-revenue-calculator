@@ -31,6 +31,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
 
   const playerDividends = players.map((player) => {
     let totalDividend = 0;
+    const periodicIncomeTotal = (player.periodicIncome || 0) * numORs;
     companies.forEach((company) => {
       const totalRevenue = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
       const holding = (company.stockHoldings || []).find((stock) => stock.playerId === player.id);
@@ -39,16 +40,21 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
       }
     });
 
-    return { ...player, totalDividend };
+    return {
+      ...player,
+      totalDividend,
+      periodicIncomeTotal,
+      totalIncome: totalDividend + periodicIncomeTotal,
+    };
   });
 
-  const sortedPlayerDividends = [...playerDividends].sort(
-    (a, b) => b.totalDividend - a.totalDividend
-  );
+  const sortedPlayerDividends = [...playerDividends].sort((a, b) => b.totalIncome - a.totalIncome);
 
   const companySummaries = companies
     .map((company) => {
-      const totalRevenueAcrossORs = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
+      const totalRevenueAcrossORs =
+        calculateCompanyTotalORRevenue(company.orRevenues, numORs) +
+        (company.periodicIncome || 0) * numORs;
       const orDetails = Array.from({ length: numORs }, (_, idx) => {
         const orNum = idx + 1;
         const entry = (company.orRevenues || []).find((orRevenue) => orRevenue.orNum === orNum);
@@ -58,7 +64,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
       return {
         ...company,
         totalRevenueAcrossORs,
-        orDetails,
+        orDetails: `${orDetails} / 定期: ${company.periodicIncome || 0} x ${numORs}`,
       };
     })
     .sort((a, b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs);
@@ -93,7 +99,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <Card>
           <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
-            プレイヤー別総配当
+            プレイヤー別総収入
           </SectionHeader>
           {players.length === 0 && <p className="italic text-text-muted">プレイヤーがいません。</p>}
           <ul className="space-y-3">
@@ -112,7 +118,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
                   <span>{getPlayerDisplayName(player)}</span>
                 </span>
                 <span className="text-lg font-semibold text-brand-primary">
-                  {player.totalDividend}
+                  {player.totalIncome}
                 </span>
               </li>
             ))}

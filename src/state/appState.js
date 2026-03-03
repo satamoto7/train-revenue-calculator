@@ -53,6 +53,7 @@ export const createPlayer = (index) => {
     name: `Player ${seatLabel}`,
     color: getDefaultPlayerColor(index),
     symbol: getDefaultPlayerSymbol(index),
+    periodicIncome: 0,
   };
 };
 
@@ -73,6 +74,7 @@ export const createCompany = (index, numORs) => ({
   treasuryStockPercentage: 0,
   bankPoolPercentage: 0,
   ipoPercentage: 100,
+  periodicIncome: 0,
   orRevenues: buildORRevenues(numORs),
 });
 
@@ -199,6 +201,9 @@ const normalizePlayer = (player, index) => {
     name: player?.name || displayName,
     color: isKnownPlayerColor(player?.color) ? player.color : getDefaultPlayerColor(index),
     symbol: player?.symbol || getDefaultPlayerSymbol(index),
+    periodicIncome: Number.isFinite(player?.periodicIncome)
+      ? Math.max(0, Math.floor(player.periodicIncome))
+      : 0,
   };
 };
 
@@ -219,6 +224,9 @@ const normalizeCompany = (company, index, numORs, hasIpoShares) => {
       ? company.bankPoolPercentage
       : 0,
     ipoPercentage: Number.isFinite(company?.ipoPercentage) ? company.ipoPercentage : 0,
+    periodicIncome: Number.isFinite(company?.periodicIncome)
+      ? Math.max(0, Math.floor(company.periodicIncome))
+      : 0,
     trains: Array.isArray(company?.trains) ? company.trains : [],
     stockHoldings: Array.isArray(company?.stockHoldings) ? company.stockHoldings : [],
     presidentPlayerId:

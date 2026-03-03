@@ -31,6 +31,8 @@ const baseProps = () => ({
   handleUnestablishedChange: vi.fn(),
   handleValidate: vi.fn(),
   handleComplete: vi.fn(),
+  handlePlayerPeriodicIncomeChange: vi.fn(),
+  handleCompanyPeriodicIncomeChange: vi.fn(),
 });
 
 describe('StockRoundView committed number inputs', () => {
@@ -92,7 +94,8 @@ describe('StockRoundView committed number inputs', () => {
       'border-l-4',
       'border-l-red-500'
     );
-    expect(screen.getByText('● Player A').closest('div.rounded-lg')).toHaveClass(
+    const accentBlocks = screen.getAllByText('● Player A');
+    expect(accentBlocks[0].closest('div.rounded-lg')).toHaveClass(
       'border-l-4',
       'border-l-rose-300'
     );
