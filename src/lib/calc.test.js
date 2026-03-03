@@ -1,8 +1,10 @@
 import {
+  calculateORRevenueDistribution,
   calculateTrainRevenue,
   calculateCompanyTrainRevenue,
   calculateCompanyTotalORRevenue,
   calculateDividend,
+  splitHalfDividendRevenue,
 } from './calc';
 
 describe('calc utilities', () => {
@@ -72,6 +74,73 @@ describe('calc utilities', () => {
     test('不正入力は0として扱う', () => {
       expect(calculateDividend('x', 50)).toBe(0);
       expect(calculateDividend(100, 'y')).toBe(0);
+    });
+  });
+
+  describe('splitHalfDividendRevenue', () => {
+    test('半配当時の配当分を10単位に切り上げる', () => {
+      expect(splitHalfDividendRevenue(190)).toEqual({
+        dividendRevenue: 100,
+        retainedRevenue: 90,
+      });
+      expect(splitHalfDividendRevenue(200)).toEqual({
+        dividendRevenue: 100,
+        retainedRevenue: 100,
+      });
+    });
+  });
+
+  describe('calculateORRevenueDistribution', () => {
+    const company = {
+      stockHoldings: [{ playerId: 'p1', percentage: 60 }],
+      treasuryStockPercentage: 10,
+      bankPoolPercentage: 20,
+    };
+    const players = [{ id: 'p1' }, { id: 'p2' }];
+
+    test('配当ではプレイヤー・自社株・市場株を配分する', () => {
+      const result = calculateORRevenueDistribution({
+        company,
+        players,
+        totalRevenue: 200,
+        mode: 'full',
+        bankPoolDividendRecipient: 'market',
+      });
+
+      expect(result.distributableRevenue).toBe(200);
+      expect(result.playerPayouts).toEqual([{ playerId: 'p1', percentage: 60, amount: 120 }]);
+      expect(result.treasury.amount).toBe(20);
+      expect(result.marketAmount).toBe(40);
+      expect(result.companyAmount).toBe(20);
+    });
+
+    test('無配では全収益を会社が受け取る', () => {
+      const result = calculateORRevenueDistribution({
+        company,
+        players,
+        totalRevenue: 200,
+        mode: 'withhold',
+      });
+
+      expect(result.distributableRevenue).toBe(0);
+      expect(result.playerPayouts).toEqual([{ playerId: 'p1', percentage: 60, amount: 0 }]);
+      expect(result.marketAmount).toBe(0);
+      expect(result.companyAmount).toBe(200);
+    });
+
+    test('市場株の受取先を会社にした場合は会社収入へ合算する', () => {
+      const result = calculateORRevenueDistribution({
+        company,
+        players,
+        totalRevenue: 190,
+        mode: 'half',
+        bankPoolDividendRecipient: 'company',
+      });
+
+      expect(result.distributableRevenue).toBe(100);
+      expect(result.retainedRevenue).toBe(90);
+      expect(result.marketAmount).toBe(0);
+      expect(result.companyAmount).toBe(120);
     });
   });
 });

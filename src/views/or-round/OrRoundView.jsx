@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   calculateCompanyTrainRevenue,
   calculateCompanyTotalORRevenue,
-  calculateDividend,
+  calculateORRevenueDistribution,
   calculateTrainRevenue,
 } from '../../lib/calc';
 import Button from '../../components/ui/Button';
@@ -280,6 +280,35 @@ const CompanyCard = ({
   onExpand,
 }) => {
   const totalRevenue = calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs);
+  const currentORRevenue = getEntryRevenue(company, currentOR);
+  const bankPoolDividendRecipient =
+    flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
+  const distributionPatterns = [
+    {
+      key: 'full',
+      label: '配当',
+      summary: '収益をすべて配当原資にする',
+    },
+    {
+      key: 'withhold',
+      label: '無配',
+      summary: '収益をすべて会社が受け取る',
+    },
+    {
+      key: 'half',
+      label: '半配当',
+      summary: '収益を配当分と会社受取分に分ける',
+    },
+  ].map((pattern) => ({
+    ...pattern,
+    distribution: calculateORRevenueDistribution({
+      company,
+      players,
+      totalRevenue: currentORRevenue,
+      mode: pattern.key,
+      bankPoolDividendRecipient,
+    }),
+  }));
 
   return (
     <article
@@ -473,25 +502,72 @@ const CompanyCard = ({
           </div>
 
           <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
-            <p className="mb-2 text-sm text-text-secondary">配当試算（全OR合計ベース）</p>
-            <ul className="space-y-1 text-sm">
-              {players.map((player) => {
-                const percentage = getHoldingPercentage(company, player.id);
-                const dividend = calculateDividend(totalRevenue, percentage);
-                return (
-                  <li key={player.id} className="flex items-center justify-between gap-2">
-                    <span
-                      className={`flex-1 rounded-md border border-border-subtle bg-surface-elevated px-3 py-2 border-l-4 ${getPlayerAccentEdgeClass(
-                        getPlayerColor(player)
-                      )}`}
-                    >
-                      {getPlayerSymbol(player)} {getPlayerDisplayName(player)} ({percentage}%)
-                    </span>
-                    <span className="font-semibold text-status-success">{dividend}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            <p className="mb-1 text-sm text-text-secondary">OR{currentOR} 配当シミュレーション</p>
+            <p className="mb-3 text-xs text-text-muted">
+              市場株の配当受取先: {bankPoolDividendRecipient === 'company' ? '会社' : '市場'}
+            </p>
+            <div className="space-y-3">
+              {distributionPatterns.map((pattern) => (
+                <section
+                  key={pattern.key}
+                  className="rounded-lg border border-border-subtle bg-surface-elevated p-3"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h6 className="text-sm font-semibold text-brand-primary">{pattern.label}</h6>
+                    <span className="text-xs text-text-muted">{pattern.summary}</span>
+                  </div>
+                  <p className="mb-2 text-xs text-text-secondary">
+                    配当原資 {pattern.distribution.distributableRevenue} / 会社留保{' '}
+                    {pattern.distribution.retainedRevenue}
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    {players.map((player) => {
+                      const percentage = getHoldingPercentage(company, player.id);
+                      const payout = pattern.distribution.playerPayouts.find(
+                        (entry) => entry.playerId === player.id
+                      );
+                      const amount = payout?.amount || 0;
+                      return (
+                        <li
+                          key={`${pattern.key}-${player.id}`}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <span
+                            className={`flex-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 border-l-4 ${getPlayerAccentEdgeClass(
+                              getPlayerColor(player)
+                            )}`}
+                          >
+                            {getPlayerSymbol(player)} {getPlayerDisplayName(player)} ({percentage}%)
+                          </span>
+                          <span className="font-semibold text-status-success">{amount}</span>
+                        </li>
+                      );
+                    })}
+                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                      <span>自社株 ({pattern.distribution.treasury.percentage}%)</span>
+                      <span className="font-semibold text-status-success">
+                        {pattern.distribution.treasury.amount}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                      <span>市場株 ({pattern.distribution.bankPool.percentage}%)</span>
+                      <span className="font-semibold text-status-success">
+                        {pattern.distribution.marketAmount}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                      <span>会社受取合計</span>
+                      <span className="font-semibold text-brand-primary">
+                        {pattern.distribution.companyAmount}
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-text-muted">
+              ※「計算値をORへ反映」は収益入力のみ反映します。配当種別はこの試算を見て都度判断してください。
+            </p>
           </div>
         </div>
       ) : null}

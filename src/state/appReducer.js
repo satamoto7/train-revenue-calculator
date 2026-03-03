@@ -86,6 +86,17 @@ export function appReducer(state, action) {
       };
     }
 
+    case 'BANK_POOL_DIVIDEND_RECIPIENT_SET': {
+      if (state.flow.setupLocked) return state;
+      return {
+        ...state,
+        flow: {
+          ...state.flow,
+          bankPoolDividendRecipient: action.payload === 'company' ? 'company' : 'market',
+        },
+      };
+    }
+
     case 'FLOW_STEP_SET':
       return {
         ...state,

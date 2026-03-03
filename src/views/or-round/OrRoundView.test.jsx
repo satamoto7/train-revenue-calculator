@@ -13,7 +13,8 @@ const buildCompany = () => ({
   isUnestablished: false,
   trains: [],
   stockHoldings: [{ playerId: 'p1', percentage: 60 }],
-  treasuryStockPercentage: 0,
+  treasuryStockPercentage: 10,
+  bankPoolPercentage: 20,
   orRevenues: [
     { orNum: 1, revenue: 100 },
     { orNum: 2, revenue: 0 },
@@ -30,7 +31,8 @@ const buildSecondCompany = () => ({
   isUnestablished: false,
   trains: [],
   stockHoldings: [],
-  treasuryStockPercentage: 0,
+  treasuryStockPercentage: 10,
+  bankPoolPercentage: 20,
   orRevenues: [
     { orNum: 1, revenue: 50 },
     { orNum: 2, revenue: 10 },
@@ -108,6 +110,17 @@ describe('OrRoundView OR revenue draft', () => {
     expect(screen.queryByText('実行企業: Co1')).not.toBeInTheDocument();
   });
 
+  test('OR配当シミュレーションで配当種別ごとの配分を表示する', () => {
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByText('OR1 配当シミュレーション')).toBeInTheDocument();
+    expect(screen.getByText('市場株の配当受取先: 市場')).toBeInTheDocument();
+    expect(screen.getByText('配当原資 100 / 会社留保 0')).toBeInTheDocument();
+    expect(screen.getByText('配当原資 0 / 会社留保 100')).toBeInTheDocument();
+    expect(screen.getByText('配当原資 50 / 会社留保 50')).toBeInTheDocument();
+  });
+
   test('会社カードと配当行に色アクセントを表示する', () => {
     const props = buildProps();
     render(<OrRoundView {...props} />);
@@ -116,7 +129,7 @@ describe('OrRoundView OR revenue draft', () => {
       'border-l-4',
       'border-l-red-500'
     );
-    expect(screen.getByText('● Alice (60%)').closest('span')).toHaveClass(
+    expect(screen.getAllByText('● Alice (60%)')[0].closest('span')).toHaveClass(
       'border-l-4',
       'border-l-emerald-300'
     );
