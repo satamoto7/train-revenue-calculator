@@ -17,6 +17,7 @@ const baseProps = () => ({
   companies: [{ id: 'c1', displayName: '会社A', name: 'Co1', symbol: '○', color: '赤' }],
   numORs: 2,
   hasIpoShares: true,
+  bankPoolDividendRecipient: 'market',
   setupLocked: false,
   handleAddMultiplePlayers: vi.fn(),
   handleDeletePlayer: vi.fn(),
@@ -30,6 +31,7 @@ const baseProps = () => ({
   handleEditCompanyColor: vi.fn(),
   handleSetNumORs: vi.fn(),
   handleSetHasIpoShares: vi.fn(),
+  handleSetBankPoolDividendRecipient: vi.fn(),
   handleStartGame: vi.fn(),
 });
 
@@ -49,6 +51,16 @@ describe('SetupView committed inputs', () => {
     fireEvent.blur(input);
 
     expect(props.handleEditPlayerName).toHaveBeenCalledWith('p1', 'ぷ');
+  });
+
+  test('市場株の配当受取先を変更できる', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<SetupView {...props} />);
+
+    await user.selectOptions(screen.getByLabelText('市場株の配当受取先'), 'company');
+
+    expect(props.handleSetBankPoolDividendRecipient).toHaveBeenCalledWith('company');
   });
 
   test('会社名は blur まで commit されない', async () => {

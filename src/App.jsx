@@ -240,6 +240,13 @@ function App() {
     dispatch({ type: 'IPO_MODE_SET', payload: hasIpoShares });
   };
 
+  const handleSetBankPoolDividendRecipient = (recipient) => {
+    dispatch({
+      type: 'BANK_POOL_DIVIDEND_RECIPIENT_SET',
+      payload: recipient,
+    });
+  };
+
   const handleStartGame = () => {
     if (players.length === 0 || companies.length === 0) {
       setModalMessage('ゲーム開始にはプレイヤーと企業の登録が必要です。');
@@ -615,6 +622,7 @@ function App() {
             numORs={flow.numORs}
             hasIpoShares={flow.hasIpoShares}
             setupLocked={flow.setupLocked}
+            bankPoolDividendRecipient={flow.bankPoolDividendRecipient}
             handleAddMultiplePlayers={handleAddMultiplePlayers}
             handleDeletePlayer={handleDeletePlayer}
             handleEditPlayerName={handleEditPlayerName}
@@ -627,6 +635,7 @@ function App() {
             handleEditCompanyColor={handleEditCompanyColor}
             handleSetNumORs={handleSetNumORs}
             handleSetHasIpoShares={handleSetHasIpoShares}
+            handleSetBankPoolDividendRecipient={handleSetBankPoolDividendRecipient}
             handleStartGame={handleStartGame}
           />
         )}

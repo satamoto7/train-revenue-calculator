@@ -174,6 +174,7 @@ export const createBaseState = () => ({
     step: 'setup',
     setupLocked: false,
     hasIpoShares: true,
+    bankPoolDividendRecipient: 'market',
     numORs: DEFAULT_NUM_ORS,
   },
   activeCycle: {
@@ -250,6 +251,7 @@ const normalizeFlow = (flow, numORs) => ({
   step: ['setup', 'stockRound', 'orRound', 'summary'].includes(flow?.step) ? flow.step : 'setup',
   setupLocked: Boolean(flow?.setupLocked),
   hasIpoShares: flow?.hasIpoShares !== false,
+  bankPoolDividendRecipient: flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market',
   numORs,
 });
 
