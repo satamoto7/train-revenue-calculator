@@ -20,6 +20,7 @@ const SetupView = ({
   companies,
   numORs,
   hasIpoShares,
+  bankPoolDividendRecipient = 'market',
   setupLocked,
   handleAddMultiplePlayers,
   handleDeletePlayer,
@@ -33,6 +34,7 @@ const SetupView = ({
   handleEditCompanyColor,
   handleSetNumORs,
   handleSetHasIpoShares,
+  handleSetBankPoolDividendRecipient,
   handleStartGame,
 }) => {
   const [numPlayersToAdd, setNumPlayersToAdd] = useState(2);
@@ -85,6 +87,22 @@ const SetupView = ({
             >
               <option value="yes">あり</option>
               <option value="no">なし</option>
+            </select>
+          </label>
+          <label
+            className="flex items-center gap-3 text-sm text-text-secondary"
+            htmlFor="bankPoolDividendRecipient"
+          >
+            <span className="font-medium">市場株の配当受取先</span>
+            <select
+              id="bankPoolDividendRecipient"
+              disabled={setupLocked}
+              value={bankPoolDividendRecipient}
+              onChange={(e) => handleSetBankPoolDividendRecipient(e.target.value)}
+              className="ui-select"
+            >
+              <option value="market">市場</option>
+              <option value="company">会社</option>
             </select>
           </label>
         </div>
