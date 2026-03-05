@@ -86,6 +86,34 @@ describe('StockRoundView committed number inputs', () => {
     expect(props.handlePresidentChange).toHaveBeenCalledWith('c1', 'p2');
   });
 
+  test('プレイヤー定期収入は blur で commit される', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<StockRoundView {...props} />);
+
+    const input = screen.getByLabelText('Player Aの定期収入');
+    await user.clear(input);
+    await user.type(input, '35');
+
+    expect(props.handlePlayerPeriodicIncomeChange).not.toHaveBeenCalled();
+
+    await user.tab();
+
+    expect(props.handlePlayerPeriodicIncomeChange).toHaveBeenCalledWith('p1', 35);
+  });
+
+  test('企業定期収入は空欄で blur すると 0 が commit される', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<StockRoundView {...props} />);
+
+    const input = screen.getByLabelText('会社Aの企業定期収入');
+    await user.clear(input);
+    await user.tab();
+
+    expect(props.handleCompanyPeriodicIncomeChange).toHaveBeenCalledWith('c1', 0);
+  });
+
   test('会社カードと保有チップに色アクセントを表示する', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);

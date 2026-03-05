@@ -88,8 +88,22 @@ describe('appReducer', () => {
     const initial = {
       ...createBaseState(),
       companies: [
-        { id: 'c1', name: 'Co1', displayName: '', stockHoldings: [], trains: [], presidentPlayerId: null },
-        { id: 'c2', name: 'Co2', displayName: '', stockHoldings: [], trains: [], presidentPlayerId: 'p9' },
+        {
+          id: 'c1',
+          name: 'Co1',
+          displayName: '',
+          stockHoldings: [],
+          trains: [],
+          presidentPlayerId: null,
+        },
+        {
+          id: 'c2',
+          name: 'Co2',
+          displayName: '',
+          stockHoldings: [],
+          trains: [],
+          presidentPlayerId: 'p9',
+        },
       ],
     };
 
@@ -103,5 +117,91 @@ describe('appReducer', () => {
 
     expect(next.companies[0].presidentPlayerId).toBe('p1');
     expect(next.companies[1].presidentPlayerId).toBe('p9');
+  });
+
+  test('PLAYER_PERIODIC_INCOME_SET で対象プレイヤーの定期収入だけ更新する', () => {
+    const initial = {
+      ...createBaseState(),
+      players: [
+        { id: 'p1', displayName: 'P1', name: 'P1', seatLabel: 'A', periodicIncome: 0 },
+        { id: 'p2', displayName: 'P2', name: 'P2', seatLabel: 'B', periodicIncome: 20 },
+      ],
+    };
+
+    const next = appReducer(initial, {
+      type: 'PLAYER_PERIODIC_INCOME_SET',
+      payload: {
+        playerId: 'p1',
+        periodicIncome: 50,
+      },
+    });
+
+    expect(next.players[0].periodicIncome).toBe(50);
+    expect(next.players[1].periodicIncome).toBe(20);
+  });
+
+  test('COMPANY_PERIODIC_INCOME_SET で対象会社の定期収入だけ更新する', () => {
+    const initial = {
+      ...createBaseState(),
+      companies: [
+        {
+          id: 'c1',
+          name: 'Co1',
+          displayName: '',
+          stockHoldings: [],
+          trains: [],
+          periodicIncome: 0,
+        },
+        {
+          id: 'c2',
+          name: 'Co2',
+          displayName: '',
+          stockHoldings: [],
+          trains: [],
+          periodicIncome: 30,
+        },
+      ],
+    };
+
+    const next = appReducer(initial, {
+      type: 'COMPANY_PERIODIC_INCOME_SET',
+      payload: {
+        companyId: 'c1',
+        periodicIncome: 40,
+      },
+    });
+
+    expect(next.companies[0].periodicIncome).toBe(40);
+    expect(next.companies[1].periodicIncome).toBe(30);
+  });
+
+  test('BANK_POOL_DIVIDEND_RECIPIENT_SET は無効値を market に正規化する', () => {
+    const initial = createBaseState();
+
+    const next = appReducer(initial, {
+      type: 'BANK_POOL_DIVIDEND_RECIPIENT_SET',
+      payload: 'invalid',
+    });
+
+    expect(next.flow.bankPoolDividendRecipient).toBe('market');
+  });
+
+  test('SETUP_LOCK=true の後は BANK_POOL_DIVIDEND_RECIPIENT_SET を無視する', () => {
+    const locked = {
+      ...createBaseState(),
+      flow: {
+        ...createBaseState().flow,
+        setupLocked: true,
+        bankPoolDividendRecipient: 'market',
+      },
+    };
+
+    const next = appReducer(locked, {
+      type: 'BANK_POOL_DIVIDEND_RECIPIENT_SET',
+      payload: 'company',
+    });
+
+    expect(next).toBe(locked);
+    expect(next.flow.bankPoolDividendRecipient).toBe('market');
   });
 });

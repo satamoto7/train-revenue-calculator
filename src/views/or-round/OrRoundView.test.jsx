@@ -15,6 +15,7 @@ const buildCompany = () => ({
   stockHoldings: [{ playerId: 'p1', percentage: 60 }],
   treasuryStockPercentage: 10,
   bankPoolPercentage: 20,
+  periodicIncome: 0,
   orRevenues: [
     { orNum: 1, revenue: 100 },
     { orNum: 2, revenue: 0 },
@@ -33,6 +34,7 @@ const buildSecondCompany = () => ({
   stockHoldings: [],
   treasuryStockPercentage: 10,
   bankPoolPercentage: 20,
+  periodicIncome: 0,
   orRevenues: [
     { orNum: 1, revenue: 50 },
     { orNum: 2, revenue: 10 },
@@ -68,6 +70,8 @@ const buildProps = (overrides = {}) => ({
   handleDeleteTrain: vi.fn(),
   handleSetTrainRevenueToCurrentOR: vi.fn(),
   handleStartNextCycle: vi.fn(),
+  handlePlayerPeriodicIncomeChange: vi.fn(),
+  handleCompanyPeriodicIncomeChange: vi.fn(),
   ...overrides,
 });
 
@@ -119,6 +123,43 @@ describe('OrRoundView OR revenue draft', () => {
     expect(screen.getByText('配当原資 100 / 会社留保 0')).toBeInTheDocument();
     expect(screen.getByText('配当原資 0 / 会社留保 100')).toBeInTheDocument();
     expect(screen.getByText('配当原資 50 / 会社留保 50')).toBeInTheDocument();
+  });
+
+  test('市場株の配当受取先が会社設定なら表示も会社になる', () => {
+    const props = buildProps({
+      flow: {
+        numORs: 2,
+        bankPoolDividendRecipient: 'company',
+      },
+    });
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByText('市場株の配当受取先: 会社')).toBeInTheDocument();
+  });
+
+  test('プレイヤー定期収入は blur で commit される', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    const input = screen.getByLabelText('Aliceの定期収入');
+    await user.clear(input);
+    await user.type(input, '45');
+
+    expect(props.handlePlayerPeriodicIncomeChange).not.toHaveBeenCalled();
+
+    await user.tab();
+
+    expect(props.handlePlayerPeriodicIncomeChange).toHaveBeenCalledWith('p1', 45);
+  });
+
+  test('企業定期収入はOR配当シミュレーションに加算される', () => {
+    const props = buildProps({
+      companies: [{ ...buildCompany(), periodicIncome: 30 }, buildSecondCompany()],
+    });
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByText('配当原資 130 / 会社留保 0')).toBeInTheDocument();
   });
 
   test('会社カードと配当行に色アクセントを表示する', () => {
