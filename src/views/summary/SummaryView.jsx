@@ -1,5 +1,5 @@
 import React from 'react';
-import { calculateCompanyTotalORRevenue, calculateDividend } from '../../lib/calc';
+import { calculateCompanyTotalORRevenue, calculateORRevenueDistribution } from '../../lib/calc';
 import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
@@ -12,7 +12,22 @@ import {
   getPlayerSymbol,
 } from '../../lib/labels';
 
-const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => {
+const getEntryRevenue = (company, orNum) =>
+  (company.orRevenues || []).find((entry) => entry.orNum === orNum)?.revenue || 0;
+
+const getEntryDividendMode = (company, orNum) => {
+  const mode = (company.orDividendModes || []).find((entry) => entry.orNum === orNum)?.mode;
+  if (mode === 'withhold' || mode === 'half') return mode;
+  return 'full';
+};
+
+const modeLabelMap = {
+  full: '配',
+  withhold: '無',
+  half: '半',
+};
+
+const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow }) => {
   const selectedCycle = cycles.find((cycle) => cycle.cycleNo === selectedCycleNo) || cycles[0];
 
   if (!selectedCycle) {
@@ -28,18 +43,67 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
 
   const players = selectedCycle.playersSnapshot || [];
   const companies = selectedCycle.companiesSnapshot || [];
+  const bankPoolDividendRecipient =
+    selectedCycle?.flowSnapshot?.bankPoolDividendRecipient === 'company'
+      ? 'company'
+      : flow?.bankPoolDividendRecipient === 'company'
+        ? 'company'
+        : 'market';
 
-  const playerDividends = players.map((player) => {
-    let totalDividend = 0;
-    const periodicIncomeTotal = (player.periodicIncome || 0) * numORs;
-    companies.forEach((company) => {
-      const totalRevenue = calculateCompanyTotalORRevenue(company.orRevenues, numORs);
-      const holding = (company.stockHoldings || []).find((stock) => stock.playerId === player.id);
-      if (holding?.percentage) {
-        totalDividend += calculateDividend(totalRevenue, holding.percentage);
-      }
+  const companyDistributionSummaries = companies.map((company) => {
+    const periodicIncome = company.periodicIncome || 0;
+    const perOR = Array.from({ length: numORs }, (_, idx) => {
+      const orNum = idx + 1;
+      const mode = getEntryDividendMode(company, orNum);
+      const revenue = getEntryRevenue(company, orNum);
+      const distribution = calculateORRevenueDistribution({
+        company,
+        players,
+        totalRevenue: revenue,
+        companyIncome: periodicIncome,
+        mode,
+        bankPoolDividendRecipient,
+      });
+      return { orNum, mode, revenue, distribution };
     });
 
+    const companyReceivedTotal = perOR.reduce(
+      (sum, item) => sum + item.distribution.companyAmount,
+      0
+    );
+    const marketReceivedTotal = perOR.reduce(
+      (sum, item) => sum + item.distribution.marketAmount,
+      0
+    );
+    const totalRevenueAcrossORs =
+      calculateCompanyTotalORRevenue(company.orRevenues, numORs) + periodicIncome * numORs;
+    const orDetails = perOR
+      .map((item) => `OR${item.orNum}: ${item.revenue}(${modeLabelMap[item.mode] || '配'})`)
+      .join(', ');
+
+    return {
+      company,
+      perOR,
+      companyReceivedTotal,
+      marketReceivedTotal,
+      totalRevenueAcrossORs,
+      orDetails: `${orDetails} / 定期: ${periodicIncome} x ${numORs}`,
+    };
+  });
+
+  const playerDividends = players.map((player) => {
+    const totalDividend = companyDistributionSummaries.reduce(
+      (sum, companySummary) =>
+        sum +
+        companySummary.perOR.reduce((orSum, item) => {
+          const payout = item.distribution.playerPayouts.find(
+            (entry) => entry.playerId === player.id
+          );
+          return orSum + (payout?.amount || 0);
+        }, 0),
+      0
+    );
+    const periodicIncomeTotal = (player.periodicIncome || 0) * numORs;
     return {
       ...player,
       totalDividend,
@@ -50,24 +114,9 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
 
   const sortedPlayerDividends = [...playerDividends].sort((a, b) => b.totalIncome - a.totalIncome);
 
-  const companySummaries = companies
-    .map((company) => {
-      const totalRevenueAcrossORs =
-        calculateCompanyTotalORRevenue(company.orRevenues, numORs) +
-        (company.periodicIncome || 0) * numORs;
-      const orDetails = Array.from({ length: numORs }, (_, idx) => {
-        const orNum = idx + 1;
-        const entry = (company.orRevenues || []).find((orRevenue) => orRevenue.orNum === orNum);
-        return `OR${orNum}: ${entry?.revenue || 0}`;
-      }).join(', ');
-
-      return {
-        ...company,
-        totalRevenueAcrossORs,
-        orDetails: `${orDetails} / 定期: ${company.periodicIncome || 0} x ${numORs}`,
-      };
-    })
-    .sort((a, b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs);
+  const companySummaries = [...companyDistributionSummaries].sort(
+    (a, b) => b.totalRevenueAcrossORs - a.totalRevenueAcrossORs
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6">
@@ -131,26 +180,33 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs }) => 
           </SectionHeader>
           {companies.length === 0 && <p className="italic text-text-muted">企業がありません。</p>}
           <ul className="space-y-3">
-            {companySummaries.map((company) => (
+            {companySummaries.map((summary) => (
               <li
-                key={company.id}
+                key={summary.company.id}
                 className="rounded-lg border border-border-subtle bg-surface-muted p-4"
               >
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
                     <span
-                      className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
+                      className={`text-base leading-none ${getColorTextClass(
+                        getCompanyColor(summary.company)
+                      )}`}
                     >
-                      {getCompanySymbol(company)}
+                      {getCompanySymbol(summary.company)}
                     </span>
-                    <span className="text-ui-xs text-text-muted">({getCompanyColor(company)})</span>
-                    <span>{getCompanyDisplayName(company)}</span>
+                    <span className="text-ui-xs text-text-muted">
+                      ({getCompanyColor(summary.company)})
+                    </span>
+                    <span>{getCompanyDisplayName(summary.company)}</span>
                   </span>
                   <span className="text-lg font-semibold text-brand-primary">
-                    {company.totalRevenueAcrossORs}
+                    {summary.totalRevenueAcrossORs}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-text-muted">{company.orDetails}</p>
+                <p className="mt-1 text-sm text-text-muted">{summary.orDetails}</p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  会社受取 {summary.companyReceivedTotal} / 市場受取 {summary.marketReceivedTotal}
+                </p>
               </li>
             ))}
           </ul>

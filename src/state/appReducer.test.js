@@ -204,4 +204,41 @@ describe('appReducer', () => {
     expect(next).toBe(locked);
     expect(next.flow.bankPoolDividendRecipient).toBe('market');
   });
+
+  test('OR_DIVIDEND_MODE_SET で対象ORの配当種別だけ更新する', () => {
+    const initial = {
+      ...createBaseState(),
+      flow: {
+        ...createBaseState().flow,
+        numORs: 2,
+      },
+      companies: [
+        {
+          id: 'c1',
+          name: 'Co1',
+          displayName: '',
+          stockHoldings: [],
+          trains: [],
+          orDividendModes: [
+            { orNum: 1, mode: 'full' },
+            { orNum: 2, mode: 'full' },
+          ],
+        },
+      ],
+    };
+
+    const next = appReducer(initial, {
+      type: 'OR_DIVIDEND_MODE_SET',
+      payload: {
+        companyId: 'c1',
+        orNum: 2,
+        mode: 'withhold',
+      },
+    });
+
+    expect(next.companies[0].orDividendModes).toEqual([
+      { orNum: 1, mode: 'full' },
+      { orNum: 2, mode: 'withhold' },
+    ]);
+  });
 });

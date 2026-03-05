@@ -26,6 +26,30 @@ const getEntryRevenue = (company, orNum) => {
   return entry?.revenue ?? 0;
 };
 
+const getEntryDividendMode = (company, orNum) => {
+  const entry = (company.orDividendModes || []).find((modeEntry) => modeEntry.orNum === orNum);
+  if (entry?.mode === 'withhold' || entry?.mode === 'half') return entry.mode;
+  return 'full';
+};
+
+const DIVIDEND_PATTERNS = [
+  {
+    key: 'full',
+    label: '配当',
+    summary: '収益をすべて配当原資にする',
+  },
+  {
+    key: 'withhold',
+    label: '無配',
+    summary: '収益をすべて会社が受け取る',
+  },
+  {
+    key: 'half',
+    label: '半配当',
+    summary: '収益を配当分と会社受取分に分ける',
+  },
+];
+
 const QUICK_STOP_VALUES = [10, 20, 30, 40, 50, 60];
 
 const StatusBadge = ({ className, children }) => (
@@ -279,44 +303,54 @@ const CompanyCard = ({
   handleSetTrainRevenueToCurrentOR,
   onExpand,
   handleCompanyPeriodicIncomeChange,
+  handleSetORDividendMode,
 }) => {
-const periodicIncome = company.periodicIncome ?? 0;
+  const periodicIncome = company.periodicIncome ?? 0;
+  const totalRevenue =
+    calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs) + periodicIncome * flow.numORs;
+  const currentORRevenue = getEntryRevenue(company, currentOR);
+  const currentORDividendMode = getEntryDividendMode(company, currentOR);
+  const bankPoolDividendRecipient =
+    flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
+  const [isDistributionOpen, setIsDistributionOpen] = useState(isSelected);
 
-const totalRevenue =
-  calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs) +
-  periodicIncome * flow.numORs;
+  useEffect(() => {
+    if (isSelected) {
+      setIsDistributionOpen(true);
+    }
+  }, [isSelected]);
 
-const currentORRevenue = getEntryRevenue(company, currentOR) + periodicIncome;
+  const distributionPatterns = DIVIDEND_PATTERNS.map((pattern) => {
+    const distribution = calculateORRevenueDistribution({
+      company,
+      players,
+      totalRevenue: currentORRevenue,
+      companyIncome: periodicIncome,
+      mode: pattern.key,
+      bankPoolDividendRecipient,
+    });
 
-const bankPoolDividendRecipient =
-  flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
-
-const distributionPatterns = [
-  {
-    key: 'full',
-    label: '配当',
-    summary: '収益をすべて配当原資にする',
-  },
-  {
-    key: 'withhold',
-    label: '無配',
-    summary: '収益をすべて会社が受け取る',
-  },
-  {
-    key: 'half',
-    label: '半配当',
-    summary: '収益を配当分と会社受取分に分ける',
-  },
-].map((pattern) => ({
-  ...pattern,
-  distribution: calculateORRevenueDistribution({
-    company,
-    players,
-    totalRevenue: currentORRevenue,
-    mode: pattern.key,
-    bankPoolDividendRecipient,
-  }),
-}));
+    return {
+      ...pattern,
+      distribution,
+      playerTotal: distribution.playerPayouts.reduce((sum, entry) => sum + entry.amount, 0),
+    };
+  });
+  const activePattern =
+    distributionPatterns.find((pattern) => pattern.key === currentORDividendMode) ||
+    distributionPatterns[0];
+  const playerRows = players
+    .map((player) => {
+      const percentage = getHoldingPercentage(company, player.id);
+      const payout = activePattern.distribution.playerPayouts.find(
+        (entry) => entry.playerId === player.id
+      );
+      const amount = payout?.amount || 0;
+      return { player, percentage, amount };
+    })
+    .filter((row) => row.amount > 0);
+  const showTreasuryRow = activePattern.distribution.treasury.amount > 0;
+  const showBankPoolRow = activePattern.distribution.bankPool.amount > 0;
 
   return (
     <article
@@ -395,7 +429,7 @@ const distributionPatterns = [
             aria-expanded={isSelected}
             onClick={onExpand}
           >
-            {isSelected ? '詳細を表示中' : '詳細を開く'}
+            {isSelected ? '詳細を閉じる' : '詳細を開く'}
           </Button>
         </div>
       </div>
@@ -445,6 +479,108 @@ const distributionPatterns = [
           </div>
         </div>
       </div>
+
+      <details
+        className="mt-4 rounded-lg border border-border-subtle bg-surface-muted"
+        open={isDistributionOpen}
+        onToggle={(event) => setIsDistributionOpen(event.currentTarget.open)}
+      >
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-brand-primary [&::-webkit-details-marker]:hidden">
+          OR{currentOR} 収益配分プレビュー（折りたたみ）
+        </summary>
+        <div className="space-y-3 border-t border-border-subtle px-4 pb-4 pt-3">
+          <p className="text-xs text-text-muted">
+            OR{currentOR}収益 {currentORRevenue} / 企業定期収入 +{periodicIncome}
+            （会社受取） / 市場株の配当受取先:{' '}
+            {bankPoolDividendRecipient === 'company' ? '会社' : '市場'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {distributionPatterns.map((pattern) => {
+              const isActive = pattern.key === activePattern.key;
+              return (
+                <Button
+                  key={pattern.key}
+                  type="button"
+                  variant={isActive ? 'primary' : 'secondary'}
+                  className="min-h-[2.25rem] px-3 py-1 text-xs"
+                  disabled={isUnestablished}
+                  onClick={() => handleSetORDividendMode(company.id, currentOR, pattern.key)}
+                >
+                  {pattern.label}
+                </Button>
+              );
+            })}
+          </div>
+          <section className="rounded-lg border border-border-subtle bg-surface-elevated p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h6 className="text-sm font-semibold text-brand-primary">{activePattern.label}</h6>
+              <span className="text-xs text-text-muted">{activePattern.summary}</span>
+            </div>
+            <p className="mb-2 text-xs text-text-secondary">
+              配当原資 {activePattern.distribution.distributableRevenue} / 会社留保{' '}
+              {activePattern.distribution.retainedRevenue} / 定期会社受取{' '}
+              {activePattern.distribution.companyIncome}
+            </p>
+            <p className="mb-2 text-xs text-text-secondary">
+              プレイヤー配当合計 {activePattern.playerTotal} / 市場受取{' '}
+              {activePattern.distribution.marketAmount} / 会社受取合計{' '}
+              {activePattern.distribution.companyAmount}
+            </p>
+            <ul className="space-y-1 text-sm">
+              {playerRows.length === 0 ? (
+                <li className="rounded-md border border-dashed border-border-subtle bg-surface-muted px-3 py-2 text-text-muted">
+                  プレイヤー配当なし
+                </li>
+              ) : (
+                playerRows.map((row) => (
+                  <li
+                    key={`${activePattern.key}-${row.player.id}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span
+                      className={`flex-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 border-l-4 ${getPlayerAccentEdgeClass(
+                        getPlayerColor(row.player)
+                      )}`}
+                    >
+                      {getPlayerSymbol(row.player)} {getPlayerDisplayName(row.player)} (
+                      {row.percentage}%)
+                    </span>
+                    <span className="font-semibold text-status-success">{row.amount}</span>
+                  </li>
+                ))
+              )}
+              {showTreasuryRow ? (
+                <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                  <span>自社株 ({activePattern.distribution.treasury.percentage}%)</span>
+                  <span className="font-semibold text-status-success">
+                    {activePattern.distribution.treasury.amount}
+                  </span>
+                </li>
+              ) : null}
+              {showBankPoolRow ? (
+                <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                  <span>
+                    市場株 ({activePattern.distribution.bankPool.percentage}%) →{' '}
+                    {activePattern.distribution.bankPool.recipient === 'company' ? '会社' : '市場'}
+                  </span>
+                  <span className="font-semibold text-status-success">
+                    {activePattern.distribution.bankPool.amount}
+                  </span>
+                </li>
+              ) : null}
+              <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
+                <span>会社受取合計</span>
+                <span className="font-semibold text-brand-primary">
+                  {activePattern.distribution.companyAmount}
+                </span>
+              </li>
+            </ul>
+          </section>
+          <p className="text-xs text-text-muted">
+            ※「計算値をORへ反映」は収益入力のみ反映します。配当種別はこの試算を見て都度判断してください。
+          </p>
+        </div>
+      </details>
 
       {isSelected ? (
         <div className="mt-5 space-y-4 border-t border-border-subtle pt-5">
@@ -523,75 +659,6 @@ const distributionPatterns = [
               </div>
             )}
           </div>
-
-          <div className="rounded-lg border border-border-subtle bg-surface-muted p-4">
-            <p className="mb-1 text-sm text-text-secondary">OR{currentOR} 配当シミュレーション</p>
-            <p className="mb-3 text-xs text-text-muted">
-              市場株の配当受取先: {bankPoolDividendRecipient === 'company' ? '会社' : '市場'}
-            </p>
-            <div className="space-y-3">
-              {distributionPatterns.map((pattern) => (
-                <section
-                  key={pattern.key}
-                  className="rounded-lg border border-border-subtle bg-surface-elevated p-3"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h6 className="text-sm font-semibold text-brand-primary">{pattern.label}</h6>
-                    <span className="text-xs text-text-muted">{pattern.summary}</span>
-                  </div>
-                  <p className="mb-2 text-xs text-text-secondary">
-                    配当原資 {pattern.distribution.distributableRevenue} / 会社留保{' '}
-                    {pattern.distribution.retainedRevenue}
-                  </p>
-                  <ul className="space-y-1 text-sm">
-                    {players.map((player) => {
-                      const percentage = getHoldingPercentage(company, player.id);
-                      const payout = pattern.distribution.playerPayouts.find(
-                        (entry) => entry.playerId === player.id
-                      );
-                      const amount = payout?.amount || 0;
-                      return (
-                        <li
-                          key={`${pattern.key}-${player.id}`}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span
-                            className={`flex-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 border-l-4 ${getPlayerAccentEdgeClass(
-                              getPlayerColor(player)
-                            )}`}
-                          >
-                            {getPlayerSymbol(player)} {getPlayerDisplayName(player)} ({percentage}%)
-                          </span>
-                          <span className="font-semibold text-status-success">{amount}</span>
-                        </li>
-                      );
-                    })}
-                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
-                      <span>自社株 ({pattern.distribution.treasury.percentage}%)</span>
-                      <span className="font-semibold text-status-success">
-                        {pattern.distribution.treasury.amount}
-                      </span>
-                    </li>
-                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
-                      <span>市場株 ({pattern.distribution.bankPool.percentage}%)</span>
-                      <span className="font-semibold text-status-success">
-                        {pattern.distribution.marketAmount}
-                      </span>
-                    </li>
-                    <li className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-muted px-3 py-2">
-                      <span>会社受取合計</span>
-                      <span className="font-semibold text-brand-primary">
-                        {pattern.distribution.companyAmount}
-                      </span>
-                    </li>
-                  </ul>
-                </section>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-text-muted">
-              ※「計算値をORへ反映」は収益入力のみ反映します。配当種別はこの試算を見て都度判断してください。
-            </p>
-          </div>
         </div>
       ) : null}
     </article>
@@ -616,6 +683,7 @@ const OrRoundView = ({
   handleStartNextCycle,
   handlePlayerPeriodicIncomeChange,
   handleCompanyPeriodicIncomeChange,
+  handleSetORDividendMode,
 }) => {
   const currentOR = activeCycle.currentOR;
   const companyOrder = activeCycle.companyOrder || [];
@@ -671,6 +739,7 @@ const OrRoundView = ({
 
   useEffect(() => {
     setLocalSelectedCompanyId((current) => {
+      if (current === null) return null;
       if (current && remainingCompanyIds.includes(current)) return current;
       return preferredLocalSelectedCompanyId;
     });
@@ -868,7 +937,10 @@ const OrRoundView = ({
               handleDeleteTrain={handleDeleteTrain}
               handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
               handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
-              onExpand={() => setLocalSelectedCompanyId(companyId)}
+              handleSetORDividendMode={handleSetORDividendMode}
+              onExpand={() =>
+                setLocalSelectedCompanyId((current) => (current === companyId ? null : companyId))
+              }
             />
           );
         })}

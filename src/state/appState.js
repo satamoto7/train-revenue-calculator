@@ -11,6 +11,7 @@ import { hasAnyStockInput, inferIsUnestablished } from '../lib/companyStatus';
 
 export const DEFAULT_NUM_ORS = 2;
 export const MAX_ORS = 5;
+export const DEFAULT_DIVIDEND_MODE = 'full';
 
 export const STEP_CONFIG = [
   { key: 'setup', label: '設定' },
@@ -30,6 +31,19 @@ export const buildORRevenues = (numORs, currentOrRevenues = []) =>
     const orNum = idx + 1;
     const existing = currentOrRevenues.find((orRevenue) => Number(orRevenue?.orNum) === orNum);
     return existing || { orNum, revenue: 0 };
+  });
+
+const normalizeDividendMode = (mode) =>
+  ['full', 'withhold', 'half'].includes(mode) ? mode : DEFAULT_DIVIDEND_MODE;
+
+export const buildORDividendModes = (numORs, currentModes = []) =>
+  Array.from({ length: numORs }, (_, idx) => {
+    const orNum = idx + 1;
+    const existing = currentModes.find((entry) => Number(entry?.orNum) === orNum);
+    return {
+      orNum,
+      mode: normalizeDividendMode(existing?.mode),
+    };
   });
 
 export const parsePercent = (value) => {
@@ -76,6 +90,7 @@ export const createCompany = (index, numORs) => ({
   ipoPercentage: 100,
   periodicIncome: 0,
   orRevenues: buildORRevenues(numORs),
+  orDividendModes: buildORDividendModes(numORs),
 });
 
 export const cloneCompanies = (companies) =>
@@ -89,6 +104,7 @@ export const cloneCompanies = (companies) =>
     presidentPlayerId:
       typeof company.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
     orRevenues: (company.orRevenues || []).map((orRevenue) => ({ ...orRevenue })),
+    orDividendModes: (company.orDividendModes || []).map((entry) => ({ ...entry })),
   }));
 
 export const clonePlayers = (players) => players.map((player) => ({ ...player }));
@@ -236,6 +252,10 @@ const normalizeCompany = (company, index, numORs, hasIpoShares) => {
       numORs,
       Array.isArray(company?.orRevenues) ? company.orRevenues : []
     ),
+    orDividendModes: buildORDividendModes(
+      numORs,
+      Array.isArray(company?.orDividendModes) ? company.orDividendModes : []
+    ),
   };
 
   return {
@@ -258,6 +278,7 @@ const normalizeFlow = (flow, numORs) => ({
 const normalizeCycleHistoryEntry = (entry, historyIndex, numORs, hasIpoShares) => ({
   cycleNo: Number.isInteger(entry?.cycleNo) ? entry.cycleNo : historyIndex + 1,
   completedAt: typeof entry?.completedAt === 'string' ? entry.completedAt : null,
+  flowSnapshot: normalizeFlow(entry?.flowSnapshot, numORs),
   playersSnapshot: Array.isArray(entry?.playersSnapshot)
     ? entry.playersSnapshot.map((player, index) => normalizePlayer(player, index))
     : [],

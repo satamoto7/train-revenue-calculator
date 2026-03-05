@@ -1,6 +1,7 @@
 import { inferIsUnestablished } from '../lib/companyStatus';
 import {
   buildEmptyCompletedByOR,
+  buildORDividendModes,
   buildORRevenues,
   buildStockValidationMap,
   cloneCompanies,
@@ -28,6 +29,7 @@ export function appReducer(state, action) {
           typeof company?.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
         isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
+        orDividendModes: buildORDividendModes(state.flow.numORs, company.orDividendModes || []),
       }));
       const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder || [], companies);
       return {
@@ -66,6 +68,7 @@ export function appReducer(state, action) {
         companies: state.companies.map((company) => ({
           ...company,
           orRevenues: buildORRevenues(numORs, company.orRevenues || []),
+          orDividendModes: buildORDividendModes(numORs, company.orDividendModes || []),
         })),
         activeCycle: {
           ...state.activeCycle,
@@ -121,6 +124,7 @@ export function appReducer(state, action) {
         ...company,
         isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
+        orDividendModes: buildORDividendModes(state.flow.numORs, company.orDividendModes || []),
       }));
       const companyOrder = normalizedCompanies.map((company) => company.id);
       return {
@@ -423,6 +427,30 @@ export function appReducer(state, action) {
       };
     }
 
+    case 'OR_DIVIDEND_MODE_SET': {
+      const { companyId, orNum, mode } = action.payload;
+      return {
+        ...state,
+        companies: state.companies.map((company) => {
+          if (company.id !== companyId) return company;
+
+          const nextModes = buildORDividendModes(state.flow.numORs, company.orDividendModes || []);
+          const targetIndex = nextModes.findIndex((entry) => entry.orNum === orNum);
+          if (targetIndex >= 0) {
+            nextModes[targetIndex] = {
+              ...nextModes[targetIndex],
+              mode: ['full', 'withhold', 'half'].includes(mode) ? mode : 'full',
+            };
+          }
+
+          return {
+            ...company,
+            orDividendModes: nextModes,
+          };
+        }),
+      };
+    }
+
     case 'TRAIN_ADD': {
       const { companyId, trainId } = action.payload;
       return {
@@ -490,6 +518,7 @@ export function appReducer(state, action) {
       const completedCycle = {
         cycleNo: currentCycleNo,
         completedAt,
+        flowSnapshot: { ...state.flow },
         playersSnapshot: clonePlayers(state.players),
         companiesSnapshot: cloneCompanies(state.companies),
       };
@@ -500,6 +529,7 @@ export function appReducer(state, action) {
           ? true
           : inferIsUnestablished(company, state.flow.hasIpoShares),
         orRevenues: buildORRevenues(state.flow.numORs),
+        orDividendModes: buildORDividendModes(state.flow.numORs),
       }));
 
       const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder, nextCompanies);
