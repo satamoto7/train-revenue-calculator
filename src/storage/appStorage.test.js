@@ -6,6 +6,7 @@ import {
   load,
   save,
 } from './appStorage';
+import { createBaseState } from '../state/appState';
 
 describe('appStorage (collab cache)', () => {
   const gameId = '00000000-0000-0000-0000-000000000001';
@@ -14,28 +15,20 @@ describe('appStorage (collab cache)', () => {
     localStorage.clear();
   });
 
-  test('save/load は gameId 単位で state を保存・取得する', () => {
+  test('save/load は gameId 単位で新しい state を保存・取得する', () => {
     const state = {
-      players: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
-      companies: [],
-      flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
-      activeCycle: {
-        cycleNo: 1,
-        companyOrder: [],
-        currentOR: 1,
-        completedCompanyIdsByOR: { 1: [], 2: [] },
-        selectedCompanyId: null,
+      ...createBaseState(),
+      gameConfig: {
+        ...createBaseState().gameConfig,
+        players: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
       },
-      cycleHistory: [],
-      summarySelectedCycleNo: null,
-      srValidation: {},
     };
 
     save(gameId, state);
     const loaded = load(gameId);
 
-    expect(loaded.players).toHaveLength(1);
-    expect(loaded.flow.step).toBe('setup');
+    expect(loaded.gameConfig.players).toHaveLength(1);
+    expect(loaded.session.mode).toBe('stockRound');
   });
 
   test('schemaVersion 不一致は null を返す', () => {
@@ -43,7 +36,7 @@ describe('appStorage (collab cache)', () => {
       getGameStorageKey(gameId),
       JSON.stringify({
         schemaVersion: APP_SCHEMA_VERSION - 1,
-        state: { players: [{ id: 'legacy' }] },
+        state: createBaseState(),
       })
     );
 
@@ -63,21 +56,7 @@ describe('appStorage (collab cache)', () => {
   });
 
   test('clear は対象ゲームキャッシュを削除する', () => {
-    save(gameId, {
-      players: [],
-      companies: [],
-      flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
-      activeCycle: {
-        cycleNo: 1,
-        companyOrder: [],
-        currentOR: 1,
-        completedCompanyIdsByOR: { 1: [], 2: [] },
-        selectedCompanyId: null,
-      },
-      cycleHistory: [],
-      summarySelectedCycleNo: null,
-      srValidation: {},
-    });
+    save(gameId, createBaseState());
 
     clear(gameId);
     expect(load(gameId)).toBeNull();

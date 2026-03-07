@@ -6,21 +6,22 @@ import { useCollaborativeGame } from './hooks/useCollaborativeGame';
 import { calculateCompanyTrainRevenue } from './lib/calc';
 import { getPlayerDisplayName } from './lib/labels';
 import {
+  WORKSPACE_CONFIG,
   buildStockValidationMap,
-  cloneCompanies,
-  clonePlayers,
   createCompany,
   createPlayer,
-  getEstablishedCompanyIds,
-  STEP_CONFIG,
 } from './state/appState';
+import {
+  selectBoardViewModel,
+  selectHistoryCycles,
+  selectMaterializedCompanies,
+} from './state/selectors';
 import LobbyView from './views/lobby/LobbyView';
-import OrRoundView from './views/or-round/OrRoundView';
+import BoardView from './views/board/BoardView';
+import HistoryView from './views/history/HistoryView';
 import SetupView from './views/setup/SetupView';
-import StockRoundView from './views/stock-round/StockRoundView';
-import SummaryView from './views/summary/SummaryView';
 
-const StepIcon = ({ stepKey }) => {
+const WorkspaceIcon = ({ workspace }) => {
   const commonProps = {
     'aria-hidden': 'true',
     className: 'h-4 w-4 shrink-0',
@@ -32,7 +33,18 @@ const StepIcon = ({ stepKey }) => {
     viewBox: '0 0 24 24',
   };
 
-  if (stepKey === 'setup') {
+  if (workspace === 'board') {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 7h16" />
+        <path d="M4 12h10" />
+        <path d="M4 17h7" />
+        <circle cx="17" cy="12" r="3" />
+      </svg>
+    );
+  }
+
+  if (workspace === 'setup') {
     return (
       <svg {...commonProps}>
         <path d="M4 7h10" />
@@ -41,28 +53,6 @@ const StepIcon = ({ stepKey }) => {
         <path d="M10 17h10" />
         <circle cx="16" cy="7" r="2" />
         <circle cx="8" cy="17" r="2" />
-      </svg>
-    );
-  }
-
-  if (stepKey === 'stockRound') {
-    return (
-      <svg {...commonProps}>
-        <path d="M5 18V9" />
-        <path d="M12 18V5" />
-        <path d="M19 18v-7" />
-        <path d="M3 18h18" />
-      </svg>
-    );
-  }
-
-  if (stepKey === 'orRound') {
-    return (
-      <svg {...commonProps}>
-        <path d="M5 16c2 0 3-8 7-8s5 8 7 8" />
-        <path d="M6 16v2" />
-        <path d="M18 16v2" />
-        <path d="M8 10h8" />
       </svg>
     );
   }
@@ -76,17 +66,17 @@ const StepIcon = ({ stepKey }) => {
   );
 };
 
-const StepButton = ({ stepKey, label, currentStep, onClick }) => {
-  const isActive = currentStep === stepKey;
+const WorkspaceButton = ({ workspace, label, currentWorkspace, onClick }) => {
+  const isActive = currentWorkspace === workspace;
   return (
     <button
-      id={`view-tab-${stepKey}`}
+      id={`workspace-tab-${workspace}`}
       type="button"
       role="tab"
       aria-selected={isActive}
-      aria-controls={`view-panel-${stepKey}`}
+      aria-controls={`workspace-panel-${workspace}`}
       tabIndex={isActive ? 0 : -1}
-      onClick={() => onClick(stepKey)}
+      onClick={() => onClick(workspace)}
       className={`relative min-h-11 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-soft ${
         isActive
           ? 'border-brand-accent text-white'
@@ -94,12 +84,15 @@ const StepButton = ({ stepKey, label, currentStep, onClick }) => {
       }`}
     >
       <span className="inline-flex items-center gap-2">
-        <StepIcon stepKey={stepKey} />
+        <WorkspaceIcon workspace={workspace} />
         <span>{label}</span>
       </span>
     </button>
   );
 };
+
+const defaultWorkspaceForState = (appState) =>
+  appState.gameConfig.setupLocked ? 'board' : 'setup';
 
 function App() {
   const [modalMessage, setModalMessage] = useState('');
@@ -115,58 +108,49 @@ function App() {
     actions,
   } = useCollaborativeGame();
 
-  const {
-    players,
-    companies,
-    flow,
-    activeCycle,
-    cycleHistory,
-    summarySelectedCycleNo,
-    srValidation,
-  } = appState;
-  const [currentViewStep, setCurrentViewStep] = useState('setup');
+  const board = useMemo(() => selectBoardViewModel(appState), [appState]);
+  const historyCycles = useMemo(() => selectHistoryCycles(appState), [appState]);
+  const materializedCompanies = useMemo(() => selectMaterializedCompanies(appState), [appState]);
+  const [workspace, setWorkspace] = useState(defaultWorkspaceForState(appState));
   const lastGameIdRef = useRef('');
 
   useEffect(() => {
     if (!syncMeta.gameId) return;
     if (lastGameIdRef.current === syncMeta.gameId) return;
     lastGameIdRef.current = syncMeta.gameId;
-    setCurrentViewStep(flow.step || 'setup');
-  }, [flow.step, syncMeta.gameId]);
+    setWorkspace(defaultWorkspaceForState(appState));
+  }, [appState, syncMeta.gameId]);
 
   const setPlayers = useCallback(
     (nextPlayers) => {
-      dispatch({ type: 'PLAYER_SET_ALL', payload: nextPlayers });
+      dispatch({ type: 'CONFIG_SET_PLAYERS', payload: nextPlayers });
     },
     [dispatch]
   );
 
   const setCompanies = useCallback(
     (nextCompanies) => {
-      dispatch({ type: 'COMPANY_SET_ALL', payload: nextCompanies });
+      dispatch({ type: 'CONFIG_SET_COMPANIES', payload: nextCompanies });
     },
     [dispatch]
   );
 
   const handleAddMultiplePlayers = (count) => {
-    const newPlayers = Array.from({ length: count }, (_, index) =>
-      createPlayer(players.length + index)
-    );
-    setPlayers([...players, ...newPlayers]);
+    const nextPlayers = [
+      ...appState.gameConfig.players,
+      ...Array.from({ length: count }, (_, index) =>
+        createPlayer(appState.gameConfig.players.length + index)
+      ),
+    ];
+    setPlayers(nextPlayers);
   };
 
   const handleDeletePlayer = (playerId) => {
-    const playerName = getPlayerDisplayName(players.find((player) => player.id === playerId));
+    const playerName = getPlayerDisplayName(
+      appState.gameConfig.players.find((player) => player.id === playerId)
+    );
     setConfirmAction(() => () => {
-      const nextPlayers = players.filter((player) => player.id !== playerId);
-      const nextCompanies = companies.map((company) => ({
-        ...company,
-        stockHoldings: (company.stockHoldings || []).filter(
-          (holding) => holding.playerId !== playerId
-        ),
-      }));
-      setPlayers(nextPlayers);
-      setCompanies(nextCompanies);
+      setPlayers(appState.gameConfig.players.filter((player) => player.id !== playerId));
       setModalMessage('');
       setConfirmAction(null);
     });
@@ -174,37 +158,42 @@ function App() {
   };
 
   const handleEditPlayerName = (playerId, name) => {
-    const nextPlayers = players.map((player) =>
-      player.id === playerId ? { ...player, displayName: name, name } : player
+    setPlayers(
+      appState.gameConfig.players.map((player) =>
+        player.id === playerId ? { ...player, displayName: name, name } : player
+      )
     );
-    setPlayers(nextPlayers);
   };
 
   const handleEditPlayerSymbol = (playerId, symbol) => {
-    const nextPlayers = players.map((player) =>
-      player.id === playerId ? { ...player, symbol } : player
+    setPlayers(
+      appState.gameConfig.players.map((player) =>
+        player.id === playerId ? { ...player, symbol } : player
+      )
     );
-    setPlayers(nextPlayers);
   };
 
   const handleEditPlayerColor = (playerId, color) => {
-    const nextPlayers = players.map((player) =>
-      player.id === playerId ? { ...player, color } : player
+    setPlayers(
+      appState.gameConfig.players.map((player) =>
+        player.id === playerId ? { ...player, color } : player
+      )
     );
-    setPlayers(nextPlayers);
   };
 
   const handleAddMultipleCompanies = (count) => {
-    const newCompanies = Array.from({ length: count }, (_, index) =>
-      createCompany(companies.length + index, flow.numORs)
-    );
-    setCompanies([...companies, ...newCompanies]);
+    const nextCompanies = [
+      ...appState.gameConfig.companies,
+      ...Array.from({ length: count }, (_, index) =>
+        createCompany(appState.gameConfig.companies.length + index)
+      ),
+    ];
+    setCompanies(nextCompanies);
   };
 
   const handleDeleteCompany = (companyId) => {
     setConfirmAction(() => () => {
-      const nextCompanies = companies.filter((company) => company.id !== companyId);
-      setCompanies(nextCompanies);
+      setCompanies(appState.gameConfig.companies.filter((company) => company.id !== companyId));
       setModalMessage('');
       setConfirmAction(null);
     });
@@ -212,32 +201,35 @@ function App() {
   };
 
   const handleEditCompanyName = (companyId, displayName) => {
-    const nextCompanies = companies.map((company) =>
-      company.id === companyId ? { ...company, displayName } : company
+    setCompanies(
+      appState.gameConfig.companies.map((company) =>
+        company.id === companyId ? { ...company, displayName } : company
+      )
     );
-    setCompanies(nextCompanies);
   };
 
   const handleEditCompanySymbol = (companyId, symbol) => {
-    const nextCompanies = companies.map((company) =>
-      company.id === companyId ? { ...company, symbol } : company
+    setCompanies(
+      appState.gameConfig.companies.map((company) =>
+        company.id === companyId ? { ...company, symbol } : company
+      )
     );
-    setCompanies(nextCompanies);
   };
 
   const handleEditCompanyColor = (companyId, color) => {
-    const nextCompanies = companies.map((company) =>
-      company.id === companyId ? { ...company, color } : company
+    setCompanies(
+      appState.gameConfig.companies.map((company) =>
+        company.id === companyId ? { ...company, color } : company
+      )
     );
-    setCompanies(nextCompanies);
   };
 
   const handleSetNumORs = (numORs) => {
-    dispatch({ type: 'OR_SET_NUM', payload: numORs });
+    dispatch({ type: 'CONFIG_SET_NUM_ORS', payload: numORs });
   };
 
   const handleSetHasIpoShares = (hasIpoShares) => {
-    dispatch({ type: 'IPO_MODE_SET', payload: hasIpoShares });
+    dispatch({ type: 'CONFIG_SET_HAS_IPO_SHARES', payload: hasIpoShares });
   };
 
   const handleSetBankPoolDividendRecipient = (recipient) => {
@@ -248,12 +240,12 @@ function App() {
   };
 
   const handleStartGame = () => {
-    if (players.length === 0 || companies.length === 0) {
+    if (appState.gameConfig.players.length === 0 || appState.gameConfig.companies.length === 0) {
       setModalMessage('ゲーム開始にはプレイヤーと企業の登録が必要です。');
       return;
     }
     dispatch({ type: 'SETUP_LOCK', payload: true });
-    setCurrentViewStep('stockRound');
+    setWorkspace('board');
   };
 
   const handleStockChange = (companyId, payload) => {
@@ -287,7 +279,7 @@ function App() {
   };
 
   const runStockValidation = () => {
-    const validation = buildStockValidationMap(companies, flow.hasIpoShares);
+    const validation = buildStockValidationMap(appState.gameConfig, appState.stockRoundState);
     dispatch({ type: 'SR_VALIDATE_RUN', payload: validation });
     return validation;
   };
@@ -300,9 +292,8 @@ function App() {
         `${invalidCount}社で株式配分に警告があります。警告を残したままORへ進行します。`
       );
     }
-    const establishedIds = getEstablishedCompanyIds(activeCycle.companyOrder, companies);
-    dispatch({ type: 'COMPANY_SELECT', payload: establishedIds[0] || null });
-    setCurrentViewStep('orRound');
+    dispatch({ type: 'SR_COMPLETE' });
+    setWorkspace('board');
   };
 
   const handleMoveOrderUp = (companyId) => {
@@ -323,27 +314,28 @@ function App() {
   };
 
   const handleMarkCompanyDone = (companyId) => {
-    const establishedCompanyIds = getEstablishedCompanyIds(activeCycle.companyOrder, companies);
-    if (establishedCompanyIds.length === 0) return;
+    const companiesById = new Map(board.companies.map((company) => [company.id, company]));
+    const establishedCompanyIds = (board.activeCycle.companyOrder || []).filter(
+      (id) => !companiesById.get(id)?.isUnestablished
+    );
     if (!establishedCompanyIds.includes(companyId)) return;
 
-    const establishedSet = new Set(establishedCompanyIds);
-    const currentOR = activeCycle.currentOR;
-    const completed = (activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter((id) =>
-      establishedSet.has(id)
+    const currentOR = board.activeCycle.currentOR;
+    const completed = (board.activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter((id) =>
+      establishedCompanyIds.includes(id)
     );
     if (completed.includes(companyId)) return;
 
     const nextCount = completed.length + 1;
     dispatch({ type: 'OR_COMPANY_MARK_DONE', payload: companyId });
 
-    if (nextCount >= establishedCompanyIds.length && currentOR < flow.numORs) {
+    if (nextCount >= establishedCompanyIds.length && currentOR < board.flow.numORs) {
       dispatch({ type: 'OR_NEXT_ROUND' });
       setModalMessage(`OR${currentOR}が完了しました。OR${currentOR + 1}に進みます。`);
       return;
     }
 
-    if (nextCount >= establishedCompanyIds.length && currentOR === flow.numORs) {
+    if (nextCount >= establishedCompanyIds.length && currentOR === board.flow.numORs) {
       setModalMessage('最終ORが完了しました。「次SR開始」で次サイクルへ進めます。');
     }
   };
@@ -376,9 +368,7 @@ function App() {
 
   const handleORRevenueChange = (companyId, orNum, value) => {
     const trimmed = `${value}`.trim();
-    if (trimmed === '') {
-      return;
-    }
+    if (trimmed === '') return;
 
     const parsed = Number.parseInt(trimmed, 10);
     if (Number.isNaN(parsed)) {
@@ -446,9 +436,9 @@ function App() {
   };
 
   const handleSetTrainRevenueToCurrentOR = (companyId) => {
-    const company = companies.find((item) => item.id === companyId);
+    const company = materializedCompanies.find((item) => item.id === companyId);
     if (!company) return;
-    const currentOR = activeCycle.currentOR;
+    const currentOR = board.activeCycle.currentOR;
     const revenue = calculateCompanyTrainRevenue(company.trains || []);
     dispatch({
       type: 'OR_REVENUE_SET',
@@ -464,50 +454,22 @@ function App() {
   const handleStartNextCycle = () => {
     setConfirmAction(() => () => {
       dispatch({ type: 'CYCLE_CLOSE_AND_START_NEXT_SR', payload: new Date().toISOString() });
-      setCurrentViewStep('stockRound');
+      setWorkspace('board');
       setModalMessage('');
       setConfirmAction(null);
     });
     setModalMessage('現在サイクルを確定し、次SRへ進みますか？');
   };
 
-  const handleStepChange = (stepKey) => {
-    setCurrentViewStep(stepKey);
-  };
-
   const handleResetApp = () => {
     setConfirmAction(() => () => {
       dispatch({ type: 'APP_RESET' });
-      setCurrentViewStep('setup');
+      setWorkspace('setup');
       setModalMessage('');
       setConfirmAction(null);
     });
     setModalMessage('全データをリセットしますか？この操作は取り消せません。');
   };
-
-  const summaryCycles = useMemo(() => {
-    const historyCycles = cycleHistory.map((cycle) => ({
-      ...cycle,
-      isCompleted: true,
-    }));
-    const active = {
-      cycleNo: activeCycle.cycleNo,
-      completedAt: null,
-      flowSnapshot: { ...flow },
-      playersSnapshot: clonePlayers(players),
-      companiesSnapshot: cloneCompanies(companies),
-      isCompleted: false,
-    };
-    return [...historyCycles, active];
-  }, [cycleHistory, activeCycle.cycleNo, flow, players, companies]);
-
-  const resolvedSummaryCycleNo = useMemo(() => {
-    if (summarySelectedCycleNo !== null) return summarySelectedCycleNo;
-    if (cycleHistory.length > 0) {
-      return cycleHistory[cycleHistory.length - 1].cycleNo;
-    }
-    return activeCycle.cycleNo;
-  }, [summarySelectedCycleNo, cycleHistory, activeCycle.cycleNo]);
 
   if (authStatus === 'loading') {
     return (
@@ -577,7 +539,7 @@ function App() {
               18xx収益計算
             </h1>
             <p className="mt-2 text-sm text-slate-300">
-              設定から SR、OR、サマリーまでを一つの画面で追えます。
+              共同プレイを維持したまま、OR中の収益計算と配分確認を中心に進行できます。
             </p>
           </div>
           <div className="flex justify-center lg:justify-end">
@@ -587,24 +549,6 @@ function App() {
           </div>
         </div>
       </header>
-
-      <div
-        className="mx-auto mb-8 max-w-6xl overflow-x-auto rounded-xl border border-brand-accent/15 bg-[linear-gradient(180deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] shadow-ui-lg"
-        role="tablist"
-        aria-label="画面切り替え"
-      >
-        <div className="flex min-w-max items-center gap-2 px-3">
-          {STEP_CONFIG.map((step) => (
-            <StepButton
-              key={step.key}
-              stepKey={step.key}
-              label={step.label}
-              currentStep={currentViewStep}
-              onClick={handleStepChange}
-            />
-          ))}
-        </div>
-      </div>
 
       <div className="mx-auto max-w-6xl">
         <SyncStatusBar
@@ -622,19 +566,62 @@ function App() {
       </div>
 
       <div
-        id={`view-panel-${currentViewStep}`}
+        className="mx-auto mb-8 max-w-6xl overflow-x-auto rounded-xl border border-brand-accent/15 bg-[linear-gradient(180deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] shadow-ui-lg"
+        role="tablist"
+        aria-label="ワークスペース切り替え"
+      >
+        <div className="flex min-w-max items-center gap-2 px-3">
+          {WORKSPACE_CONFIG.map((entry) => (
+            <WorkspaceButton
+              key={entry.key}
+              workspace={entry.key}
+              label={entry.label}
+              currentWorkspace={workspace}
+              onClick={setWorkspace}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div
+        id={`workspace-panel-${workspace}`}
         role="tabpanel"
-        aria-labelledby={`view-tab-${currentViewStep}`}
+        aria-labelledby={`workspace-tab-${workspace}`}
         className="mx-auto max-w-6xl"
       >
-        {currentViewStep === 'setup' && (
+        {workspace === 'board' ? (
+          <BoardView
+            board={board}
+            handleStockChange={handleStockChange}
+            handlePresidentChange={handlePresidentChange}
+            handleUnestablishedChange={handleUnestablishedChange}
+            handleValidate={runStockValidation}
+            handleCompleteStockRound={handleCompleteStockRound}
+            handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
+            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
+            handleMoveOrderUp={handleMoveOrderUp}
+            handleMoveOrderDown={handleMoveOrderDown}
+            handleRebalanceRemaining={handleRebalanceRemaining}
+            handleMarkCompanyDone={handleMarkCompanyDone}
+            handleORRevenueChange={handleORRevenueChange}
+            handleAddTrain={handleAddTrain}
+            handleUpdateTrainStops={handleUpdateTrainStops}
+            handleClearTrain={handleClearTrain}
+            handleDeleteTrain={handleDeleteTrain}
+            handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
+            handleSetORDividendMode={handleSetORDividendMode}
+            handleStartNextCycle={handleStartNextCycle}
+          />
+        ) : null}
+
+        {workspace === 'setup' ? (
           <SetupView
-            players={players}
-            companies={companies}
-            numORs={flow.numORs}
-            hasIpoShares={flow.hasIpoShares}
-            setupLocked={flow.setupLocked}
-            bankPoolDividendRecipient={flow.bankPoolDividendRecipient}
+            players={appState.gameConfig.players}
+            companies={appState.gameConfig.companies}
+            numORs={appState.gameConfig.numORs}
+            hasIpoShares={appState.gameConfig.hasIpoShares}
+            setupLocked={appState.gameConfig.setupLocked}
+            bankPoolDividendRecipient={appState.gameConfig.bankPoolDividendRecipient}
             handleAddMultiplePlayers={handleAddMultiplePlayers}
             handleDeletePlayer={handleDeletePlayer}
             handleEditPlayerName={handleEditPlayerName}
@@ -650,58 +637,11 @@ function App() {
             handleSetBankPoolDividendRecipient={handleSetBankPoolDividendRecipient}
             handleStartGame={handleStartGame}
           />
-        )}
+        ) : null}
 
-        {currentViewStep === 'stockRound' && (
-          <StockRoundView
-            players={players}
-            companies={companies}
-            hasIpoShares={flow.hasIpoShares}
-            validation={srValidation}
-            handleStockChange={handleStockChange}
-            handlePresidentChange={handlePresidentChange}
-            handleUnestablishedChange={handleUnestablishedChange}
-            handleValidate={runStockValidation}
-            handleComplete={handleCompleteStockRound}
-            handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
-            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
-          />
-        )}
-
-        {currentViewStep === 'orRound' && (
-          <OrRoundView
-            players={players}
-            companies={companies}
-            flow={flow}
-            activeCycle={activeCycle}
-            handleMoveOrderUp={handleMoveOrderUp}
-            handleMoveOrderDown={handleMoveOrderDown}
-            handleRebalanceRemaining={handleRebalanceRemaining}
-            handleMarkCompanyDone={handleMarkCompanyDone}
-            handleORRevenueChange={handleORRevenueChange}
-            handleAddTrain={handleAddTrain}
-            handleUpdateTrainStops={handleUpdateTrainStops}
-            handleClearTrain={handleClearTrain}
-            handleDeleteTrain={handleDeleteTrain}
-            handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
-            handleStartNextCycle={handleStartNextCycle}
-            handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
-            handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
-            handleSetORDividendMode={handleSetORDividendMode}
-          />
-        )}
-
-        {currentViewStep === 'summary' && (
-          <SummaryView
-            cycles={summaryCycles}
-            selectedCycleNo={resolvedSummaryCycleNo}
-            handleSelectCycle={(cycleNo) =>
-              dispatch({ type: 'SUMMARY_CYCLE_SELECT', payload: cycleNo })
-            }
-            numORs={flow.numORs}
-            flow={flow}
-          />
-        )}
+        {workspace === 'history' ? (
+          <HistoryView cycles={historyCycles} numORs={appState.gameConfig.numORs} />
+        ) : null}
       </div>
 
       <footer className="mx-auto mt-12 max-w-6xl border-t border-border-subtle py-4 text-center">

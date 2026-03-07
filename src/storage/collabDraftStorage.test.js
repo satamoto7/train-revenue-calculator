@@ -4,6 +4,7 @@ import {
   loadUnsyncedDraft,
   saveUnsyncedDraft,
 } from './collabDraftStorage';
+import { createBaseState } from '../state/appState';
 
 describe('collabDraftStorage', () => {
   const gameId = '00000000-0000-0000-0000-000000000002';
@@ -16,7 +17,11 @@ describe('collabDraftStorage', () => {
     saveUnsyncedDraft(
       gameId,
       {
-        players: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
+        ...createBaseState(),
+        gameConfig: {
+          ...createBaseState().gameConfig,
+          players: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
+        },
       },
       'save failed'
     );
@@ -24,7 +29,7 @@ describe('collabDraftStorage', () => {
     const draft = loadUnsyncedDraft(gameId);
 
     expect(draft.reason).toBe('save failed');
-    expect(draft.state.players[0].id).toBe('p1');
+    expect(draft.state.gameConfig.players[0].id).toBe('p1');
     expect(typeof draft.savedAt).toBe('string');
   });
 
@@ -34,7 +39,7 @@ describe('collabDraftStorage', () => {
   });
 
   test('clear と hasUnsyncedDraft が機能する', () => {
-    saveUnsyncedDraft(gameId, { players: [] });
+    saveUnsyncedDraft(gameId, createBaseState());
     expect(hasUnsyncedDraft(gameId)).toBe(true);
 
     clearUnsyncedDraft(gameId);

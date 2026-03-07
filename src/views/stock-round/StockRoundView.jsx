@@ -324,6 +324,7 @@ const CompanyCard = ({
 };
 
 const StockRoundView = ({
+  embedded = false,
   players,
   companies,
   hasIpoShares,
@@ -343,14 +344,18 @@ const StockRoundView = ({
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
-        SR
-      </SectionHeader>
+      {!embedded ? (
+        <>
+          <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
+            SR
+          </SectionHeader>
 
-      <p className="mb-5 rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(39,68,93,0.96))] px-5 py-4 text-sm text-slate-200 shadow-ui-lg">
-        会社ごとに保有率を確認し、必要な会社だけ詳細を開いて調整します。最大株主は自動強調され、
-        例外だけ手動で社長指定できます。
-      </p>
+          <p className="mb-5 rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(39,68,93,0.96))] px-5 py-4 text-sm text-slate-200 shadow-ui-lg">
+            会社ごとに保有率を確認し、必要な会社だけ詳細を開いて調整します。最大株主は自動強調され、
+            例外だけ手動で社長指定できます。
+          </p>
+        </>
+      ) : null}
 
       <section className="mb-5 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">
         <p className="mb-3 text-sm font-medium text-text-primary">プレイヤー定期収入（ORごと）</p>
