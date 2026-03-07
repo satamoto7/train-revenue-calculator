@@ -82,6 +82,41 @@ describe('appReducer', () => {
     expect(next.history[0].operatingResultsSnapshot['1'].c1.revenue).toBe(100);
   });
 
+  test('CYCLE_CLOSE_AND_START_NEXT_SR で前サイクル最終ORを次サイクルOR1へ引き継ぐ', () => {
+    let state = buildConfiguredState();
+    state = appReducer(state, { type: 'SETUP_LOCK', payload: true });
+    state = appReducer(state, { type: 'SR_COMPLETE' });
+    state = appReducer(state, {
+      type: 'SR_STOCK_SET',
+      payload: { companyId: 'c1', target: 'player', playerId: 'p1', value: 60 },
+    });
+    state = appReducer(state, {
+      type: 'OR_REVENUE_SET',
+      payload: { companyId: 'c1', orNum: 2, revenue: 180 },
+    });
+    state = appReducer(state, {
+      type: 'OR_DIVIDEND_MODE_SET',
+      payload: { companyId: 'c1', orNum: 2, mode: 'half' },
+    });
+
+    const next = appReducer(state, {
+      type: 'CYCLE_CLOSE_AND_START_NEXT_SR',
+      payload: '2026-01-01T00:00:00.000Z',
+    });
+    const materialized = selectMaterializedCompanies(next);
+
+    expect(next.session.currentCycleNo).toBe(2);
+    expect(materialized[0].orRevenues).toEqual([
+      { orNum: 1, revenue: 180 },
+      { orNum: 2, revenue: 0 },
+    ]);
+    expect(materialized[0].orDividendModes).toEqual([
+      { orNum: 1, mode: 'half' },
+      { orNum: 2, mode: 'full' },
+    ]);
+    expect(next.operatingResults['2']['1'].c1.isConfirmed).toBe(false);
+  });
+
   test('SR_PRESIDENT_SET で会社別の社長指定だけ更新する', () => {
     const initial = buildConfiguredState();
     const next = appReducer(initial, {
@@ -185,5 +220,24 @@ describe('appReducer', () => {
       { orNum: 2, mode: 'withhold' },
     ]);
     expect(next.operatingResults['1']['2'].c1.retainedRevenue).toBe(100);
+  });
+
+  test('OR_NEXT_ROUND でも前OR収益を次ORへ自動コピーしない', () => {
+    let state = buildConfiguredState();
+    state = appReducer(state, { type: 'SETUP_LOCK', payload: true });
+    state = appReducer(state, { type: 'SR_COMPLETE' });
+    state = appReducer(state, {
+      type: 'OR_REVENUE_SET',
+      payload: { companyId: 'c1', orNum: 1, revenue: 120 },
+    });
+
+    const next = appReducer(state, { type: 'OR_NEXT_ROUND' });
+    const materialized = selectMaterializedCompanies(next);
+
+    expect(next.operatingState.currentOR).toBe(2);
+    expect(materialized[0].orRevenues).toEqual([
+      { orNum: 1, revenue: 120 },
+      { orNum: 2, revenue: 0 },
+    ]);
   });
 });
