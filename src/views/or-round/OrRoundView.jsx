@@ -666,6 +666,7 @@ const CompanyCard = ({
 };
 
 const OrRoundView = ({
+  embedded = false,
   players,
   companies,
   flow,
@@ -760,9 +761,11 @@ const OrRoundView = ({
   if (companies.length === 0) {
     return (
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeader size="page" className="mb-4 text-center text-brand-primary">
-          OR
-        </SectionHeader>
+        {!embedded ? (
+          <SectionHeader size="page" className="mb-4 text-center text-brand-primary">
+            OR
+          </SectionHeader>
+        ) : null}
         <p className="text-center text-text-secondary">
           企業が未登録です。設定で企業を追加してください。
         </p>
@@ -772,9 +775,11 @@ const OrRoundView = ({
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
-        OR
-      </SectionHeader>
+      {!embedded ? (
+        <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
+          OR
+        </SectionHeader>
+      ) : null}
 
       <section className="mb-6 rounded-xl border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.16),_transparent_28%),linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-6 shadow-ui-lg">
         <section className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">

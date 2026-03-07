@@ -87,12 +87,11 @@ describe('App (collab mode)', () => {
     expect(screen.getByText('ゲームID')).toBeInTheDocument();
     expect(screen.getByText('P1')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '設定' })).toBeInTheDocument();
-    const tablist = screen.getByRole('tablist', { name: '画面切り替え' });
+    const tablist = screen.getByRole('tablist', { name: 'ワークスペース切り替え' });
     expect(tablist).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: '設定', selected: true })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'SR' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'OR' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'サマリー' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'ボード' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '履歴' })).toBeInTheDocument();
   });
 
   test('共有ボタン押下で shareRoom を呼ぶ', async () => {

@@ -7,17 +7,16 @@ import {
   isKnownCompanyColor,
   isKnownPlayerColor,
 } from '../lib/labels';
+import { calculateORRevenueDistribution } from '../lib/calc';
 import { hasAnyStockInput, inferIsUnestablished } from '../lib/companyStatus';
 
 export const DEFAULT_NUM_ORS = 2;
 export const MAX_ORS = 5;
 export const DEFAULT_DIVIDEND_MODE = 'full';
-
-export const STEP_CONFIG = [
+export const WORKSPACE_CONFIG = [
+  { key: 'board', label: 'ボード' },
   { key: 'setup', label: '設定' },
-  { key: 'stockRound', label: 'SR' },
-  { key: 'orRound', label: 'OR' },
-  { key: 'summary', label: 'サマリー' },
+  { key: 'history', label: '履歴' },
 ];
 
 export const buildEmptyCompletedByOR = (numORs) =>
@@ -26,30 +25,16 @@ export const buildEmptyCompletedByOR = (numORs) =>
     return acc;
   }, {});
 
-export const buildORRevenues = (numORs, currentOrRevenues = []) =>
-  Array.from({ length: numORs }, (_, idx) => {
-    const orNum = idx + 1;
-    const existing = currentOrRevenues.find((orRevenue) => Number(orRevenue?.orNum) === orNum);
-    return existing || { orNum, revenue: 0 };
-  });
-
-const normalizeDividendMode = (mode) =>
-  ['full', 'withhold', 'half'].includes(mode) ? mode : DEFAULT_DIVIDEND_MODE;
-
-export const buildORDividendModes = (numORs, currentModes = []) =>
-  Array.from({ length: numORs }, (_, idx) => {
-    const orNum = idx + 1;
-    const existing = currentModes.find((entry) => Number(entry?.orNum) === orNum);
-    return {
-      orNum,
-      mode: normalizeDividendMode(existing?.mode),
-    };
-  });
-
 export const parsePercent = (value) => {
   const parsed = Number.parseInt(value, 10);
   if (Number.isNaN(parsed)) return 0;
   return Math.max(0, Math.min(100, parsed));
+};
+
+const normalizeInteger = (value, fallback = 0) => {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) return fallback;
+  return parsed;
 };
 
 const createFallbackId = (prefix, index) => {
@@ -67,143 +52,82 @@ export const createPlayer = (index) => {
     name: `Player ${seatLabel}`,
     color: getDefaultPlayerColor(index),
     symbol: getDefaultPlayerSymbol(index),
-    periodicIncome: 0,
   };
 };
 
-export const createCompany = (index, numORs) => ({
+export const createCompany = (index) => ({
   id: createFallbackId('company', index),
   name: `Co${index + 1}`,
   displayName: '',
   genericIndex: index + 1,
   color: getDefaultCompanyColor(index),
   symbol: getDefaultCompanySymbol(index),
-  abbr: '',
-  templateId: null,
-  icon: null,
-  trains: [],
+});
+
+export const createCompanyRoundState = () => ({
   stockHoldings: [],
   presidentPlayerId: null,
   isUnestablished: true,
   treasuryStockPercentage: 0,
   bankPoolPercentage: 0,
-  ipoPercentage: 100,
   periodicIncome: 0,
-  orRevenues: buildORRevenues(numORs),
-  orDividendModes: buildORDividendModes(numORs),
+  trains: [],
 });
-
-export const cloneCompanies = (companies) =>
-  companies.map((company) => ({
-    ...company,
-    trains: (company.trains || []).map((train) => ({
-      ...train,
-      stops: [...(train.stops || [])],
-    })),
-    stockHoldings: (company.stockHoldings || []).map((holding) => ({ ...holding })),
-    presidentPlayerId:
-      typeof company.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
-    orRevenues: (company.orRevenues || []).map((orRevenue) => ({ ...orRevenue })),
-    orDividendModes: (company.orDividendModes || []).map((entry) => ({ ...entry })),
-  }));
 
 export const clonePlayers = (players) => players.map((player) => ({ ...player }));
 
-export const evaluateStockValidation = (company, hasIpoShares) => {
-  const playerTotal = (company.stockHoldings || []).reduce(
-    (sum, holding) => sum + parsePercent(holding.percentage),
-    0
-  );
-  const treasury = parsePercent(company.treasuryStockPercentage || 0);
-  const bank = hasIpoShares
-    ? parsePercent(company.bankPoolPercentage || 0)
-    : 100 - playerTotal - treasury;
-  const ipo = hasIpoShares ? 100 - playerTotal - treasury - bank : 0;
+export const cloneCompanies = (companies) => companies.map((company) => ({ ...company }));
 
-  const invalid = bank < 0 || ipo < 0 || playerTotal + treasury + bank > 100;
-  let message = 'OK';
-  if (invalid) {
-    message =
-      playerTotal + treasury + bank > 100
-        ? '配分合計が100%を超えています。'
-        : '自動計算値が負になっています。';
-  }
+export const cloneStockRoundState = (stockRoundState) => ({
+  playerPeriodicIncomes: { ...(stockRoundState?.playerPeriodicIncomes || {}) },
+  companyStates: Object.entries(stockRoundState?.companyStates || {}).reduce(
+    (acc, [companyId, entry]) => {
+      acc[companyId] = {
+        stockHoldings: (entry?.stockHoldings || []).map((holding) => ({ ...holding })),
+        presidentPlayerId:
+          typeof entry?.presidentPlayerId === 'string' ? entry.presidentPlayerId : null,
+        isUnestablished: Boolean(entry?.isUnestablished),
+        treasuryStockPercentage: parsePercent(entry?.treasuryStockPercentage || 0),
+        bankPoolPercentage: parsePercent(entry?.bankPoolPercentage || 0),
+        periodicIncome: Math.max(0, normalizeInteger(entry?.periodicIncome, 0)),
+        trains: (entry?.trains || []).map((train) => ({
+          ...train,
+          stops: [...(train?.stops || [])],
+        })),
+      };
+      return acc;
+    },
+    {}
+  ),
+  validation: { ...(stockRoundState?.validation || {}) },
+});
 
-  return {
-    companyId: company.id,
-    invalid,
-    message,
-  };
-};
-
-export const buildStockValidationMap = (companies, hasIpoShares) =>
-  companies.reduce((acc, company) => {
-    const result = evaluateStockValidation(company, hasIpoShares);
-    acc[company.id] = result;
-    return acc;
+export const cloneOperatingResults = (operatingResults) =>
+  Object.entries(operatingResults || {}).reduce((cycleAcc, [cycleNo, orEntries]) => {
+    cycleAcc[cycleNo] = Object.entries(orEntries || {}).reduce((orAcc, [orNum, companyEntries]) => {
+      orAcc[orNum] = Object.entries(companyEntries || {}).reduce(
+        (companyAcc, [companyId, record]) => {
+          companyAcc[companyId] = {
+            ...record,
+            playerPayouts: (record?.playerPayouts || []).map((entry) => ({ ...entry })),
+          };
+          return companyAcc;
+        },
+        {}
+      );
+      return orAcc;
+    }, {});
+    return cycleAcc;
   }, {});
 
-export const syncCompanyOrder = (companyOrder, companies) => {
-  const companyIds = companies.map((company) => company.id);
+export const syncCompanyOrder = (companyOrder, companyIds) => {
   const known = (companyOrder || []).filter((companyId) => companyIds.includes(companyId));
   const missing = companyIds.filter((companyId) => !known.includes(companyId));
   return [...known, ...missing];
 };
 
-export const resolveIsUnestablished = (company, hasIpoShares) =>
-  typeof company?.isUnestablished === 'boolean'
-    ? company.isUnestablished
-    : inferIsUnestablished(company, hasIpoShares);
-
-export const splitCompanyOrderByEstablishment = (companyOrder, companies) => {
-  const companiesById = new Map(companies.map((company) => [company.id, company]));
-  const known = (companyOrder || []).filter((companyId) => companiesById.has(companyId));
-  const missing = companies
-    .map((company) => company.id)
-    .filter((companyId) => !known.includes(companyId));
-  const normalizedOrder = [...known, ...missing];
-
-  const establishedIds = normalizedOrder.filter(
-    (companyId) => !companiesById.get(companyId)?.isUnestablished
-  );
-  const unestablishedIds = normalizedOrder.filter(
-    (companyId) => companiesById.get(companyId)?.isUnestablished
-  );
-
-  return {
-    establishedIds,
-    unestablishedIds,
-    orderedIds: [...establishedIds, ...unestablishedIds],
-  };
-};
-
-export const getFirstEstablishedCompanyId = (companyOrder, companies) =>
-  splitCompanyOrderByEstablishment(companyOrder, companies).establishedIds[0] || null;
-
-export const getEstablishedCompanyIds = (companyOrder, companies) =>
-  splitCompanyOrderByEstablishment(companyOrder, companies).establishedIds;
-
-export const createBaseState = () => ({
-  players: [],
-  companies: [],
-  flow: {
-    step: 'setup',
-    setupLocked: false,
-    hasIpoShares: true,
-    bankPoolDividendRecipient: 'market',
-    numORs: DEFAULT_NUM_ORS,
-  },
-  activeCycle: {
-    cycleNo: 1,
-    companyOrder: [],
-    currentOR: 1,
-    completedCompanyIdsByOR: buildEmptyCompletedByOR(DEFAULT_NUM_ORS),
-    selectedCompanyId: null,
-  },
-  cycleHistory: [],
-  summarySelectedCycleNo: null,
-  srValidation: {},
-});
+const normalizeDividendMode = (mode) =>
+  ['full', 'withhold', 'half'].includes(mode) ? mode : DEFAULT_DIVIDEND_MODE;
 
 const normalizePlayer = (player, index) => {
   const seatLabel = player?.seatLabel || getSeatLabel(index);
@@ -218,15 +142,12 @@ const normalizePlayer = (player, index) => {
     name: player?.name || displayName,
     color: isKnownPlayerColor(player?.color) ? player.color : getDefaultPlayerColor(index),
     symbol: player?.symbol || getDefaultPlayerSymbol(index),
-    periodicIncome: Number.isFinite(player?.periodicIncome)
-      ? Math.max(0, Math.floor(player.periodicIncome))
-      : 0,
   };
 };
 
-const normalizeCompany = (company, index, numORs, hasIpoShares) => {
+const normalizeCompany = (company, index) => {
   const genericIndex = Number.isInteger(company?.genericIndex) ? company.genericIndex : index + 1;
-  const normalized = {
+  return {
     ...company,
     id: company?.id || createFallbackId('company', index),
     genericIndex,
@@ -234,106 +155,79 @@ const normalizeCompany = (company, index, numORs, hasIpoShares) => {
     displayName: company?.displayName || '',
     color: isKnownCompanyColor(company?.color) ? company.color : getDefaultCompanyColor(index),
     symbol: company?.symbol || getDefaultCompanySymbol(index),
-    treasuryStockPercentage: Number.isFinite(company?.treasuryStockPercentage)
-      ? company.treasuryStockPercentage
-      : 0,
-    bankPoolPercentage: Number.isFinite(company?.bankPoolPercentage)
-      ? company.bankPoolPercentage
-      : 0,
-    ipoPercentage: Number.isFinite(company?.ipoPercentage) ? company.ipoPercentage : 0,
-    periodicIncome: Number.isFinite(company?.periodicIncome)
-      ? Math.max(0, Math.floor(company.periodicIncome))
-      : 0,
-    trains: Array.isArray(company?.trains) ? company.trains : [],
-    stockHoldings: Array.isArray(company?.stockHoldings) ? company.stockHoldings : [],
+  };
+};
+
+const normalizeCompanyRoundState = (entry, hasIpoShares) => {
+  const fallback = createCompanyRoundState();
+  const normalized = {
+    stockHoldings: Array.isArray(entry?.stockHoldings)
+      ? entry.stockHoldings
+          .map((holding) => ({
+            playerId: holding?.playerId,
+            percentage: parsePercent(holding?.percentage),
+          }))
+          .filter((holding) => typeof holding.playerId === 'string' && holding.percentage > 0)
+      : fallback.stockHoldings,
     presidentPlayerId:
-      typeof company?.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
-    orRevenues: buildORRevenues(
-      numORs,
-      Array.isArray(company?.orRevenues) ? company.orRevenues : []
-    ),
-    orDividendModes: buildORDividendModes(
-      numORs,
-      Array.isArray(company?.orDividendModes) ? company.orDividendModes : []
-    ),
+      typeof entry?.presidentPlayerId === 'string' ? entry.presidentPlayerId : null,
+    isUnestablished:
+      typeof entry?.isUnestablished === 'boolean'
+        ? entry.isUnestablished
+        : inferIsUnestablished(entry, hasIpoShares),
+    treasuryStockPercentage: parsePercent(entry?.treasuryStockPercentage || 0),
+    bankPoolPercentage: parsePercent(entry?.bankPoolPercentage || 0),
+    periodicIncome: Math.max(0, normalizeInteger(entry?.periodicIncome, 0)),
+    trains: Array.isArray(entry?.trains)
+      ? entry.trains.map((train, index) => ({
+          id: train?.id || createFallbackId('train', index),
+          stops: Array.isArray(train?.stops)
+            ? train.stops.map((stop) => Math.max(0, normalizeInteger(stop, 0)))
+            : [],
+        }))
+      : [],
   };
 
   return {
     ...normalized,
     isUnestablished:
-      typeof company?.isUnestablished === 'boolean'
-        ? company.isUnestablished
+      typeof entry?.isUnestablished === 'boolean'
+        ? entry.isUnestablished
         : inferIsUnestablished(normalized, hasIpoShares),
   };
 };
 
-const normalizeFlow = (flow, numORs) => ({
-  step: ['setup', 'stockRound', 'orRound', 'summary'].includes(flow?.step) ? flow.step : 'setup',
-  setupLocked: Boolean(flow?.setupLocked),
-  hasIpoShares: flow?.hasIpoShares !== false,
-  bankPoolDividendRecipient: flow?.bankPoolDividendRecipient === 'company' ? 'company' : 'market',
-  numORs,
-});
+const normalizeGameConfig = (gameConfig) => {
+  const numORs = Number.isInteger(gameConfig?.numORs)
+    ? Math.max(1, Math.min(MAX_ORS, gameConfig.numORs))
+    : DEFAULT_NUM_ORS;
 
-const normalizeCycleHistoryEntry = (entry, historyIndex, numORs, hasIpoShares) => ({
-  cycleNo: Number.isInteger(entry?.cycleNo) ? entry.cycleNo : historyIndex + 1,
-  completedAt: typeof entry?.completedAt === 'string' ? entry.completedAt : null,
-  flowSnapshot: normalizeFlow(entry?.flowSnapshot, numORs),
-  playersSnapshot: Array.isArray(entry?.playersSnapshot)
-    ? entry.playersSnapshot.map((player, index) => normalizePlayer(player, index))
-    : [],
-  companiesSnapshot: Array.isArray(entry?.companiesSnapshot)
-    ? entry.companiesSnapshot.map((company, index) =>
-        normalizeCompany(company, index, numORs, hasIpoShares)
-      )
-    : [],
-});
+  return {
+    players: Array.isArray(gameConfig?.players)
+      ? gameConfig.players.map((player, index) => normalizePlayer(player, index))
+      : [],
+    companies: Array.isArray(gameConfig?.companies)
+      ? gameConfig.companies.map((company, index) => normalizeCompany(company, index))
+      : [],
+    numORs,
+    hasIpoShares: gameConfig?.hasIpoShares !== false,
+    bankPoolDividendRecipient:
+      gameConfig?.bankPoolDividendRecipient === 'company' ? 'company' : 'market',
+    setupLocked: Boolean(gameConfig?.setupLocked),
+  };
+};
 
-export const normalizeAppState = (saved) => {
-  if (!saved || typeof saved !== 'object') {
-    return createBaseState();
-  }
-
-  const numORs = Number.isInteger(saved?.flow?.numORs)
-    ? Math.max(1, Math.min(MAX_ORS, saved.flow.numORs))
-    : Number.isInteger(saved?.numORs)
-      ? Math.max(1, Math.min(MAX_ORS, saved.numORs))
-      : DEFAULT_NUM_ORS;
-
-  const players = Array.isArray(saved.players)
-    ? saved.players.map((player, index) => normalizePlayer(player, index))
-    : [];
-  const hasIpoShares = saved?.flow?.hasIpoShares !== false;
-  const companies = Array.isArray(saved.companies)
-    ? saved.companies.map((company, index) =>
-        normalizeCompany(company, index, numORs, hasIpoShares)
-      )
-    : [];
-
-  const fallbackOrder = companies.map((company) => company.id);
-  const existingOrder = Array.isArray(saved?.activeCycle?.companyOrder)
-    ? saved.activeCycle.companyOrder.filter((companyId) => fallbackOrder.includes(companyId))
-    : [];
-  const companyOrder = [
-    ...existingOrder,
-    ...fallbackOrder.filter((companyId) => !existingOrder.includes(companyId)),
-  ];
-
-  const cycleNo = Number.isInteger(saved?.activeCycle?.cycleNo)
-    ? saved.activeCycle.cycleNo
-    : Number.isInteger(saved?.cycleNo)
-      ? saved.cycleNo
-      : 1;
-
-  const currentOR = Number.isInteger(saved?.activeCycle?.currentOR)
-    ? Math.max(1, Math.min(numORs, saved.activeCycle.currentOR))
+const normalizeOperatingState = (operatingState, numORs, companyIds) => {
+  const companyOrder = syncCompanyOrder(operatingState?.companyOrder || [], companyIds);
+  const currentOR = Number.isInteger(operatingState?.currentOR)
+    ? Math.max(1, Math.min(numORs, operatingState.currentOR))
     : 1;
 
   const completedCompanyIdsByOR = Array.from({ length: numORs }, (_, idx) => idx + 1).reduce(
     (acc, orNum) => {
-      const source = saved?.activeCycle?.completedCompanyIdsByOR?.[orNum];
-      acc[orNum] = Array.isArray(source)
-        ? source.filter((companyId) => companyOrder.includes(companyId))
+      const current = operatingState?.completedCompanyIdsByOR?.[orNum];
+      acc[orNum] = Array.isArray(current)
+        ? current.filter((companyId) => companyIds.includes(companyId))
         : [];
       return acc;
     },
@@ -341,45 +235,318 @@ export const normalizeAppState = (saved) => {
   );
 
   const selectedCompanyId =
-    saved?.activeCycle?.selectedCompanyId &&
-    companyOrder.includes(saved.activeCycle.selectedCompanyId)
-      ? saved.activeCycle.selectedCompanyId
+    typeof operatingState?.selectedCompanyId === 'string' &&
+    companyIds.includes(operatingState.selectedCompanyId)
+      ? operatingState.selectedCompanyId
       : companyOrder[0] || null;
 
-  const flow = normalizeFlow(saved.flow, numORs);
-
-  const cycleHistory = Array.isArray(saved.cycleHistory)
-    ? saved.cycleHistory.map((entry, historyIndex) =>
-        normalizeCycleHistoryEntry(entry, historyIndex, numORs, hasIpoShares)
-      )
-    : [];
-
-  const summarySelectedCycleNo = Number.isInteger(saved.summarySelectedCycleNo)
-    ? saved.summarySelectedCycleNo
-    : null;
-
   return {
-    players,
-    companies,
-    flow,
-    activeCycle: {
-      cycleNo,
-      companyOrder,
-      currentOR,
-      completedCompanyIdsByOR,
-      selectedCompanyId,
-    },
-    cycleHistory,
-    summarySelectedCycleNo,
-    srValidation:
-      typeof saved.srValidation === 'object' && saved.srValidation ? saved.srValidation : {},
+    companyOrder,
+    currentOR,
+    completedCompanyIdsByOR,
+    selectedCompanyId,
   };
 };
 
-export const hasAnyStatefulData = (state) =>
-  Array.isArray(state?.players) ||
-  Array.isArray(state?.companies) ||
-  Array.isArray(state?.cycleHistory);
+const normalizeOperatingResults = (operatingResults, gameConfig, stockRoundState) =>
+  Object.entries(operatingResults || {}).reduce((cycleAcc, [cycleNo, orEntries]) => {
+    const normalizedCycleNo = Number.parseInt(cycleNo, 10);
+    if (Number.isNaN(normalizedCycleNo) || normalizedCycleNo < 1) return cycleAcc;
 
-export const shouldAutoUnsetUnestablished = (company, hasIpoShares) =>
-  hasAnyStockInput(company, hasIpoShares);
+    cycleAcc[normalizedCycleNo] = Object.entries(orEntries || {}).reduce(
+      (orAcc, [orNum, entries]) => {
+        const normalizedOrNum = Number.parseInt(orNum, 10);
+        if (
+          Number.isNaN(normalizedOrNum) ||
+          normalizedOrNum < 1 ||
+          normalizedOrNum > gameConfig.numORs
+        ) {
+          return orAcc;
+        }
+
+        orAcc[normalizedOrNum] = Object.entries(entries || {}).reduce(
+          (companyAcc, [companyId, record]) => {
+            if (!gameConfig.companies.some((company) => company.id === companyId))
+              return companyAcc;
+            companyAcc[companyId] = buildOperatingResultRecord({
+              cycleNo: normalizedCycleNo,
+              orNum: normalizedOrNum,
+              companyId,
+              revenue: Math.max(0, normalizeInteger(record?.revenue, 0)),
+              dividendMode: normalizeDividendMode(record?.dividendMode),
+              isConfirmed: Boolean(record?.isConfirmed),
+              gameConfig,
+              stockRoundState,
+            });
+            return companyAcc;
+          },
+          {}
+        );
+
+        return orAcc;
+      },
+      {}
+    );
+
+    return cycleAcc;
+  }, {});
+
+const normalizeHistoryEntry = (entry) => {
+  if (!entry || typeof entry !== 'object') return null;
+  const gameConfigSnapshot = normalizeGameConfig(entry.gameConfigSnapshot);
+  const stockRoundSnapshot = normalizeStockRoundState(entry.stockRoundSnapshot, gameConfigSnapshot);
+
+  return {
+    cycleNo: Number.isInteger(entry.cycleNo) ? entry.cycleNo : 1,
+    completedAt: typeof entry.completedAt === 'string' ? entry.completedAt : null,
+    gameConfigSnapshot,
+    stockRoundSnapshot,
+    operatingResultsSnapshot:
+      normalizeOperatingResults(
+        { [entry.cycleNo || 1]: entry.operatingResultsSnapshot || {} },
+        gameConfigSnapshot,
+        stockRoundSnapshot,
+        entry.cycleNo || 1
+      )[entry.cycleNo || 1] || {},
+  };
+};
+
+export const createBaseState = () => ({
+  gameConfig: {
+    players: [],
+    companies: [],
+    numORs: DEFAULT_NUM_ORS,
+    hasIpoShares: true,
+    bankPoolDividendRecipient: 'market',
+    setupLocked: false,
+  },
+  session: {
+    currentCycleNo: 1,
+    mode: 'stockRound',
+  },
+  stockRoundState: {
+    playerPeriodicIncomes: {},
+    companyStates: {},
+    validation: {},
+  },
+  operatingState: {
+    companyOrder: [],
+    currentOR: 1,
+    completedCompanyIdsByOR: buildEmptyCompletedByOR(DEFAULT_NUM_ORS),
+    selectedCompanyId: null,
+  },
+  operatingResults: {},
+  history: [],
+});
+
+export const normalizeStockRoundState = (stockRoundState, gameConfig) => {
+  const players = gameConfig?.players || [];
+  const companies = gameConfig?.companies || [];
+  const playerPeriodicIncomes = players.reduce((acc, player) => {
+    acc[player.id] = Math.max(
+      0,
+      normalizeInteger(stockRoundState?.playerPeriodicIncomes?.[player.id], 0)
+    );
+    return acc;
+  }, {});
+
+  const companyStates = companies.reduce((acc, company) => {
+    acc[company.id] = normalizeCompanyRoundState(
+      stockRoundState?.companyStates?.[company.id],
+      gameConfig?.hasIpoShares !== false
+    );
+    return acc;
+  }, {});
+
+  return {
+    playerPeriodicIncomes,
+    companyStates,
+    validation:
+      typeof stockRoundState?.validation === 'object' && stockRoundState.validation
+        ? stockRoundState.validation
+        : {},
+  };
+};
+
+export const normalizeAppState = (saved) => {
+  if (!saved || typeof saved !== 'object' || !saved.gameConfig || !saved.stockRoundState) {
+    return createBaseState();
+  }
+
+  const gameConfig = normalizeGameConfig(saved.gameConfig);
+  const stockRoundState = normalizeStockRoundState(saved.stockRoundState, gameConfig);
+  const session = {
+    currentCycleNo: Number.isInteger(saved?.session?.currentCycleNo)
+      ? Math.max(1, saved.session.currentCycleNo)
+      : 1,
+    mode: saved?.session?.mode === 'orRound' ? 'orRound' : 'stockRound',
+  };
+  const companyIds = gameConfig.companies.map((company) => company.id);
+  const operatingState = normalizeOperatingState(
+    saved.operatingState,
+    gameConfig.numORs,
+    companyIds
+  );
+  const operatingResults = normalizeOperatingResults(
+    saved.operatingResults,
+    gameConfig,
+    stockRoundState,
+    session.currentCycleNo
+  );
+  const history = Array.isArray(saved.history)
+    ? saved.history.map(normalizeHistoryEntry).filter(Boolean)
+    : [];
+
+  return {
+    gameConfig,
+    session: {
+      ...session,
+      mode: gameConfig.setupLocked ? session.mode : 'stockRound',
+    },
+    stockRoundState,
+    operatingState: {
+      ...operatingState,
+      completedCompanyIdsByOR: buildEmptyCompletedByOR(gameConfig.numORs),
+      ...operatingState,
+    },
+    operatingResults,
+    history,
+  };
+};
+
+export const resolveBankPoolPercentage = (companyState, hasIpoShares) => {
+  if (hasIpoShares) {
+    return parsePercent(companyState?.bankPoolPercentage || 0);
+  }
+
+  const playerTotal = (companyState?.stockHoldings || []).reduce(
+    (sum, holding) => sum + parsePercent(holding.percentage),
+    0
+  );
+  const treasury = parsePercent(companyState?.treasuryStockPercentage || 0);
+  return Math.max(0, 100 - playerTotal - treasury);
+};
+
+export const evaluateStockValidation = (companyId, companyState, hasIpoShares) => {
+  const playerTotal = (companyState?.stockHoldings || []).reduce(
+    (sum, holding) => sum + parsePercent(holding.percentage),
+    0
+  );
+  const treasury = parsePercent(companyState?.treasuryStockPercentage || 0);
+  const bank = hasIpoShares
+    ? parsePercent(companyState?.bankPoolPercentage || 0)
+    : 100 - playerTotal - treasury;
+  const ipo = hasIpoShares ? 100 - playerTotal - treasury - bank : 0;
+
+  const invalid = bank < 0 || ipo < 0 || playerTotal + treasury + bank > 100;
+  let message = 'OK';
+  if (invalid) {
+    message =
+      playerTotal + treasury + bank > 100
+        ? '配分合計が100%を超えています。'
+        : '自動計算値が負になっています。';
+  }
+
+  return {
+    companyId,
+    invalid,
+    message,
+  };
+};
+
+export const buildStockValidationMap = (gameConfig, stockRoundState) =>
+  (gameConfig?.companies || []).reduce((acc, company) => {
+    acc[company.id] = evaluateStockValidation(
+      company.id,
+      stockRoundState?.companyStates?.[company.id],
+      gameConfig?.hasIpoShares !== false
+    );
+    return acc;
+  }, {});
+
+export const buildOperatingResultRecord = ({
+  cycleNo,
+  orNum,
+  companyId,
+  revenue = 0,
+  dividendMode = DEFAULT_DIVIDEND_MODE,
+  isConfirmed = false,
+  gameConfig,
+  stockRoundState,
+}) => {
+  const companyState = stockRoundState?.companyStates?.[companyId] || createCompanyRoundState();
+  const players = gameConfig?.players || [];
+  const bankPoolDividendRecipient =
+    gameConfig?.bankPoolDividendRecipient === 'company' ? 'company' : 'market';
+  const distribution = calculateORRevenueDistribution({
+    company: {
+      stockHoldings: companyState.stockHoldings || [],
+      treasuryStockPercentage: companyState.treasuryStockPercentage || 0,
+      bankPoolPercentage: resolveBankPoolPercentage(
+        companyState,
+        gameConfig?.hasIpoShares !== false
+      ),
+    },
+    players,
+    totalRevenue: Math.max(0, normalizeInteger(revenue, 0)),
+    companyIncome: Math.max(0, normalizeInteger(companyState.periodicIncome, 0)),
+    mode: normalizeDividendMode(dividendMode),
+    bankPoolDividendRecipient,
+  });
+
+  return {
+    cycleNo,
+    orNum,
+    companyId,
+    revenue: distribution.totalRevenue,
+    dividendMode: distribution.mode,
+    distributableRevenue: distribution.distributableRevenue,
+    retainedRevenue: distribution.retainedRevenue,
+    companyIncome: distribution.companyIncome,
+    playerPayouts: distribution.playerPayouts.map((entry) => ({ ...entry })),
+    treasuryPercentage: distribution.treasury.percentage,
+    treasuryAmount: distribution.treasury.amount,
+    bankPoolPercentage: distribution.bankPool.percentage,
+    bankPoolAmount: distribution.bankPool.amount,
+    bankPoolRecipient: distribution.bankPool.recipient,
+    companyAmount: distribution.companyAmount,
+    marketAmount: distribution.marketAmount,
+    isConfirmed,
+  };
+};
+
+export const splitCompanyOrderByEstablishment = (companyOrder, companyStates, companyIds) => {
+  const normalizedOrder = syncCompanyOrder(companyOrder, companyIds);
+  const establishedIds = normalizedOrder.filter(
+    (companyId) => !companyStates?.[companyId]?.isUnestablished
+  );
+  const unestablishedIds = normalizedOrder.filter(
+    (companyId) => companyStates?.[companyId]?.isUnestablished
+  );
+
+  return {
+    establishedIds,
+    unestablishedIds,
+    orderedIds: [...establishedIds, ...unestablishedIds],
+  };
+};
+
+export const getEstablishedCompanyIds = (companyOrder, companyStates, companyIds) =>
+  splitCompanyOrderByEstablishment(companyOrder, companyStates, companyIds).establishedIds;
+
+export const getFirstEstablishedCompanyId = (companyOrder, companyStates, companyIds) =>
+  getEstablishedCompanyIds(companyOrder, companyStates, companyIds)[0] || null;
+
+export const ensureCompanyRoundStates = (companyStates, companyIds) =>
+  companyIds.reduce((acc, companyId) => {
+    acc[companyId] = normalizeCompanyRoundState(companyStates?.[companyId], true);
+    return acc;
+  }, {});
+
+export const hasAnyStatefulData = (state) =>
+  Array.isArray(state?.gameConfig?.players) ||
+  Array.isArray(state?.gameConfig?.companies) ||
+  Array.isArray(state?.history);
+
+export const shouldAutoUnsetUnestablished = (companyState, hasIpoShares) =>
+  hasAnyStockInput(companyState, hasIpoShares);

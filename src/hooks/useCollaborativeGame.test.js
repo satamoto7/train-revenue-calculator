@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useCollaborativeGame } from './useCollaborativeGame';
+import { createBaseState } from '../state/appState';
 
 const mockCreateGame = vi.fn();
 const mockJoinGame = vi.fn();
@@ -14,21 +15,7 @@ const mockListGameMembers = vi.fn();
 const mockSubscribeGameMembers = vi.fn();
 const mockHasSupabaseEnv = vi.fn();
 
-const buildBaseState = () => ({
-  players: [],
-  companies: [],
-  flow: { step: 'setup', setupLocked: false, hasIpoShares: true, numORs: 2 },
-  activeCycle: {
-    cycleNo: 1,
-    companyOrder: [],
-    currentOR: 1,
-    completedCompanyIdsByOR: { 1: [], 2: [] },
-    selectedCompanyId: null,
-  },
-  cycleHistory: [],
-  summarySelectedCycleNo: null,
-  srValidation: {},
-});
+const buildBaseState = () => createBaseState();
 
 vi.mock('../collab/gameRepository', () => ({
   createGame: (...args) => mockCreateGame(...args),
@@ -205,7 +192,7 @@ describe('useCollaborativeGame', () => {
 
     act(() => {
       result.current.dispatch({
-        type: 'PLAYER_SET_ALL',
+        type: 'CONFIG_SET_PLAYERS',
         payload: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
       });
     });
@@ -217,7 +204,9 @@ describe('useCollaborativeGame', () => {
     expect(mockSaveGameState).toHaveBeenCalledWith(
       'game-1',
       expect.objectContaining({
-        players: expect.arrayContaining([expect.objectContaining({ id: 'p1' })]),
+        gameConfig: expect.objectContaining({
+          players: expect.arrayContaining([expect.objectContaining({ id: 'p1' })]),
+        }),
       })
     );
   });
@@ -395,12 +384,12 @@ describe('useCollaborativeGame', () => {
 
     act(() => {
       result.current.dispatch({
-        type: 'PLAYER_SET_ALL',
+        type: 'CONFIG_SET_PLAYERS',
         payload: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
       });
     });
 
-    expect(result.current.appState.players).toEqual([
+    expect(result.current.appState.gameConfig.players).toEqual([
       expect.objectContaining({ id: 'p1', name: 'Player A' }),
     ]);
 
@@ -411,7 +400,7 @@ describe('useCollaborativeGame', () => {
       });
     });
 
-    expect(result.current.appState.players).toEqual([
+    expect(result.current.appState.gameConfig.players).toEqual([
       expect.objectContaining({ id: 'p1', name: 'Player A' }),
     ]);
 
@@ -422,7 +411,9 @@ describe('useCollaborativeGame', () => {
     expect(mockSaveGameState).toHaveBeenCalledWith(
       'game-1',
       expect.objectContaining({
-        players: [expect.objectContaining({ id: 'p1', name: 'Player A' })],
+        gameConfig: expect.objectContaining({
+          players: [expect.objectContaining({ id: 'p1', name: 'Player A' })],
+        }),
       })
     );
   }, 10000);
@@ -447,7 +438,7 @@ describe('useCollaborativeGame', () => {
 
     act(() => {
       result.current.dispatch({
-        type: 'PLAYER_SET_ALL',
+        type: 'CONFIG_SET_PLAYERS',
         payload: [{ id: 'p1', name: 'Player A', displayName: 'Player A' }],
       });
     });
@@ -456,7 +447,7 @@ describe('useCollaborativeGame', () => {
       await new Promise((resolve) => setTimeout(resolve, 2200));
     });
 
-    expect(result.current.appState.players).toEqual([
+    expect(result.current.appState.gameConfig.players).toEqual([
       expect.objectContaining({ id: 'p1', name: 'Player A' }),
     ]);
   }, 10000);
@@ -480,12 +471,15 @@ describe('useCollaborativeGame', () => {
         version: 2,
         state: {
           ...buildBaseState(),
-          players: [{ id: 'p2', name: 'Player B', displayName: 'Player B' }],
+          gameConfig: {
+            ...buildBaseState().gameConfig,
+            players: [{ id: 'p2', name: 'Player B', displayName: 'Player B' }],
+          },
         },
       });
     });
 
-    expect(result.current.appState.players).toEqual([
+    expect(result.current.appState.gameConfig.players).toEqual([
       expect.objectContaining({ id: 'p2', name: 'Player B' }),
     ]);
   });
@@ -500,7 +494,7 @@ describe('useCollaborativeGame', () => {
 
     act(() => {
       result.current.dispatch({
-        type: 'PLAYER_SET_ALL',
+        type: 'CONFIG_SET_PLAYERS',
         payload: [{ id: 'p1', name: 'Local Player', displayName: 'Local Player' }],
       });
     });
@@ -509,7 +503,10 @@ describe('useCollaborativeGame', () => {
       version: 1,
       state: {
         ...buildBaseState(),
-        players: [{ id: 'p2', name: 'Remote Player', displayName: 'Remote Player' }],
+        gameConfig: {
+          ...buildBaseState().gameConfig,
+          players: [{ id: 'p2', name: 'Remote Player', displayName: 'Remote Player' }],
+        },
       },
     });
 
@@ -517,7 +514,7 @@ describe('useCollaborativeGame', () => {
       await result.current.actions.reloadFromServer();
     });
 
-    expect(result.current.appState.players).toEqual([
+    expect(result.current.appState.gameConfig.players).toEqual([
       expect.objectContaining({ id: 'p2', name: 'Remote Player' }),
     ]);
   });

@@ -1,268 +1,376 @@
-import { inferIsUnestablished } from '../lib/companyStatus';
 import {
   buildEmptyCompletedByOR,
-  buildORDividendModes,
-  buildORRevenues,
+  buildOperatingResultRecord,
   buildStockValidationMap,
   cloneCompanies,
+  cloneOperatingResults,
   clonePlayers,
+  cloneStockRoundState,
   createBaseState,
+  createCompanyRoundState,
   getEstablishedCompanyIds,
   getFirstEstablishedCompanyId,
   normalizeAppState,
   parsePercent,
-  resolveIsUnestablished,
   shouldAutoUnsetUnestablished,
   splitCompanyOrderByEstablishment,
   syncCompanyOrder,
 } from './appState';
 
+const cloneState = (state) => ({
+  ...state,
+  gameConfig: {
+    ...state.gameConfig,
+    players: clonePlayers(state.gameConfig.players),
+    companies: cloneCompanies(state.gameConfig.companies),
+  },
+  stockRoundState: cloneStockRoundState(state.stockRoundState),
+  operatingState: {
+    ...state.operatingState,
+    completedCompanyIdsByOR: Object.entries(
+      state.operatingState.completedCompanyIdsByOR || {}
+    ).reduce((acc, [orNum, companyIds]) => {
+      acc[orNum] = [...companyIds];
+      return acc;
+    }, {}),
+  },
+  operatingResults: cloneOperatingResults(state.operatingResults),
+  history: [...(state.history || [])],
+});
+
+const toCycleKey = (cycleNo) => `${cycleNo}`;
+const toOrKey = (orNum) => `${orNum}`;
+
+const getCompanyIds = (state) => state.gameConfig.companies.map((company) => company.id);
+
+const syncPlayerPeriodicIncomes = (playerPeriodicIncomes, players) =>
+  players.reduce((acc, player) => {
+    acc[player.id] = Number.isFinite(playerPeriodicIncomes?.[player.id])
+      ? Math.max(0, Math.floor(playerPeriodicIncomes[player.id]))
+      : 0;
+    return acc;
+  }, {});
+
+const syncCompanyStates = (companyStates, companyIds) =>
+  companyIds.reduce((acc, companyId) => {
+    const current = companyStates?.[companyId];
+    acc[companyId] = current
+      ? {
+          ...createCompanyRoundState(),
+          ...current,
+          stockHoldings: (current.stockHoldings || []).map((holding) => ({ ...holding })),
+          trains: (current.trains || []).map((train) => ({
+            ...train,
+            stops: [...(train.stops || [])],
+          })),
+        }
+      : createCompanyRoundState();
+    return acc;
+  }, {});
+
+const cleanupCompanyStateForPlayers = (companyState, playerIds) => {
+  const playerIdSet = new Set(playerIds);
+  return {
+    ...companyState,
+    stockHoldings: (companyState.stockHoldings || []).filter((holding) =>
+      playerIdSet.has(holding.playerId)
+    ),
+    presidentPlayerId: playerIdSet.has(companyState.presidentPlayerId)
+      ? companyState.presidentPlayerId
+      : null,
+  };
+};
+
+const recomputeResults = (state, companyIds = null) => {
+  const next = cloneState(state);
+  const targetIds = companyIds ? new Set(companyIds) : null;
+
+  Object.entries(next.operatingResults || {}).forEach(([cycleNo, cycleEntries]) => {
+    Object.entries(cycleEntries || {}).forEach(([orNum, companyEntries]) => {
+      Object.keys(companyEntries || {}).forEach((companyId) => {
+        if (targetIds && !targetIds.has(companyId)) return;
+        const current = next.operatingResults[cycleNo][orNum][companyId];
+        next.operatingResults[cycleNo][orNum][companyId] = buildOperatingResultRecord({
+          cycleNo: Number(cycleNo),
+          orNum: Number(orNum),
+          companyId,
+          revenue: current.revenue,
+          dividendMode: current.dividendMode,
+          isConfirmed: current.isConfirmed,
+          gameConfig: next.gameConfig,
+          stockRoundState: next.stockRoundState,
+        });
+      });
+    });
+  });
+
+  return next;
+};
+
+const upsertOperatingResult = (state, { companyId, orNum, revenue, dividendMode, isConfirmed }) => {
+  const next = cloneState(state);
+  const cycleNo = next.session.currentCycleNo;
+  const cycleKey = toCycleKey(cycleNo);
+  const orKey = toOrKey(orNum);
+  const existing = next.operatingResults?.[cycleKey]?.[orKey]?.[companyId];
+
+  const record = buildOperatingResultRecord({
+    cycleNo,
+    orNum,
+    companyId,
+    revenue: revenue ?? existing?.revenue ?? 0,
+    dividendMode: dividendMode ?? existing?.dividendMode ?? 'full',
+    isConfirmed: isConfirmed ?? existing?.isConfirmed ?? false,
+    gameConfig: next.gameConfig,
+    stockRoundState: next.stockRoundState,
+  });
+
+  if (!next.operatingResults[cycleKey]) next.operatingResults[cycleKey] = {};
+  if (!next.operatingResults[cycleKey][orKey]) next.operatingResults[cycleKey][orKey] = {};
+  next.operatingResults[cycleKey][orKey][companyId] = record;
+  return next;
+};
+
+const syncOperatingState = (state) => {
+  const next = cloneState(state);
+  const companyIds = getCompanyIds(next);
+  next.stockRoundState.companyStates = syncCompanyStates(
+    next.stockRoundState.companyStates,
+    companyIds
+  );
+  next.gameConfig.players = clonePlayers(next.gameConfig.players);
+  next.gameConfig.companies = cloneCompanies(next.gameConfig.companies);
+  next.operatingState.companyOrder = syncCompanyOrder(next.operatingState.companyOrder, companyIds);
+  next.operatingState.selectedCompanyId =
+    next.operatingState.selectedCompanyId &&
+    companyIds.includes(next.operatingState.selectedCompanyId)
+      ? next.operatingState.selectedCompanyId
+      : next.operatingState.companyOrder[0] || null;
+
+  Object.keys(next.operatingResults || {}).forEach((cycleNo) => {
+    Object.keys(next.operatingResults[cycleNo] || {}).forEach((orNum) => {
+      Object.keys(next.operatingResults[cycleNo][orNum] || {}).forEach((companyId) => {
+        if (!companyIds.includes(companyId)) {
+          delete next.operatingResults[cycleNo][orNum][companyId];
+        }
+      });
+    });
+  });
+
+  next.stockRoundState.validation = buildStockValidationMap(next.gameConfig, next.stockRoundState);
+  return next;
+};
+
 export function appReducer(state, action) {
   switch (action.type) {
-    case 'PLAYER_SET_ALL':
-      return { ...state, players: action.payload };
-
-    case 'COMPANY_SET_ALL': {
-      const companies = action.payload.map((company) => ({
-        ...company,
-        presidentPlayerId:
-          typeof company?.presidentPlayerId === 'string' ? company.presidentPlayerId : null,
-        isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
-        orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
-        orDividendModes: buildORDividendModes(state.flow.numORs, company.orDividendModes || []),
-      }));
-      const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder || [], companies);
-      return {
-        ...state,
-        companies,
-        activeCycle: {
-          ...state.activeCycle,
-          companyOrder,
-          selectedCompanyId:
-            state.activeCycle.selectedCompanyId &&
-            companyOrder.includes(state.activeCycle.selectedCompanyId)
-              ? state.activeCycle.selectedCompanyId
-              : companyOrder[0] || null,
-        },
-      };
+    case 'CONFIG_SET_PLAYERS': {
+      const next = cloneState(state);
+      next.gameConfig.players = action.payload;
+      const playerIds = next.gameConfig.players.map((player) => player.id);
+      next.stockRoundState.playerPeriodicIncomes = syncPlayerPeriodicIncomes(
+        next.stockRoundState.playerPeriodicIncomes,
+        next.gameConfig.players
+      );
+      next.stockRoundState.companyStates = Object.entries(
+        next.stockRoundState.companyStates
+      ).reduce((acc, [companyId, companyState]) => {
+        acc[companyId] = cleanupCompanyStateForPlayers(companyState, playerIds);
+        return acc;
+      }, {});
+      return recomputeResults(syncOperatingState(next));
     }
 
-    case 'COMPANY_SELECT':
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          selectedCompanyId: action.payload,
-        },
-      };
-
-    case 'OR_SET_NUM': {
-      if (state.flow.setupLocked) return state;
-      const numORs = action.payload;
-      return {
-        ...state,
-        flow: {
-          ...state.flow,
-          numORs,
-        },
-        companies: state.companies.map((company) => ({
-          ...company,
-          orRevenues: buildORRevenues(numORs, company.orRevenues || []),
-          orDividendModes: buildORDividendModes(numORs, company.orDividendModes || []),
-        })),
-        activeCycle: {
-          ...state.activeCycle,
-          currentOR: Math.min(state.activeCycle.currentOR, numORs),
-          completedCompanyIdsByOR: buildEmptyCompletedByOR(numORs),
-        },
-      };
+    case 'CONFIG_SET_COMPANIES': {
+      const next = cloneState(state);
+      next.gameConfig.companies = action.payload;
+      const companyIds = getCompanyIds(next);
+      next.stockRoundState.companyStates = syncCompanyStates(
+        next.stockRoundState.companyStates,
+        companyIds
+      );
+      next.operatingState.companyOrder = syncCompanyOrder(
+        next.operatingState.companyOrder,
+        companyIds
+      );
+      next.operatingState.selectedCompanyId =
+        next.operatingState.selectedCompanyId &&
+        companyIds.includes(next.operatingState.selectedCompanyId)
+          ? next.operatingState.selectedCompanyId
+          : next.operatingState.companyOrder[0] || null;
+      return recomputeResults(syncOperatingState(next));
     }
 
-    case 'IPO_MODE_SET': {
-      if (state.flow.setupLocked) return state;
-      return {
-        ...state,
-        flow: {
-          ...state.flow,
-          hasIpoShares: action.payload,
-        },
-      };
+    case 'CONFIG_SET_NUM_ORS': {
+      if (state.gameConfig.setupLocked) return state;
+      const next = cloneState(state);
+      next.gameConfig.numORs = action.payload;
+      next.operatingState.currentOR = Math.min(next.operatingState.currentOR, action.payload);
+      next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(action.payload);
+      return next;
+    }
+
+    case 'CONFIG_SET_HAS_IPO_SHARES': {
+      if (state.gameConfig.setupLocked) return state;
+      const next = cloneState(state);
+      next.gameConfig.hasIpoShares = action.payload;
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return recomputeResults(next);
     }
 
     case 'BANK_POOL_DIVIDEND_RECIPIENT_SET': {
-      if (state.flow.setupLocked) return state;
-      return {
-        ...state,
-        flow: {
-          ...state.flow,
-          bankPoolDividendRecipient: action.payload === 'company' ? 'company' : 'market',
-        },
-      };
+      if (state.gameConfig.setupLocked) return state;
+      const next = cloneState(state);
+      next.gameConfig.bankPoolDividendRecipient =
+        action.payload === 'company' ? 'company' : 'market';
+      return recomputeResults(next);
     }
 
-    case 'FLOW_STEP_SET':
-      return {
-        ...state,
-        flow: {
-          ...state.flow,
-          step: action.payload,
-        },
-      };
-
     case 'SETUP_LOCK': {
-      if (!action.payload) {
-        return {
-          ...state,
-          flow: {
-            ...state.flow,
-            setupLocked: false,
-          },
-        };
-      }
-
-      const normalizedCompanies = state.companies.map((company) => ({
-        ...company,
-        isUnestablished: resolveIsUnestablished(company, state.flow.hasIpoShares),
-        orRevenues: buildORRevenues(state.flow.numORs, company.orRevenues || []),
-        orDividendModes: buildORDividendModes(state.flow.numORs, company.orDividendModes || []),
-      }));
-      const companyOrder = normalizedCompanies.map((company) => company.id);
-      return {
-        ...state,
-        companies: normalizedCompanies,
-        flow: {
-          ...state.flow,
-          setupLocked: true,
-          step: 'stockRound',
-        },
-        activeCycle: {
-          ...state.activeCycle,
-          companyOrder,
-          currentOR: 1,
-          completedCompanyIdsByOR: buildEmptyCompletedByOR(state.flow.numORs),
-          selectedCompanyId: companyOrder[0] || null,
-        },
-      };
+      const next = cloneState(state);
+      next.gameConfig.setupLocked = Boolean(action.payload);
+      next.session.mode = 'stockRound';
+      next.operatingState.currentOR = 1;
+      next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(next.gameConfig.numORs);
+      next.operatingState.companyOrder = syncCompanyOrder(
+        next.operatingState.companyOrder,
+        getCompanyIds(next)
+      );
+      next.operatingState.selectedCompanyId = getFirstEstablishedCompanyId(
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        getCompanyIds(next)
+      );
+      return next;
     }
 
     case 'SR_STOCK_SET': {
       const { companyId, target, playerId, value } = action.payload;
+      const next = cloneState(state);
+      const companyState =
+        next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
       const nextValue = parsePercent(value);
+      let nextCompanyState = companyState;
 
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
+      if (target === 'player') {
+        const stockHoldings = [...(companyState.stockHoldings || [])];
+        const existingIndex = stockHoldings.findIndex((holding) => holding.playerId === playerId);
+        if (nextValue === 0) {
+          nextCompanyState = {
+            ...companyState,
+            stockHoldings: stockHoldings.filter((holding) => holding.playerId !== playerId),
+          };
+        } else if (existingIndex >= 0) {
+          stockHoldings[existingIndex] = {
+            ...stockHoldings[existingIndex],
+            percentage: nextValue,
+          };
+          nextCompanyState = { ...companyState, stockHoldings };
+        } else {
+          stockHoldings.push({ playerId, percentage: nextValue });
+          nextCompanyState = { ...companyState, stockHoldings };
+        }
+      } else if (target === 'treasury') {
+        nextCompanyState = {
+          ...companyState,
+          treasuryStockPercentage: nextValue,
+        };
+      } else if (target === 'bank') {
+        nextCompanyState = {
+          ...companyState,
+          bankPoolPercentage: nextValue,
+        };
+      }
 
-          let nextCompany = company;
+      if (shouldAutoUnsetUnestablished(nextCompanyState, next.gameConfig.hasIpoShares)) {
+        nextCompanyState = { ...nextCompanyState, isUnestablished: false };
+      }
 
-          if (target === 'player') {
-            const stockHoldings = [...(company.stockHoldings || [])];
-            const existingIndex = stockHoldings.findIndex(
-              (holding) => holding.playerId === playerId
-            );
-
-            if (nextValue === 0) {
-              nextCompany = {
-                ...company,
-                stockHoldings: stockHoldings.filter((holding) => holding.playerId !== playerId),
-              };
-            } else if (existingIndex >= 0) {
-              stockHoldings[existingIndex] = {
-                ...stockHoldings[existingIndex],
-                percentage: nextValue,
-              };
-              nextCompany = { ...company, stockHoldings };
-            } else {
-              stockHoldings.push({ playerId, percentage: nextValue });
-              nextCompany = { ...company, stockHoldings };
-            }
-          } else if (target === 'treasury') {
-            nextCompany = {
-              ...company,
-              treasuryStockPercentage: nextValue,
-            };
-          } else if (target === 'bank') {
-            nextCompany = {
-              ...company,
-              bankPoolPercentage: nextValue,
-            };
-          }
-
-          if (shouldAutoUnsetUnestablished(nextCompany, state.flow.hasIpoShares)) {
-            return { ...nextCompany, isUnestablished: false };
-          }
-
-          return nextCompany;
-        }),
-      };
+      next.stockRoundState.companyStates[companyId] = nextCompanyState;
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return recomputeResults(next, [companyId]);
     }
 
     case 'SR_UNESTABLISHED_SET': {
+      const next = cloneState(state);
       const { companyId, isUnestablished } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) =>
-          company.id === companyId ? { ...company, isUnestablished } : company
-        ),
+      next.stockRoundState.companyStates[companyId] = {
+        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        isUnestablished,
       };
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return next;
     }
 
     case 'SR_PRESIDENT_SET': {
+      const next = cloneState(state);
       const { companyId, presidentPlayerId } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) =>
-          company.id === companyId
-            ? {
-                ...company,
-                presidentPlayerId:
-                  typeof presidentPlayerId === 'string' && presidentPlayerId.trim()
-                    ? presidentPlayerId
-                    : null,
-              }
-            : company
-        ),
+      next.stockRoundState.companyStates[companyId] = {
+        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        presidentPlayerId:
+          typeof presidentPlayerId === 'string' && presidentPlayerId.trim()
+            ? presidentPlayerId
+            : null,
       };
+      return next;
     }
 
     case 'SR_VALIDATE_RUN': {
-      const validation =
-        action.payload || buildStockValidationMap(state.companies, state.flow.hasIpoShares);
-      return {
-        ...state,
-        srValidation: validation,
-      };
+      const next = cloneState(state);
+      next.stockRoundState.validation =
+        action.payload || buildStockValidationMap(next.gameConfig, next.stockRoundState);
+      return next;
+    }
+
+    case 'SR_COMPLETE': {
+      const next = cloneState(state);
+      next.session.mode = 'orRound';
+      next.operatingState.currentOR = 1;
+      next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(next.gameConfig.numORs);
+      next.operatingState.selectedCompanyId = getFirstEstablishedCompanyId(
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        getCompanyIds(next)
+      );
+      return next;
     }
 
     case 'PLAYER_PERIODIC_INCOME_SET': {
+      const next = cloneState(state);
       const { playerId, periodicIncome } = action.payload;
-      return {
-        ...state,
-        players: state.players.map((player) =>
-          player.id === playerId ? { ...player, periodicIncome } : player
-        ),
-      };
+      next.stockRoundState.playerPeriodicIncomes[playerId] = periodicIncome;
+      return next;
     }
 
     case 'COMPANY_PERIODIC_INCOME_SET': {
+      const next = cloneState(state);
       const { companyId, periodicIncome } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) =>
-          company.id === companyId ? { ...company, periodicIncome } : company
-        ),
+      next.stockRoundState.companyStates[companyId] = {
+        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        periodicIncome,
       };
+      return recomputeResults(next, [companyId]);
     }
 
     case 'OR_ORDER_MOVE_UP': {
+      const next = cloneState(state);
+      const companyIds = getCompanyIds(next);
       const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
-        state.activeCycle.companyOrder,
-        state.companies
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        companyIds
       );
       const establishedSet = new Set(establishedIds);
       const completed = (
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+        next.operatingState.completedCompanyIdsByOR?.[next.operatingState.currentOR] || []
       ).filter((companyId) => establishedSet.has(companyId));
       if (completed.length > 0) return state;
 
@@ -271,30 +379,26 @@ export function appReducer(state, action) {
       const currentIndex = establishedIds.indexOf(companyId);
       if (currentIndex <= 0) return state;
 
-      const nextEstablished = [...establishedIds];
-      [nextEstablished[currentIndex - 1], nextEstablished[currentIndex]] = [
-        nextEstablished[currentIndex],
-        nextEstablished[currentIndex - 1],
+      const reordered = [...establishedIds];
+      [reordered[currentIndex - 1], reordered[currentIndex]] = [
+        reordered[currentIndex],
+        reordered[currentIndex - 1],
       ];
-      const nextOrder = [...nextEstablished, ...unestablishedIds];
-
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          companyOrder: nextOrder,
-        },
-      };
+      next.operatingState.companyOrder = [...reordered, ...unestablishedIds];
+      return next;
     }
 
     case 'OR_ORDER_MOVE_DOWN': {
+      const next = cloneState(state);
+      const companyIds = getCompanyIds(next);
       const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
-        state.activeCycle.companyOrder,
-        state.companies
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        companyIds
       );
       const establishedSet = new Set(establishedIds);
       const completed = (
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+        next.operatingState.completedCompanyIdsByOR?.[next.operatingState.currentOR] || []
       ).filter((companyId) => establishedSet.has(companyId));
       if (completed.length > 0) return state;
 
@@ -303,265 +407,192 @@ export function appReducer(state, action) {
       const currentIndex = establishedIds.indexOf(companyId);
       if (currentIndex < 0 || currentIndex >= establishedIds.length - 1) return state;
 
-      const nextEstablished = [...establishedIds];
-      [nextEstablished[currentIndex], nextEstablished[currentIndex + 1]] = [
-        nextEstablished[currentIndex + 1],
-        nextEstablished[currentIndex],
+      const reordered = [...establishedIds];
+      [reordered[currentIndex], reordered[currentIndex + 1]] = [
+        reordered[currentIndex + 1],
+        reordered[currentIndex],
       ];
-      const nextOrder = [...nextEstablished, ...unestablishedIds];
-
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          companyOrder: nextOrder,
-        },
-      };
+      next.operatingState.companyOrder = [...reordered, ...unestablishedIds];
+      return next;
     }
 
     case 'OR_ORDER_REBALANCE_REMAINING': {
+      const next = cloneState(state);
+      const companyIds = getCompanyIds(next);
       const { establishedIds, unestablishedIds } = splitCompanyOrderByEstablishment(
-        state.activeCycle.companyOrder,
-        state.companies
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        companyIds
       );
       const establishedSet = new Set(establishedIds);
       const completed = (
-        state.activeCycle.completedCompanyIdsByOR?.[state.activeCycle.currentOR] || []
+        next.operatingState.completedCompanyIdsByOR?.[next.operatingState.currentOR] || []
       ).filter((companyId) => establishedSet.has(companyId));
       const remaining = establishedIds.filter((companyId) => !completed.includes(companyId));
       const draft = action.payload;
-
       if (remaining.length !== draft.length) return state;
-      const remainingSet = new Set(remaining);
-      if (!draft.every((companyId) => remainingSet.has(companyId))) return state;
+      const draftSet = new Set(draft);
+      if (!remaining.every((companyId) => draftSet.has(companyId))) return state;
 
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          companyOrder: [...completed, ...draft, ...unestablishedIds],
-          selectedCompanyId:
-            draft[0] || completed[completed.length - 1] || establishedIds[0] || null,
-        },
+      next.operatingState.companyOrder = [...completed, ...draft, ...unestablishedIds];
+      next.operatingState.selectedCompanyId =
+        draft[0] || completed[completed.length - 1] || establishedIds[0] || null;
+      return next;
+    }
+
+    case 'OR_REVENUE_SET':
+      return upsertOperatingResult(state, {
+        companyId: action.payload.companyId,
+        orNum: action.payload.orNum,
+        revenue: action.payload.revenue,
+      });
+
+    case 'OR_DIVIDEND_MODE_SET':
+      return upsertOperatingResult(state, {
+        companyId: action.payload.companyId,
+        orNum: action.payload.orNum,
+        dividendMode: action.payload.mode,
+      });
+
+    case 'OR_COMPANY_SELECT': {
+      const next = cloneState(state);
+      next.operatingState.selectedCompanyId = action.payload;
+      return next;
+    }
+
+    case 'TRAIN_ADD': {
+      const next = cloneState(state);
+      const { companyId, trainId } = action.payload;
+      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      next.stockRoundState.companyStates[companyId] = {
+        ...current,
+        trains: [...(current.trains || []), { id: trainId, stops: [] }],
       };
+      return next;
+    }
+
+    case 'TRAIN_UPDATE_STOPS': {
+      const next = cloneState(state);
+      const { companyId, trainId, stops } = action.payload;
+      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      next.stockRoundState.companyStates[companyId] = {
+        ...current,
+        trains: (current.trains || []).map((train) =>
+          train.id === trainId ? { ...train, stops } : train
+        ),
+      };
+      return next;
+    }
+
+    case 'TRAIN_CLEAR': {
+      const next = cloneState(state);
+      const { companyId, trainId } = action.payload;
+      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      next.stockRoundState.companyStates[companyId] = {
+        ...current,
+        trains: (current.trains || []).map((train) =>
+          train.id === trainId ? { ...train, stops: [] } : train
+        ),
+      };
+      return next;
+    }
+
+    case 'TRAIN_DELETE': {
+      const next = cloneState(state);
+      const { companyId, trainId } = action.payload;
+      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      next.stockRoundState.companyStates[companyId] = {
+        ...current,
+        trains: (current.trains || []).filter((train) => train.id !== trainId),
+      };
+      return next;
     }
 
     case 'OR_COMPANY_MARK_DONE': {
-      const { establishedIds } = splitCompanyOrderByEstablishment(
-        state.activeCycle.companyOrder,
-        state.companies
+      const next = upsertOperatingResult(state, {
+        companyId: action.payload,
+        orNum: state.operatingState.currentOR,
+        isConfirmed: true,
+      });
+      const companyIds = getCompanyIds(next);
+      const establishedIds = getEstablishedCompanyIds(
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        companyIds
       );
       const establishedSet = new Set(establishedIds);
       if (!establishedSet.has(action.payload)) return state;
 
-      const currentOR = state.activeCycle.currentOR;
-      const completed = (state.activeCycle.completedCompanyIdsByOR?.[currentOR] || []).filter(
+      const currentOR = next.operatingState.currentOR;
+      const completed = (next.operatingState.completedCompanyIdsByOR?.[currentOR] || []).filter(
         (companyId) => establishedSet.has(companyId)
       );
-      if (completed.includes(action.payload)) return state;
-
-      const nextCompleted = [...completed, action.payload];
-      const completedCompanyIdsByOR = {
-        ...state.activeCycle.completedCompanyIdsByOR,
-        [currentOR]: nextCompleted,
-      };
-
-      const nextUncompleted = establishedIds.filter(
-        (companyId) => !nextCompleted.includes(companyId)
+      if (!completed.includes(action.payload)) {
+        next.operatingState.completedCompanyIdsByOR[currentOR] = [...completed, action.payload];
+      }
+      const remaining = establishedIds.filter(
+        (companyId) => !next.operatingState.completedCompanyIdsByOR[currentOR].includes(companyId)
       );
-
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          completedCompanyIdsByOR,
-          selectedCompanyId: nextUncompleted[0] || action.payload,
-        },
-      };
+      next.operatingState.selectedCompanyId = remaining[0] || action.payload;
+      return next;
     }
 
     case 'OR_NEXT_ROUND': {
-      if (state.activeCycle.currentOR >= state.flow.numORs) return state;
-      const nextOR = state.activeCycle.currentOR + 1;
+      if (state.operatingState.currentOR >= state.gameConfig.numORs) return state;
+      const next = cloneState(state);
+      const nextOR = next.operatingState.currentOR + 1;
+      const companyIds = getCompanyIds(next);
       const establishedIds = getEstablishedCompanyIds(
-        state.activeCycle.companyOrder,
-        state.companies
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        companyIds
       );
-      const establishedSet = new Set(establishedIds);
-      return {
-        ...state,
-        activeCycle: {
-          ...state.activeCycle,
-          currentOR: nextOR,
-          selectedCompanyId: establishedIds[0] || null,
-          completedCompanyIdsByOR: {
-            ...state.activeCycle.completedCompanyIdsByOR,
-            [nextOR]: (state.activeCycle.completedCompanyIdsByOR[nextOR] || []).filter(
-              (companyId) => establishedSet.has(companyId)
-            ),
-          },
-        },
-      };
-    }
-
-    case 'OR_REVENUE_SET': {
-      const { companyId, orNum, revenue } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
-          const nextRevenues = buildORRevenues(state.flow.numORs, company.orRevenues || []);
-          const targetIndex = nextRevenues.findIndex((entry) => entry.orNum === orNum);
-          if (targetIndex >= 0) {
-            nextRevenues[targetIndex] = {
-              ...nextRevenues[targetIndex],
-              revenue,
-            };
-          }
-
-          return {
-            ...company,
-            orRevenues: nextRevenues,
-          };
-        }),
-      };
-    }
-
-    case 'OR_DIVIDEND_MODE_SET': {
-      const { companyId, orNum, mode } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
-
-          const nextModes = buildORDividendModes(state.flow.numORs, company.orDividendModes || []);
-          const targetIndex = nextModes.findIndex((entry) => entry.orNum === orNum);
-          if (targetIndex >= 0) {
-            nextModes[targetIndex] = {
-              ...nextModes[targetIndex],
-              mode: ['full', 'withhold', 'half'].includes(mode) ? mode : 'full',
-            };
-          }
-
-          return {
-            ...company,
-            orDividendModes: nextModes,
-          };
-        }),
-      };
-    }
-
-    case 'TRAIN_ADD': {
-      const { companyId, trainId } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) =>
-          company.id === companyId
-            ? {
-                ...company,
-                trains: [...(company.trains || []), { id: trainId, stops: [] }],
-              }
-            : company
-        ),
-      };
-    }
-
-    case 'TRAIN_UPDATE_STOPS': {
-      const { companyId, trainId, stops } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
-          return {
-            ...company,
-            trains: (company.trains || []).map((train) =>
-              train.id === trainId ? { ...train, stops } : train
-            ),
-          };
-        }),
-      };
-    }
-
-    case 'TRAIN_CLEAR': {
-      const { companyId, trainId } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
-          return {
-            ...company,
-            trains: (company.trains || []).map((train) =>
-              train.id === trainId ? { ...train, stops: [] } : train
-            ),
-          };
-        }),
-      };
-    }
-
-    case 'TRAIN_DELETE': {
-      const { companyId, trainId } = action.payload;
-      return {
-        ...state,
-        companies: state.companies.map((company) => {
-          if (company.id !== companyId) return company;
-          return {
-            ...company,
-            trains: (company.trains || []).filter((train) => train.id !== trainId),
-          };
-        }),
-      };
+      next.operatingState.currentOR = nextOR;
+      next.operatingState.selectedCompanyId = establishedIds[0] || null;
+      next.operatingState.completedCompanyIdsByOR[nextOR] =
+        next.operatingState.completedCompanyIdsByOR[nextOR] || [];
+      return next;
     }
 
     case 'CYCLE_CLOSE_AND_START_NEXT_SR': {
-      const completedAt = action.payload;
-      const currentCycleNo = state.activeCycle.cycleNo;
-      const completedCycle = {
-        cycleNo: currentCycleNo,
-        completedAt,
-        flowSnapshot: { ...state.flow },
-        playersSnapshot: clonePlayers(state.players),
-        companiesSnapshot: cloneCompanies(state.companies),
-      };
+      const next = cloneState(state);
+      const cycleNo = next.session.currentCycleNo;
+      const cycleKey = toCycleKey(cycleNo);
 
-      const nextCompanies = state.companies.map((company) => ({
-        ...company,
-        isUnestablished: company.isUnestablished
-          ? true
-          : inferIsUnestablished(company, state.flow.hasIpoShares),
-        orRevenues: buildORRevenues(state.flow.numORs),
-        orDividendModes: buildORDividendModes(state.flow.numORs),
-      }));
-
-      const companyOrder = syncCompanyOrder(state.activeCycle.companyOrder, nextCompanies);
-      const nextSelectedCompanyId = getFirstEstablishedCompanyId(companyOrder, nextCompanies);
-      const nextCycleNo = currentCycleNo + 1;
-
-      return {
-        ...state,
-        companies: nextCompanies,
-        flow: {
-          ...state.flow,
-          step: 'stockRound',
+      next.history = [
+        ...next.history,
+        {
+          cycleNo,
+          completedAt: action.payload,
+          gameConfigSnapshot: {
+            ...next.gameConfig,
+            players: clonePlayers(next.gameConfig.players),
+            companies: cloneCompanies(next.gameConfig.companies),
+          },
+          stockRoundSnapshot: cloneStockRoundState(next.stockRoundState),
+          operatingResultsSnapshot:
+            cloneOperatingResults({
+              [cycleKey]: next.operatingResults[cycleKey] || {},
+            })[cycleKey] || {},
         },
-        activeCycle: {
-          ...state.activeCycle,
-          cycleNo: nextCycleNo,
-          currentOR: 1,
-          companyOrder,
-          completedCompanyIdsByOR: buildEmptyCompletedByOR(state.flow.numORs),
-          selectedCompanyId: nextSelectedCompanyId,
-        },
-        cycleHistory: [...state.cycleHistory, completedCycle],
-        summarySelectedCycleNo: currentCycleNo,
-        srValidation: {},
+      ];
+      next.session = {
+        currentCycleNo: cycleNo + 1,
+        mode: 'stockRound',
       };
+      next.operatingState = {
+        companyOrder: syncCompanyOrder(next.operatingState.companyOrder, getCompanyIds(next)),
+        currentOR: 1,
+        completedCompanyIdsByOR: buildEmptyCompletedByOR(next.gameConfig.numORs),
+        selectedCompanyId: getFirstEstablishedCompanyId(
+          next.operatingState.companyOrder,
+          next.stockRoundState.companyStates,
+          getCompanyIds(next)
+        ),
+      };
+      next.stockRoundState.validation = {};
+      return next;
     }
-
-    case 'SUMMARY_CYCLE_SELECT':
-      return {
-        ...state,
-        summarySelectedCycleNo: action.payload,
-      };
 
     case 'APP_LOAD':
       return normalizeAppState(action.payload);
