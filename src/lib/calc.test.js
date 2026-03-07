@@ -142,5 +142,22 @@ describe('calc utilities', () => {
       expect(result.marketAmount).toBe(0);
       expect(result.companyAmount).toBe(120);
     });
+
+    test('企業定期収入は配当原資に含めず会社受取へ加算する', () => {
+      const result = calculateORRevenueDistribution({
+        company,
+        players,
+        totalRevenue: 100,
+        companyIncome: 30,
+        mode: 'full',
+        bankPoolDividendRecipient: 'market',
+      });
+
+      expect(result.distributableRevenue).toBe(100);
+      expect(result.companyIncome).toBe(30);
+      expect(result.playerPayouts).toEqual([{ playerId: 'p1', percentage: 60, amount: 60 }]);
+      expect(result.marketAmount).toBe(20);
+      expect(result.companyAmount).toBe(40);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 import OrRoundView from './OrRoundView';
@@ -16,6 +16,10 @@ const buildCompany = () => ({
   treasuryStockPercentage: 10,
   bankPoolPercentage: 20,
   periodicIncome: 0,
+  orDividendModes: [
+    { orNum: 1, mode: 'full' },
+    { orNum: 2, mode: 'full' },
+  ],
   orRevenues: [
     { orNum: 1, revenue: 100 },
     { orNum: 2, revenue: 0 },
@@ -35,6 +39,10 @@ const buildSecondCompany = () => ({
   treasuryStockPercentage: 10,
   bankPoolPercentage: 20,
   periodicIncome: 0,
+  orDividendModes: [
+    { orNum: 1, mode: 'full' },
+    { orNum: 2, mode: 'full' },
+  ],
   orRevenues: [
     { orNum: 1, revenue: 50 },
     { orNum: 2, revenue: 10 },
@@ -72,8 +80,18 @@ const buildProps = (overrides = {}) => ({
   handleStartNextCycle: vi.fn(),
   handlePlayerPeriodicIncomeChange: vi.fn(),
   handleCompanyPeriodicIncomeChange: vi.fn(),
+  handleSetORDividendMode: vi.fn(),
   ...overrides,
 });
+
+const getCompanyCard = (companyName) => {
+  const heading = screen.getByRole('heading', { name: companyName });
+  const card = heading.closest('article');
+  if (!card) {
+    throw new Error(`Company card not found: ${companyName}`);
+  }
+  return card;
+};
 
 describe('OrRoundView OR revenue draft', () => {
   test('空欄 blur は OR収益を更新しない', async () => {
@@ -118,11 +136,13 @@ describe('OrRoundView OR revenue draft', () => {
     const props = buildProps();
     render(<OrRoundView {...props} />);
 
-    expect(screen.getByText('OR1 配当シミュレーション')).toBeInTheDocument();
-    expect(screen.getByText('市場株の配当受取先: 市場')).toBeInTheDocument();
-    expect(screen.getByText('配当原資 100 / 会社留保 0')).toBeInTheDocument();
-    expect(screen.getByText('配当原資 0 / 会社留保 100')).toBeInTheDocument();
-    expect(screen.getByText('配当原資 50 / 会社留保 50')).toBeInTheDocument();
+    const companyCard = within(getCompanyCard('Co1'));
+    expect(companyCard.getByText('OR1 収益配分プレビュー（折りたたみ）')).toBeInTheDocument();
+    expect(companyCard.getByText(/市場株の配当受取先: 市場/)).toBeInTheDocument();
+    expect(companyCard.getByText('配当原資 100 / 会社留保 0 / 定期会社受取 0')).toBeInTheDocument();
+    expect(
+      companyCard.queryByText('配当原資 0 / 会社留保 100 / 定期会社受取 0')
+    ).not.toBeInTheDocument();
   });
 
   test('市場株の配当受取先が会社設定なら表示も会社になる', () => {
@@ -134,7 +154,8 @@ describe('OrRoundView OR revenue draft', () => {
     });
     render(<OrRoundView {...props} />);
 
-    expect(screen.getByText('市場株の配当受取先: 会社')).toBeInTheDocument();
+    const companyCard = within(getCompanyCard('Co1'));
+    expect(companyCard.getByText(/市場株の配当受取先: 会社/)).toBeInTheDocument();
   });
 
   test('プレイヤー定期収入は blur で commit される', async () => {
@@ -153,13 +174,61 @@ describe('OrRoundView OR revenue draft', () => {
     expect(props.handlePlayerPeriodicIncomeChange).toHaveBeenCalledWith('p1', 45);
   });
 
-  test('企業定期収入はOR配当シミュレーションに加算される', () => {
+  test('企業定期収入は配当原資に混ぜず会社受取へ加算される', () => {
     const props = buildProps({
       companies: [{ ...buildCompany(), periodicIncome: 30 }, buildSecondCompany()],
     });
     render(<OrRoundView {...props} />);
 
-    expect(screen.getByText('配当原資 130 / 会社留保 0')).toBeInTheDocument();
+    const companyCard = within(getCompanyCard('Co1'));
+    expect(
+      companyCard.getByText('配当原資 100 / 会社留保 0 / 定期会社受取 30')
+    ).toBeInTheDocument();
+    expect(
+      companyCard.getByText(
+        (_, element) =>
+          element?.tagName.toLowerCase() === 'li' &&
+          element.textContent?.includes('会社受取合計') &&
+          element.textContent?.includes('40')
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('配当種別を選択すると OR ごとの配当種別更新を dispatch する', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    const companyCard = within(getCompanyCard('Co1'));
+    await user.click(companyCard.getByRole('button', { name: '無配' }));
+
+    expect(props.handleSetORDividendMode).toHaveBeenCalledWith('c1', 1, 'withhold');
+  });
+
+  test('同じ企業の詳細ボタンを再度押すと詳細を閉じられる', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    expect(screen.getByText('実行企業: Co1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '詳細を閉じる' }));
+    expect(screen.queryByText('実行企業: Co1')).not.toBeInTheDocument();
+  });
+
+  test('収益配分プレビューを折りたたみできる', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    render(<OrRoundView {...props} />);
+
+    const companyCard = within(getCompanyCard('Co1'));
+    const summary = companyCard.getByText('OR1 収益配分プレビュー（折りたたみ）');
+    const details = summary.closest('details');
+    expect(details).not.toBeNull();
+    expect(details).toHaveAttribute('open');
+
+    await user.click(summary);
+
+    expect(details).not.toHaveAttribute('open');
   });
 
   test('会社カードと配当行に色アクセントを表示する', () => {

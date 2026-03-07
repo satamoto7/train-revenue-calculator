@@ -41,11 +41,13 @@ export const calculateORRevenueDistribution = ({
   company,
   players = [],
   totalRevenue = 0,
+  companyIncome = 0,
   mode = 'full',
   bankPoolDividendRecipient = 'market',
 }) => {
   const normalizedMode = normalizeDividendMode(mode);
   const normalizedRevenue = Math.max(0, toSafeNumber(totalRevenue));
+  const normalizedCompanyIncome = Math.max(0, toSafeNumber(companyIncome));
   const normalizedRecipient = bankPoolDividendRecipient === 'company' ? 'company' : 'market';
 
   let distributableRevenue = normalizedRevenue;
@@ -79,11 +81,15 @@ export const calculateORRevenueDistribution = ({
   const bankPoolAmount = calculateDividend(distributableRevenue, bankPoolPercentage);
   const marketAmount = normalizedRecipient === 'market' ? bankPoolAmount : 0;
   const companyAmount =
-    retainedRevenue + treasuryAmount + (normalizedRecipient === 'company' ? bankPoolAmount : 0);
+    normalizedCompanyIncome +
+    retainedRevenue +
+    treasuryAmount +
+    (normalizedRecipient === 'company' ? bankPoolAmount : 0);
 
   return {
     mode: normalizedMode,
     totalRevenue: normalizedRevenue,
+    companyIncome: normalizedCompanyIncome,
     distributableRevenue,
     retainedRevenue,
     playerPayouts,

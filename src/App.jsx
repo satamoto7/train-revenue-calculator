@@ -396,6 +396,17 @@ function App() {
     });
   };
 
+  const handleSetORDividendMode = (companyId, orNum, mode) => {
+    dispatch({
+      type: 'OR_DIVIDEND_MODE_SET',
+      payload: {
+        companyId,
+        orNum,
+        mode,
+      },
+    });
+  };
+
   const handleAddTrain = (companyId) => {
     const trainId =
       globalThis.crypto?.randomUUID?.() ||
@@ -482,12 +493,13 @@ function App() {
     const active = {
       cycleNo: activeCycle.cycleNo,
       completedAt: null,
+      flowSnapshot: { ...flow },
       playersSnapshot: clonePlayers(players),
       companiesSnapshot: cloneCompanies(companies),
       isCompleted: false,
     };
     return [...historyCycles, active];
-  }, [cycleHistory, activeCycle.cycleNo, players, companies]);
+  }, [cycleHistory, activeCycle.cycleNo, flow, players, companies]);
 
   const resolvedSummaryCycleNo = useMemo(() => {
     if (summarySelectedCycleNo !== null) return summarySelectedCycleNo;
@@ -675,6 +687,7 @@ function App() {
             handleStartNextCycle={handleStartNextCycle}
             handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
             handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
+            handleSetORDividendMode={handleSetORDividendMode}
           />
         )}
 
@@ -686,6 +699,7 @@ function App() {
               dispatch({ type: 'SUMMARY_CYCLE_SELECT', payload: cycleNo })
             }
             numORs={flow.numORs}
+            flow={flow}
           />
         )}
       </div>
