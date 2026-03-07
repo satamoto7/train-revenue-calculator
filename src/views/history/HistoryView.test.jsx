@@ -17,6 +17,14 @@ const buildCycle = () => ({
         symbol: '●',
         periodicIncome: 5,
       },
+      {
+        id: 'p2',
+        displayName: 'Bob',
+        name: 'Bob',
+        color: '黄',
+        symbol: '▲',
+        periodicIncome: 0,
+      },
     ],
     companies: [
       {
@@ -38,7 +46,10 @@ const buildCycle = () => ({
         distributableRevenue: 100,
         companyAmount: 20,
         marketAmount: 10,
-        playerPayouts: [{ playerId: 'p1', percentage: 60, amount: 60 }],
+        playerPayouts: [
+          { playerId: 'p1', percentage: 60, amount: 60 },
+          { playerId: 'p2', percentage: 10, amount: 10 },
+        ],
       },
     },
     2: {
@@ -117,6 +128,7 @@ describe('HistoryView', () => {
     expect(screen.getByLabelText('表示対象')).toHaveDisplayValue('Cycle 1');
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
     expect(screen.getByText(/配当 60 \/ 定期 10/)).toBeInTheDocument();
+    expect(screen.getByText(/配当 10 \/ 定期 0/)).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('表示対象'), '1-2');
 
@@ -145,6 +157,13 @@ describe('HistoryView', () => {
     expect(within(table).getByText('220')).toBeInTheDocument();
     expect(within(table).getByText('無配')).toBeInTheDocument();
     expect(within(table).getByText('半配当')).toBeInTheDocument();
+    expect(within(table).getByText('人 70 / 会 20 / 市 10')).toBeInTheDocument();
+    expect(within(table).getByText('原 0 / 留 50')).toBeInTheDocument();
+    expect(within(table).getByText('人 90 / 会 95 / 市 0')).toBeInTheDocument();
+    expect(within(table).getByText('原 90 / 留 90')).toBeInTheDocument();
+    expect(within(table).getByText('Alice 60')).toBeInTheDocument();
+    expect(within(table).getByText('Bob 10')).toBeInTheDocument();
+    expect(within(table).getAllByText('プレイヤー配当なし').length).toBeGreaterThan(0);
 
     expect(screen.getByRole('heading', { name: 'プレイヤー受取詳細' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '企業受取詳細' })).toBeInTheDocument();

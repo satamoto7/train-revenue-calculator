@@ -186,6 +186,34 @@ describe('OrRoundView focused OR flow', () => {
     expect(within(getFocusPanel()).queryByRole('heading', { name: 'Co1' })).not.toBeInTheDocument();
   });
 
+  test('ORが進んだら選択中企業を先頭企業へ戻す', async () => {
+    const user = userEvent.setup();
+    const props = buildProps();
+    const { rerender } = render(<OrRoundView {...props} />);
+
+    await user.click(screen.getByRole('button', { name: 'この会社を開く' }));
+    expect(within(getFocusPanel()).getByRole('heading', { name: '会社B' })).toBeInTheDocument();
+
+    rerender(
+      <OrRoundView
+        {...buildProps({
+          activeCycle: {
+            currentOR: 2,
+            companyOrder: ['c1', 'c2'],
+            selectedCompanyId: 'c1',
+            completedCompanyIdsByOR: {
+              1: ['c1', 'c2'],
+              2: [],
+            },
+          },
+        })}
+      />
+    );
+
+    expect(within(getFocusPanel()).getByRole('heading', { name: 'Co1' })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Co1の現在OR2収益' })).toBeInTheDocument();
+  });
+
   test('配当種別を詳細展開なしで変更できる', async () => {
     const user = userEvent.setup();
     const props = buildProps();

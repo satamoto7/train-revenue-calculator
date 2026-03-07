@@ -18,6 +18,42 @@ const modeLabelMap = {
   half: '半配当',
 };
 
+const getPlayerPayoutTotal = (result) =>
+  (result?.playerPayouts || []).reduce((sum, entry) => sum + (entry.amount || 0), 0);
+
+const getPlayerPayoutEntries = (result, players) =>
+  (result?.playerPayouts || [])
+    .filter((entry) => (entry.amount || 0) > 0)
+    .map((entry) => {
+      const player = (players || []).find((candidate) => candidate.id === entry.playerId);
+      return {
+        playerId: entry.playerId,
+        label: player ? getPlayerDisplayName(player) : entry.playerId,
+        amount: entry.amount || 0,
+      };
+    });
+
+const getRetainedRevenue = (result) => {
+  if (Number.isFinite(result?.retainedRevenue)) {
+    return result.retainedRevenue;
+  }
+
+  const revenue = Number.isFinite(result?.revenue) ? result.revenue : 0;
+  const distributableRevenue = Number.isFinite(result?.distributableRevenue)
+    ? result.distributableRevenue
+    : 0;
+
+  if (result?.dividendMode === 'withhold') {
+    return revenue;
+  }
+
+  if (result?.dividendMode === 'half') {
+    return Math.max(0, revenue - distributableRevenue);
+  }
+
+  return 0;
+};
+
 const buildViewOptions = (cycles, numORs) =>
   cycles.flatMap((cycle) => [
     {
@@ -149,6 +185,10 @@ const SpreadsheetView = ({
     () => buildSheetRows(companies, cycles, numORs),
     [companies, cycles, numORs]
   );
+  const playersByCycle = useMemo(
+    () => new Map(cycles.map((cycle) => [cycle.cycleNo, cycle.gameConfigSnapshot?.players || []])),
+    [cycles]
+  );
 
   return (
     <div className="space-y-8">
@@ -158,7 +198,8 @@ const SpreadsheetView = ({
             スプレッドシート表示
           </SectionHeader>
           <p className="mt-1 text-sm text-text-secondary">
-            全サイクルの各 OR を企業行で横並び表示します。現在選択中の表示対象は強調表示します。
+            全サイクルの各 OR
+            を企業行で横並び表示します。各セルに収益、配当種別、配分内訳を表示します。
           </p>
         </div>
 
@@ -218,22 +259,45 @@ const SpreadsheetView = ({
                       selectedView.orNum === cell.orNum;
                     const isSelectedCycle =
                       selectedView.orNum === null && selectedCycle.cycleNo === cell.cycleNo;
+                    const playerPayoutEntries = getPlayerPayoutEntries(
+                      cell.result,
+                      playersByCycle.get(cell.cycleNo)
+                    );
 
                     return (
                       <td
                         key={cell.key}
-                        className={`border-b border-border-subtle px-4 py-3 text-center ${
+                        className={`border-b border-border-subtle px-4 py-3 align-top ${
                           isSelectedCell || isSelectedCycle
                             ? 'bg-brand-soft/30'
                             : 'bg-surface-elevated'
                         }`}
                       >
                         {cell.result ? (
-                          <div className="min-w-[5rem]">
+                          <div className="min-w-[10rem] text-left">
                             <p className="font-semibold text-text-primary">{cell.result.revenue}</p>
-                            <p className="mt-1 text-xs text-text-muted">
-                              {modeLabelMap[cell.result.dividendMode] || '配当'}
+                            <div className="mt-1 flex items-center justify-between gap-2 text-xs text-text-muted">
+                              <p>{modeLabelMap[cell.result.dividendMode] || '配当'}</p>
+                              <p>
+                                原 {cell.result.distributableRevenue || 0} / 留{' '}
+                                {getRetainedRevenue(cell.result)}
+                              </p>
+                            </div>
+                            <p className="mt-2 text-xs text-text-secondary">
+                              人 {getPlayerPayoutTotal(cell.result)} / 会{' '}
+                              {cell.result.companyAmount || 0} / 市 {cell.result.marketAmount || 0}
                             </p>
+                            <div className="mt-2 space-y-1 text-xs text-text-secondary">
+                              {playerPayoutEntries.length > 0 ? (
+                                playerPayoutEntries.map((entry) => (
+                                  <p key={`${cell.key}-${entry.playerId}`}>
+                                    {entry.label} {entry.amount}
+                                  </p>
+                                ))
+                              ) : (
+                                <p>プレイヤー配当なし</p>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-text-muted">-</span>

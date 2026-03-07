@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
@@ -82,6 +82,7 @@ const OrRoundView = ({
   const [localSelectedCompanyId, setLocalSelectedCompanyId] = useState(
     preferredLocalSelectedCompanyId
   );
+  const previousCurrentORRef = useRef(currentOR);
 
   useEffect(() => {
     if (rebalanceMode) {
@@ -90,11 +91,15 @@ const OrRoundView = ({
   }, [rebalanceMode, remainingCompanyIds]);
 
   useEffect(() => {
+    const isRoundChanged = previousCurrentORRef.current !== currentOR;
+    previousCurrentORRef.current = currentOR;
+
     setLocalSelectedCompanyId((current) => {
+      if (isRoundChanged) return preferredLocalSelectedCompanyId;
       if (current && remainingCompanyIds.includes(current)) return current;
       return preferredLocalSelectedCompanyId;
     });
-  }, [preferredLocalSelectedCompanyId, remainingCompanyIds]);
+  }, [currentOR, preferredLocalSelectedCompanyId, remainingCompanyIds]);
 
   const moveDraft = (targetCompanyId, direction) => {
     setDraftRemaining((prev) => {
