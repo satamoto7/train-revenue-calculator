@@ -131,6 +131,40 @@ const upsertOperatingResult = (state, { companyId, orNum, revenue, dividendMode,
   return next;
 };
 
+const carryForwardFinalORResults = (state, fromCycleNo, toCycleNo) => {
+  const fromCycleKey = toCycleKey(fromCycleNo);
+  const toCycleKeyValue = toCycleKey(toCycleNo);
+  const finalOrKey = toOrKey(state.gameConfig.numORs);
+  const finalEntries = state.operatingResults?.[fromCycleKey]?.[finalOrKey];
+
+  if (!finalEntries || Object.keys(finalEntries).length === 0) {
+    return state;
+  }
+
+  if (!state.operatingResults[toCycleKeyValue]) {
+    state.operatingResults[toCycleKeyValue] = {};
+  }
+
+  state.operatingResults[toCycleKeyValue][toOrKey(1)] = Object.entries(finalEntries).reduce(
+    (acc, [companyId, record]) => {
+      acc[companyId] = buildOperatingResultRecord({
+        cycleNo: toCycleNo,
+        orNum: 1,
+        companyId,
+        revenue: record.revenue,
+        dividendMode: record.dividendMode,
+        isConfirmed: false,
+        gameConfig: state.gameConfig,
+        stockRoundState: state.stockRoundState,
+      });
+      return acc;
+    },
+    {}
+  );
+
+  return state;
+};
+
 const syncOperatingState = (state) => {
   const next = cloneState(state);
   const companyIds = getCompanyIds(next);
@@ -558,6 +592,7 @@ export function appReducer(state, action) {
       const next = cloneState(state);
       const cycleNo = next.session.currentCycleNo;
       const cycleKey = toCycleKey(cycleNo);
+      const nextCycleNo = cycleNo + 1;
 
       next.history = [
         ...next.history,
@@ -577,9 +612,10 @@ export function appReducer(state, action) {
         },
       ];
       next.session = {
-        currentCycleNo: cycleNo + 1,
+        currentCycleNo: nextCycleNo,
         mode: 'stockRound',
       };
+      carryForwardFinalORResults(next, cycleNo, nextCycleNo);
       next.operatingState = {
         companyOrder: syncCompanyOrder(next.operatingState.companyOrder, getCompanyIds(next)),
         currentOR: 1,
