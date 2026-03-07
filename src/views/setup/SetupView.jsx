@@ -13,13 +13,14 @@ import {
 
 const panelClass = 'rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui';
 const rowClass =
-  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_auto_auto_auto]';
+  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_auto_auto_auto_auto]';
 
 const SetupView = ({
   players,
   companies,
   numORs,
   hasIpoShares,
+  mergerRoundEnabled,
   bankPoolDividendRecipient = 'market',
   setupLocked,
   handleAddMultiplePlayers,
@@ -32,8 +33,10 @@ const SetupView = ({
   handleEditCompanyName,
   handleEditCompanySymbol,
   handleEditCompanyColor,
+  handleEditCompanyType,
   handleSetNumORs,
   handleSetHasIpoShares,
+  handleSetMergerRoundEnabled,
   handleSetBankPoolDividendRecipient,
   handleStartGame,
 }) => {
@@ -105,7 +108,29 @@ const SetupView = ({
               <option value="company">会社</option>
             </select>
           </label>
+          <label
+            className="flex items-center gap-3 text-sm text-text-secondary"
+            htmlFor="mergerRoundEnabled"
+          >
+            <span className="font-medium">Merger Round</span>
+            <select
+              id="mergerRoundEnabled"
+              disabled={setupLocked}
+              value={mergerRoundEnabled ? 'enabled' : 'disabled'}
+              onChange={(e) => handleSetMergerRoundEnabled(e.target.value === 'enabled')}
+              className="ui-select"
+            >
+              <option value="disabled">使わない</option>
+              <option value="enabled">使う</option>
+            </select>
+          </label>
         </div>
+        {mergerRoundEnabled ? (
+          <p className="mt-4 text-sm text-text-secondary">
+            Merger Round 有効時は、`major`
+            にした会社は開始時に待機状態となり、合併後に盤面へ出ます。
+          </p>
+        ) : null}
       </section>
 
       <section className={`mb-6 ${panelClass}`}>
@@ -255,6 +280,18 @@ const SetupView = ({
                   </option>
                 ))}
               </select>
+              {mergerRoundEnabled ? (
+                <select
+                  value={company.companyType || 'minor'}
+                  disabled={setupLocked}
+                  onChange={(e) => handleEditCompanyType(company.id, e.target.value)}
+                  className="ui-select"
+                  aria-label={`企業「${getCompanyDisplayName(company)}」の種別`}
+                >
+                  <option value="minor">minor</option>
+                  <option value="major">major</option>
+                </select>
+              ) : null}
               <Button
                 type="button"
                 variant="danger"

@@ -33,6 +33,7 @@ const OrRoundView = ({
   handleDeleteTrain,
   handleSetTrainRevenueToCurrentOR,
   handleStartNextCycle,
+  handleEnterMergerRound,
   handlePlayerPeriodicIncomeChange,
   handleCompanyPeriodicIncomeChange,
   handleSetORDividendMode,
@@ -341,8 +342,12 @@ const OrRoundView = ({
 
       {finalORCompleted ? (
         <div className="mt-6 flex justify-end">
-          <Button type="button" size="lg" onClick={handleStartNextCycle}>
-            次SR開始
+          <Button
+            type="button"
+            size="lg"
+            onClick={flow.shouldEnterMergerRound ? handleEnterMergerRound : handleStartNextCycle}
+          >
+            {flow.shouldEnterMergerRound ? 'Merger Roundへ' : '次SR開始'}
           </Button>
         </div>
       ) : null}

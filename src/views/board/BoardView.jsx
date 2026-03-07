@@ -2,9 +2,11 @@ import React from 'react';
 import CycleStatusHeader from './CycleStatusHeader';
 import StockRoundView from '../stock-round/StockRoundView';
 import OrRoundView from '../or-round/OrRoundView';
+import MergerRoundView from '../merger-round/MergerRoundView';
 
 const BoardView = ({
   board,
+  handleGreenTrainTriggeredChange,
   handleStockChange,
   handlePresidentChange,
   handleUnestablishedChange,
@@ -23,9 +25,12 @@ const BoardView = ({
   handleDeleteTrain,
   handleSetTrainRevenueToCurrentOR,
   handleSetORDividendMode,
+  handleEnterMergerRound,
   handleStartNextCycle,
+  handleCommitMerger,
+  handleCompleteMergerRound,
 }) => {
-  const { players, companies, validation, flow, activeCycle, status } = board;
+  const { players, companies, validation, flow, activeCycle, status, merger } = board;
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -37,6 +42,9 @@ const BoardView = ({
         completedCount={status.completedCount}
         remainingCount={status.remainingCount}
         invalidCount={status.invalidCount}
+        mergerRoundEnabled={flow.mergerRoundEnabled}
+        greenTrainTriggered={flow.greenTrainTriggered}
+        onGreenTrainTriggeredChange={handleGreenTrainTriggeredChange}
         onCompleteStockRound={handleCompleteStockRound}
       />
 
@@ -54,6 +62,15 @@ const BoardView = ({
           handleComplete={handleCompleteStockRound}
           handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
           handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
+        />
+      ) : status.mode === 'mergerRound' ? (
+        <MergerRoundView
+          players={players}
+          minorCandidates={merger.minorCandidates}
+          majorCandidates={merger.majorCandidates}
+          hasIpoShares={flow.hasIpoShares}
+          onCommitMerge={handleCommitMerger}
+          onComplete={handleCompleteMergerRound}
         />
       ) : (
         <OrRoundView
@@ -73,6 +90,7 @@ const BoardView = ({
           handleDeleteTrain={handleDeleteTrain}
           handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
           handleStartNextCycle={handleStartNextCycle}
+          handleEnterMergerRound={handleEnterMergerRound}
           handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
           handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
           handleSetORDividendMode={handleSetORDividendMode}
