@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 import SetupView from './SetupView';
 
-const baseProps = () => ({
+const baseProps = (overrides = {}) => ({
   players: [
     {
       id: 'p1',
@@ -17,6 +17,7 @@ const baseProps = () => ({
   companies: [{ id: 'c1', displayName: '会社A', name: 'Co1', symbol: '○', color: '赤' }],
   numORs: 2,
   hasIpoShares: true,
+  mergerRoundEnabled: false,
   bankPoolDividendRecipient: 'market',
   setupLocked: false,
   handleAddMultiplePlayers: vi.fn(),
@@ -29,10 +30,13 @@ const baseProps = () => ({
   handleEditCompanyName: vi.fn(),
   handleEditCompanySymbol: vi.fn(),
   handleEditCompanyColor: vi.fn(),
+  handleEditCompanyType: vi.fn(),
   handleSetNumORs: vi.fn(),
   handleSetHasIpoShares: vi.fn(),
+  handleSetMergerRoundEnabled: vi.fn(),
   handleSetBankPoolDividendRecipient: vi.fn(),
   handleStartGame: vi.fn(),
+  ...overrides,
 });
 
 describe('SetupView committed inputs', () => {
@@ -77,5 +81,23 @@ describe('SetupView committed inputs', () => {
     fireEvent.blur(input);
 
     expect(props.handleEditCompanyName).toHaveBeenCalledWith('c1', 'カ');
+  });
+
+  test('Merger Round 無効時は会社種別UIを表示しない', () => {
+    const props = baseProps();
+    render(<SetupView {...props} />);
+
+    expect(screen.queryByLabelText('企業「会社A」の種別')).not.toBeInTheDocument();
+  });
+
+  test('Merger Round を有効にすると会社種別UIを表示する', async () => {
+    const user = userEvent.setup();
+    const props = baseProps({ mergerRoundEnabled: true });
+    render(<SetupView {...props} />);
+
+    expect(screen.getByLabelText('企業「会社A」の種別')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Merger Round'), 'enabled');
+
+    expect(props.handleSetMergerRoundEnabled).toHaveBeenCalledWith(true);
   });
 });

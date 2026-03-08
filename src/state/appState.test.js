@@ -35,6 +35,14 @@ describe('appState normalization', () => {
     expect(normalizeAppState({ players: [{ id: 'legacy' }] })).toEqual(createBaseState());
   });
 
+  test('createBaseState は mergerRound 関連既定値を含む', () => {
+    const state = createBaseState();
+
+    expect(state.gameConfig.mergerRoundEnabled).toBe(false);
+    expect(state.session.greenTrainTriggered).toBe(false);
+    expect(state.session.mode).toBe('stockRound');
+  });
+
   test('配分結果レコードを現在の株式設定から構築できる', () => {
     const record = buildOperatingResultRecord({
       cycleNo: 1,

@@ -19,6 +19,10 @@ export const WORKSPACE_CONFIG = [
   { key: 'history', label: '履歴' },
 ];
 
+const COMPANY_TYPES = ['minor', 'major'];
+const SESSION_MODES = ['stockRound', 'orRound', 'mergerRound'];
+const COMPANY_STATUSES = ['active', 'available', 'retired'];
+
 export const buildEmptyCompletedByOR = (numORs) =>
   Array.from({ length: numORs }, (_, idx) => idx + 1).reduce((acc, orNum) => {
     acc[orNum] = [];
@@ -43,6 +47,23 @@ const createFallbackId = (prefix, index) => {
   return `${prefix}-${index + 1}`;
 };
 
+const normalizeCompanyType = (companyType) =>
+  COMPANY_TYPES.includes(companyType) ? companyType : 'minor';
+
+const normalizeSessionMode = (mode) => (SESSION_MODES.includes(mode) ? mode : 'stockRound');
+
+export const getDefaultCompanyStatus = (companyType, mergerRoundEnabled) => {
+  if (!mergerRoundEnabled) return 'active';
+  return companyType === 'major' ? 'available' : 'active';
+};
+
+const normalizeCompanyStatus = (companyStatus, companyType, mergerRoundEnabled) =>
+  COMPANY_STATUSES.includes(companyStatus)
+    ? companyStatus
+    : getDefaultCompanyStatus(companyType, mergerRoundEnabled);
+
+export const isCompanyActive = (companyState) => companyState?.companyStatus === 'active';
+
 export const createPlayer = (index) => {
   const seatLabel = getSeatLabel(index);
   return {
@@ -62,9 +83,13 @@ export const createCompany = (index) => ({
   genericIndex: index + 1,
   color: getDefaultCompanyColor(index),
   symbol: getDefaultCompanySymbol(index),
+  companyType: 'minor',
 });
 
-export const createCompanyRoundState = () => ({
+export const createCompanyRoundState = ({
+  companyType = 'minor',
+  mergerRoundEnabled = false,
+} = {}) => ({
   stockHoldings: [],
   presidentPlayerId: null,
   isUnestablished: true,
@@ -72,7 +97,14 @@ export const createCompanyRoundState = () => ({
   bankPoolPercentage: 0,
   periodicIncome: 0,
   trains: [],
+  companyStatus: getDefaultCompanyStatus(companyType, mergerRoundEnabled),
 });
+
+const createCompanyRoundStateForCompany = (company, mergerRoundEnabled) =>
+  createCompanyRoundState({
+    companyType: normalizeCompanyType(company?.companyType),
+    mergerRoundEnabled,
+  });
 
 export const clonePlayers = (players) => players.map((player) => ({ ...player }));
 
@@ -94,6 +126,9 @@ export const cloneStockRoundState = (stockRoundState) => ({
           ...train,
           stops: [...(train?.stops || [])],
         })),
+        companyStatus: COMPANY_STATUSES.includes(entry?.companyStatus)
+          ? entry.companyStatus
+          : 'active',
       };
       return acc;
     },
@@ -155,45 +190,7 @@ const normalizeCompany = (company, index) => {
     displayName: company?.displayName || '',
     color: isKnownCompanyColor(company?.color) ? company.color : getDefaultCompanyColor(index),
     symbol: company?.symbol || getDefaultCompanySymbol(index),
-  };
-};
-
-const normalizeCompanyRoundState = (entry, hasIpoShares) => {
-  const fallback = createCompanyRoundState();
-  const normalized = {
-    stockHoldings: Array.isArray(entry?.stockHoldings)
-      ? entry.stockHoldings
-          .map((holding) => ({
-            playerId: holding?.playerId,
-            percentage: parsePercent(holding?.percentage),
-          }))
-          .filter((holding) => typeof holding.playerId === 'string' && holding.percentage > 0)
-      : fallback.stockHoldings,
-    presidentPlayerId:
-      typeof entry?.presidentPlayerId === 'string' ? entry.presidentPlayerId : null,
-    isUnestablished:
-      typeof entry?.isUnestablished === 'boolean'
-        ? entry.isUnestablished
-        : inferIsUnestablished(entry, hasIpoShares),
-    treasuryStockPercentage: parsePercent(entry?.treasuryStockPercentage || 0),
-    bankPoolPercentage: parsePercent(entry?.bankPoolPercentage || 0),
-    periodicIncome: Math.max(0, normalizeInteger(entry?.periodicIncome, 0)),
-    trains: Array.isArray(entry?.trains)
-      ? entry.trains.map((train, index) => ({
-          id: train?.id || createFallbackId('train', index),
-          stops: Array.isArray(train?.stops)
-            ? train.stops.map((stop) => Math.max(0, normalizeInteger(stop, 0)))
-            : [],
-        }))
-      : [],
-  };
-
-  return {
-    ...normalized,
-    isUnestablished:
-      typeof entry?.isUnestablished === 'boolean'
-        ? entry.isUnestablished
-        : inferIsUnestablished(normalized, hasIpoShares),
+    companyType: normalizeCompanyType(company?.companyType),
   };
 };
 
@@ -213,7 +210,54 @@ const normalizeGameConfig = (gameConfig) => {
     hasIpoShares: gameConfig?.hasIpoShares !== false,
     bankPoolDividendRecipient:
       gameConfig?.bankPoolDividendRecipient === 'company' ? 'company' : 'market',
+    mergerRoundEnabled: Boolean(gameConfig?.mergerRoundEnabled),
     setupLocked: Boolean(gameConfig?.setupLocked),
+  };
+};
+
+const normalizeCompanyRoundState = (entry, gameConfig, company) => {
+  const fallback = createCompanyRoundStateForCompany(company, gameConfig?.mergerRoundEnabled);
+  const normalized = {
+    stockHoldings: Array.isArray(entry?.stockHoldings)
+      ? entry.stockHoldings
+          .map((holding) => ({
+            playerId: holding?.playerId,
+            percentage: parsePercent(holding?.percentage),
+          }))
+          .filter((holding) => typeof holding.playerId === 'string' && holding.percentage > 0)
+      : fallback.stockHoldings,
+    presidentPlayerId:
+      typeof entry?.presidentPlayerId === 'string' ? entry.presidentPlayerId : null,
+    isUnestablished:
+      typeof entry?.isUnestablished === 'boolean'
+        ? entry.isUnestablished
+        : inferIsUnestablished(entry, gameConfig?.hasIpoShares !== false),
+    treasuryStockPercentage: parsePercent(entry?.treasuryStockPercentage || 0),
+    bankPoolPercentage: parsePercent(entry?.bankPoolPercentage || 0),
+    periodicIncome: Math.max(0, normalizeInteger(entry?.periodicIncome, 0)),
+    trains: Array.isArray(entry?.trains)
+      ? entry.trains.map((train, index) => ({
+          id: train?.id || createFallbackId('train', index),
+          stops: Array.isArray(train?.stops)
+            ? train.stops.map((stop) => Math.max(0, normalizeInteger(stop, 0)))
+            : [],
+        }))
+      : [],
+    companyStatus: normalizeCompanyStatus(
+      entry?.companyStatus,
+      company?.companyType,
+      gameConfig?.mergerRoundEnabled
+    ),
+  };
+
+  return {
+    ...normalized,
+    isUnestablished:
+      normalized.companyStatus !== 'active'
+        ? true
+        : typeof entry?.isUnestablished === 'boolean'
+          ? entry.isUnestablished
+          : inferIsUnestablished(normalized, gameConfig?.hasIpoShares !== false),
   };
 };
 
@@ -266,8 +310,9 @@ const normalizeOperatingResults = (operatingResults, gameConfig, stockRoundState
 
         orAcc[normalizedOrNum] = Object.entries(entries || {}).reduce(
           (companyAcc, [companyId, record]) => {
-            if (!gameConfig.companies.some((company) => company.id === companyId))
+            if (!gameConfig.companies.some((company) => company.id === companyId)) {
               return companyAcc;
+            }
             companyAcc[companyId] = buildOperatingResultRecord({
               cycleNo: normalizedCycleNo,
               orNum: normalizedOrNum,
@@ -305,8 +350,7 @@ const normalizeHistoryEntry = (entry) => {
       normalizeOperatingResults(
         { [entry.cycleNo || 1]: entry.operatingResultsSnapshot || {} },
         gameConfigSnapshot,
-        stockRoundSnapshot,
-        entry.cycleNo || 1
+        stockRoundSnapshot
       )[entry.cycleNo || 1] || {},
   };
 };
@@ -318,11 +362,13 @@ export const createBaseState = () => ({
     numORs: DEFAULT_NUM_ORS,
     hasIpoShares: true,
     bankPoolDividendRecipient: 'market',
+    mergerRoundEnabled: false,
     setupLocked: false,
   },
   session: {
     currentCycleNo: 1,
     mode: 'stockRound',
+    greenTrainTriggered: false,
   },
   stockRoundState: {
     playerPeriodicIncomes: {},
@@ -353,7 +399,8 @@ export const normalizeStockRoundState = (stockRoundState, gameConfig) => {
   const companyStates = companies.reduce((acc, company) => {
     acc[company.id] = normalizeCompanyRoundState(
       stockRoundState?.companyStates?.[company.id],
-      gameConfig?.hasIpoShares !== false
+      gameConfig,
+      company
     );
     return acc;
   }, {});
@@ -379,7 +426,8 @@ export const normalizeAppState = (saved) => {
     currentCycleNo: Number.isInteger(saved?.session?.currentCycleNo)
       ? Math.max(1, saved.session.currentCycleNo)
       : 1,
-    mode: saved?.session?.mode === 'orRound' ? 'orRound' : 'stockRound',
+    mode: normalizeSessionMode(saved?.session?.mode),
+    greenTrainTriggered: Boolean(saved?.session?.greenTrainTriggered),
   };
   const companyIds = gameConfig.companies.map((company) => company.id);
   const operatingState = normalizeOperatingState(
@@ -390,8 +438,7 @@ export const normalizeAppState = (saved) => {
   const operatingResults = normalizeOperatingResults(
     saved.operatingResults,
     gameConfig,
-    stockRoundState,
-    session.currentCycleNo
+    stockRoundState
   );
   const history = Array.isArray(saved.history)
     ? saved.history.map(normalizeHistoryEntry).filter(Boolean)
@@ -428,6 +475,14 @@ export const resolveBankPoolPercentage = (companyState, hasIpoShares) => {
 };
 
 export const evaluateStockValidation = (companyId, companyState, hasIpoShares) => {
+  if (!isCompanyActive(companyState)) {
+    return {
+      companyId,
+      invalid: false,
+      message: 'OK',
+    };
+  }
+
   const playerTotal = (companyState?.stockHoldings || []).reduce(
     (sum, holding) => sum + parsePercent(holding.percentage),
     0
@@ -516,7 +571,9 @@ export const buildOperatingResultRecord = ({
 };
 
 export const splitCompanyOrderByEstablishment = (companyOrder, companyStates, companyIds) => {
-  const normalizedOrder = syncCompanyOrder(companyOrder, companyIds);
+  const normalizedOrder = syncCompanyOrder(companyOrder, companyIds).filter((companyId) =>
+    isCompanyActive(companyStates?.[companyId])
+  );
   const establishedIds = normalizedOrder.filter(
     (companyId) => !companyStates?.[companyId]?.isUnestablished
   );
@@ -537,9 +594,13 @@ export const getEstablishedCompanyIds = (companyOrder, companyStates, companyIds
 export const getFirstEstablishedCompanyId = (companyOrder, companyStates, companyIds) =>
   getEstablishedCompanyIds(companyOrder, companyStates, companyIds)[0] || null;
 
-export const ensureCompanyRoundStates = (companyStates, companyIds) =>
-  companyIds.reduce((acc, companyId) => {
-    acc[companyId] = normalizeCompanyRoundState(companyStates?.[companyId], true);
+export const ensureCompanyRoundStates = (companyStates, companies, mergerRoundEnabled) =>
+  (companies || []).reduce((acc, company) => {
+    acc[company.id] = normalizeCompanyRoundState(
+      companyStates?.[company.id],
+      { hasIpoShares: true, mergerRoundEnabled },
+      company
+    );
     return acc;
   }, {});
 
@@ -549,4 +610,4 @@ export const hasAnyStatefulData = (state) =>
   Array.isArray(state?.history);
 
 export const shouldAutoUnsetUnestablished = (companyState, hasIpoShares) =>
-  hasAnyStockInput(companyState, hasIpoShares);
+  isCompanyActive(companyState) && hasAnyStockInput(companyState, hasIpoShares);
