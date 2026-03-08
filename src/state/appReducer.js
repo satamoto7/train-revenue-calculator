@@ -8,8 +8,10 @@ import {
   cloneStockRoundState,
   createBaseState,
   createCompanyRoundState,
+  getDefaultCompanyStatus,
   getEstablishedCompanyIds,
   getFirstEstablishedCompanyId,
+  isCompanyActive,
   normalizeAppState,
   parsePercent,
   shouldAutoUnsetUnestablished,
@@ -23,6 +25,9 @@ const cloneState = (state) => ({
     ...state.gameConfig,
     players: clonePlayers(state.gameConfig.players),
     companies: cloneCompanies(state.gameConfig.companies),
+  },
+  session: {
+    ...state.session,
   },
   stockRoundState: cloneStockRoundState(state.stockRoundState),
   operatingState: {
@@ -43,6 +48,9 @@ const toOrKey = (orNum) => `${orNum}`;
 
 const getCompanyIds = (state) => state.gameConfig.companies.map((company) => company.id);
 
+const getCompanyById = (state, companyId) =>
+  state.gameConfig.companies.find((company) => company.id === companyId) || null;
+
 const syncPlayerPeriodicIncomes = (playerPeriodicIncomes, players) =>
   players.reduce((acc, player) => {
     acc[player.id] = Number.isFinite(playerPeriodicIncomes?.[player.id])
@@ -51,22 +59,50 @@ const syncPlayerPeriodicIncomes = (playerPeriodicIncomes, players) =>
     return acc;
   }, {});
 
-const syncCompanyStates = (companyStates, companyIds) =>
-  companyIds.reduce((acc, companyId) => {
-    const current = companyStates?.[companyId];
-    acc[companyId] = current
+const syncCompanyStates = (companyStates, companies, mergerRoundEnabled) =>
+  companies.reduce((acc, company) => {
+    const current = companyStates?.[company.id];
+    const fallback = createCompanyRoundState({
+      companyType: company.companyType,
+      mergerRoundEnabled,
+    });
+    acc[company.id] = current
       ? {
-          ...createCompanyRoundState(),
+          ...fallback,
           ...current,
           stockHoldings: (current.stockHoldings || []).map((holding) => ({ ...holding })),
           trains: (current.trains || []).map((train) => ({
             ...train,
             stops: [...(train.stops || [])],
           })),
+          companyStatus:
+            current.companyStatus ||
+            getDefaultCompanyStatus(company.companyType, mergerRoundEnabled),
         }
-      : createCompanyRoundState();
+      : fallback;
     return acc;
   }, {});
+
+const applyDefaultCompanyStatuses = (next) => {
+  next.stockRoundState.companyStates = next.gameConfig.companies.reduce((acc, company) => {
+    const current =
+      next.stockRoundState.companyStates?.[company.id] ||
+      createCompanyRoundState({
+        companyType: company.companyType,
+        mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+      });
+    const companyStatus = getDefaultCompanyStatus(
+      company.companyType,
+      next.gameConfig.mergerRoundEnabled
+    );
+    acc[company.id] = {
+      ...current,
+      companyStatus,
+      isUnestablished: companyStatus === 'active' ? current.isUnestablished : true,
+    };
+    return acc;
+  }, {});
+};
 
 const cleanupCompanyStateForPlayers = (companyState, playerIds) => {
   const playerIdSet = new Set(playerIds);
@@ -141,12 +177,19 @@ const carryForwardFinalORResults = (state, fromCycleNo, toCycleNo) => {
     return state;
   }
 
+  const activeCompanyIds = new Set(
+    Object.entries(state.stockRoundState.companyStates || {})
+      .filter(([, companyState]) => isCompanyActive(companyState))
+      .map(([companyId]) => companyId)
+  );
+
   if (!state.operatingResults[toCycleKeyValue]) {
     state.operatingResults[toCycleKeyValue] = {};
   }
 
   state.operatingResults[toCycleKeyValue][toOrKey(1)] = Object.entries(finalEntries).reduce(
     (acc, [companyId, record]) => {
+      if (!activeCompanyIds.has(companyId)) return acc;
       acc[companyId] = buildOperatingResultRecord({
         cycleNo: toCycleNo,
         orNum: 1,
@@ -170,7 +213,8 @@ const syncOperatingState = (state) => {
   const companyIds = getCompanyIds(next);
   next.stockRoundState.companyStates = syncCompanyStates(
     next.stockRoundState.companyStates,
-    companyIds
+    next.gameConfig.companies,
+    next.gameConfig.mergerRoundEnabled
   );
   next.gameConfig.players = clonePlayers(next.gameConfig.players);
   next.gameConfig.companies = cloneCompanies(next.gameConfig.companies);
@@ -179,7 +223,11 @@ const syncOperatingState = (state) => {
     next.operatingState.selectedCompanyId &&
     companyIds.includes(next.operatingState.selectedCompanyId)
       ? next.operatingState.selectedCompanyId
-      : next.operatingState.companyOrder[0] || null;
+      : getFirstEstablishedCompanyId(
+          next.operatingState.companyOrder,
+          next.stockRoundState.companyStates,
+          companyIds
+        );
 
   Object.keys(next.operatingResults || {}).forEach((cycleNo) => {
     Object.keys(next.operatingResults[cycleNo] || {}).forEach((orNum) => {
@@ -193,6 +241,95 @@ const syncOperatingState = (state) => {
 
   next.stockRoundState.validation = buildStockValidationMap(next.gameConfig, next.stockRoundState);
   return next;
+};
+
+const trimCurrentCycleOperatingResults = (operatingResults, cycleNo, numORs) => {
+  const cycleKey = toCycleKey(cycleNo);
+  const cycleEntries = operatingResults?.[cycleKey];
+  if (!cycleEntries) return;
+
+  Object.keys(cycleEntries).forEach((orKey) => {
+    if (Number.parseInt(orKey, 10) > numORs) {
+      delete cycleEntries[orKey];
+    }
+  });
+};
+
+const completeCycleAndStartNextSR = (state, completedAt) => {
+  const next = cloneState(state);
+  const cycleNo = next.session.currentCycleNo;
+  const cycleKey = toCycleKey(cycleNo);
+  const nextCycleNo = cycleNo + 1;
+
+  next.history = [
+    ...next.history,
+    {
+      cycleNo,
+      completedAt,
+      gameConfigSnapshot: {
+        ...next.gameConfig,
+        players: clonePlayers(next.gameConfig.players),
+        companies: cloneCompanies(next.gameConfig.companies),
+      },
+      stockRoundSnapshot: cloneStockRoundState(next.stockRoundState),
+      operatingResultsSnapshot:
+        cloneOperatingResults({
+          [cycleKey]: next.operatingResults[cycleKey] || {},
+        })[cycleKey] || {},
+    },
+  ];
+  next.session = {
+    currentCycleNo: nextCycleNo,
+    mode: 'stockRound',
+    greenTrainTriggered: next.session.greenTrainTriggered,
+  };
+  carryForwardFinalORResults(next, cycleNo, nextCycleNo);
+  next.operatingState = {
+    companyOrder: syncCompanyOrder(next.operatingState.companyOrder, getCompanyIds(next)),
+    currentOR: 1,
+    completedCompanyIdsByOR: buildEmptyCompletedByOR(next.gameConfig.numORs),
+    selectedCompanyId: getFirstEstablishedCompanyId(
+      next.operatingState.companyOrder,
+      next.stockRoundState.companyStates,
+      getCompanyIds(next)
+    ),
+  };
+  next.stockRoundState.validation = buildStockValidationMap(next.gameConfig, next.stockRoundState);
+  return next;
+};
+
+const getMergedPresidentPlayerId = ({
+  stockHoldings,
+  sourceCompanyIds,
+  targetCompanyId,
+  state,
+}) => {
+  const highestPercentage = Math.max(
+    0,
+    ...(stockHoldings || []).map((holding) => parsePercent(holding.percentage))
+  );
+  const leaders = (stockHoldings || [])
+    .filter(
+      (holding) => parsePercent(holding.percentage) === highestPercentage && highestPercentage > 0
+    )
+    .map((holding) => holding.playerId);
+
+  if (leaders.length === 1) {
+    return leaders[0];
+  }
+
+  if (leaders.length > 1) {
+    const orderedSources = (state.operatingState.companyOrder || [])
+      .filter((companyId) => sourceCompanyIds.includes(companyId))
+      .map((companyId) => state.stockRoundState.companyStates?.[companyId]?.presidentPlayerId)
+      .filter(Boolean);
+    const fallbackPresident = orderedSources.find((playerId) => leaders.includes(playerId));
+    if (fallbackPresident) return fallbackPresident;
+  }
+
+  const currentPresident =
+    state.stockRoundState.companyStates?.[targetCompanyId]?.presidentPlayerId;
+  return currentPresident || null;
 };
 
 export function appReducer(state, action) {
@@ -217,29 +354,34 @@ export function appReducer(state, action) {
     case 'CONFIG_SET_COMPANIES': {
       const next = cloneState(state);
       next.gameConfig.companies = action.payload;
-      const companyIds = getCompanyIds(next);
       next.stockRoundState.companyStates = syncCompanyStates(
         next.stockRoundState.companyStates,
-        companyIds
+        next.gameConfig.companies,
+        next.gameConfig.mergerRoundEnabled
       );
       next.operatingState.companyOrder = syncCompanyOrder(
         next.operatingState.companyOrder,
-        companyIds
+        getCompanyIds(next)
       );
-      next.operatingState.selectedCompanyId =
-        next.operatingState.selectedCompanyId &&
-        companyIds.includes(next.operatingState.selectedCompanyId)
-          ? next.operatingState.selectedCompanyId
-          : next.operatingState.companyOrder[0] || null;
+      next.operatingState.selectedCompanyId = getFirstEstablishedCompanyId(
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        getCompanyIds(next)
+      );
       return recomputeResults(syncOperatingState(next));
     }
 
     case 'CONFIG_SET_NUM_ORS': {
-      if (state.gameConfig.setupLocked) return state;
+      if (state.gameConfig.setupLocked && state.session.mode !== 'stockRound') return state;
       const next = cloneState(state);
       next.gameConfig.numORs = action.payload;
       next.operatingState.currentOR = Math.min(next.operatingState.currentOR, action.payload);
       next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(action.payload);
+      trimCurrentCycleOperatingResults(
+        next.operatingResults,
+        next.session.currentCycleNo,
+        action.payload
+      );
       return next;
     }
 
@@ -254,6 +396,49 @@ export function appReducer(state, action) {
       return recomputeResults(next);
     }
 
+    case 'CONFIG_SET_MERGER_ROUND_ENABLED': {
+      if (state.gameConfig.setupLocked) return state;
+      const next = cloneState(state);
+      next.gameConfig.mergerRoundEnabled = Boolean(action.payload);
+      applyDefaultCompanyStatuses(next);
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return next;
+    }
+
+    case 'CONFIG_SET_COMPANY_TYPE': {
+      if (state.gameConfig.setupLocked) return state;
+      const next = cloneState(state);
+      const { companyId, companyType } = action.payload;
+      next.gameConfig.companies = next.gameConfig.companies.map((company) =>
+        company.id === companyId ? { ...company, companyType } : company
+      );
+      const company = getCompanyById(next, companyId);
+      if (!company) return state;
+      const current =
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
+      const companyStatus = getDefaultCompanyStatus(
+        companyType,
+        next.gameConfig.mergerRoundEnabled
+      );
+      next.stockRoundState.companyStates[companyId] = {
+        ...current,
+        companyStatus,
+        isUnestablished: companyStatus === 'active' ? current.isUnestablished : true,
+      };
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return next;
+    }
+
     case 'BANK_POOL_DIVIDEND_RECIPIENT_SET': {
       if (state.gameConfig.setupLocked) return state;
       const next = cloneState(state);
@@ -266,6 +451,14 @@ export function appReducer(state, action) {
       const next = cloneState(state);
       next.gameConfig.setupLocked = Boolean(action.payload);
       next.session.mode = 'stockRound';
+      next.stockRoundState.companyStates = syncCompanyStates(
+        next.stockRoundState.companyStates,
+        next.gameConfig.companies,
+        next.gameConfig.mergerRoundEnabled
+      );
+      if (next.gameConfig.setupLocked) {
+        applyDefaultCompanyStatuses(next);
+      }
       next.operatingState.currentOR = 1;
       next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(next.gameConfig.numORs);
       next.operatingState.companyOrder = syncCompanyOrder(
@@ -277,14 +470,23 @@ export function appReducer(state, action) {
         next.stockRoundState.companyStates,
         getCompanyIds(next)
       );
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
       return next;
     }
 
     case 'SR_STOCK_SET': {
       const { companyId, target, playerId, value } = action.payload;
       const next = cloneState(state);
+      const company = getCompanyById(next, companyId);
       const companyState =
-        next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType: company?.companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
       const nextValue = parsePercent(value);
       let nextCompanyState = companyState;
 
@@ -333,8 +535,13 @@ export function appReducer(state, action) {
     case 'SR_UNESTABLISHED_SET': {
       const next = cloneState(state);
       const { companyId, isUnestablished } = action.payload;
+      const company = getCompanyById(next, companyId);
       next.stockRoundState.companyStates[companyId] = {
-        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        ...(next.stockRoundState.companyStates[companyId] ||
+          createCompanyRoundState({
+            companyType: company?.companyType,
+            mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+          })),
         isUnestablished,
       };
       next.stockRoundState.validation = buildStockValidationMap(
@@ -347,8 +554,13 @@ export function appReducer(state, action) {
     case 'SR_PRESIDENT_SET': {
       const next = cloneState(state);
       const { companyId, presidentPlayerId } = action.payload;
+      const company = getCompanyById(next, companyId);
       next.stockRoundState.companyStates[companyId] = {
-        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        ...(next.stockRoundState.companyStates[companyId] ||
+          createCompanyRoundState({
+            companyType: company?.companyType,
+            mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+          })),
         presidentPlayerId:
           typeof presidentPlayerId === 'string' && presidentPlayerId.trim()
             ? presidentPlayerId
@@ -377,6 +589,12 @@ export function appReducer(state, action) {
       return next;
     }
 
+    case 'GREEN_TRAIN_TRIGGER_SET': {
+      const next = cloneState(state);
+      next.session.greenTrainTriggered = Boolean(action.payload);
+      return next;
+    }
+
     case 'PLAYER_PERIODIC_INCOME_SET': {
       const next = cloneState(state);
       const { playerId, periodicIncome } = action.payload;
@@ -387,8 +605,13 @@ export function appReducer(state, action) {
     case 'COMPANY_PERIODIC_INCOME_SET': {
       const next = cloneState(state);
       const { companyId, periodicIncome } = action.payload;
+      const company = getCompanyById(next, companyId);
       next.stockRoundState.companyStates[companyId] = {
-        ...(next.stockRoundState.companyStates[companyId] || createCompanyRoundState()),
+        ...(next.stockRoundState.companyStates[companyId] ||
+          createCompanyRoundState({
+            companyType: company?.companyType,
+            mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+          })),
         periodicIncome,
       };
       return recomputeResults(next, [companyId]);
@@ -497,7 +720,13 @@ export function appReducer(state, action) {
     case 'TRAIN_ADD': {
       const next = cloneState(state);
       const { companyId, trainId } = action.payload;
-      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      const company = getCompanyById(next, companyId);
+      const current =
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType: company?.companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
       next.stockRoundState.companyStates[companyId] = {
         ...current,
         trains: [...(current.trains || []), { id: trainId, stops: [] }],
@@ -508,7 +737,13 @@ export function appReducer(state, action) {
     case 'TRAIN_UPDATE_STOPS': {
       const next = cloneState(state);
       const { companyId, trainId, stops } = action.payload;
-      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      const company = getCompanyById(next, companyId);
+      const current =
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType: company?.companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
       next.stockRoundState.companyStates[companyId] = {
         ...current,
         trains: (current.trains || []).map((train) =>
@@ -521,7 +756,13 @@ export function appReducer(state, action) {
     case 'TRAIN_CLEAR': {
       const next = cloneState(state);
       const { companyId, trainId } = action.payload;
-      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      const company = getCompanyById(next, companyId);
+      const current =
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType: company?.companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
       next.stockRoundState.companyStates[companyId] = {
         ...current,
         trains: (current.trains || []).map((train) =>
@@ -534,7 +775,13 @@ export function appReducer(state, action) {
     case 'TRAIN_DELETE': {
       const next = cloneState(state);
       const { companyId, trainId } = action.payload;
-      const current = next.stockRoundState.companyStates[companyId] || createCompanyRoundState();
+      const company = getCompanyById(next, companyId);
+      const current =
+        next.stockRoundState.companyStates[companyId] ||
+        createCompanyRoundState({
+          companyType: company?.companyType,
+          mergerRoundEnabled: next.gameConfig.mergerRoundEnabled,
+        });
       next.stockRoundState.companyStates[companyId] = {
         ...current,
         trains: (current.trains || []).filter((train) => train.id !== trainId),
@@ -588,47 +835,115 @@ export function appReducer(state, action) {
       return next;
     }
 
-    case 'CYCLE_CLOSE_AND_START_NEXT_SR': {
+    case 'OR_ENTER_MERGER_ROUND': {
+      if (!state.gameConfig.mergerRoundEnabled || !state.session.greenTrainTriggered) return state;
       const next = cloneState(state);
-      const cycleNo = next.session.currentCycleNo;
-      const cycleKey = toCycleKey(cycleNo);
-      const nextCycleNo = cycleNo + 1;
-
-      next.history = [
-        ...next.history,
-        {
-          cycleNo,
-          completedAt: action.payload,
-          gameConfigSnapshot: {
-            ...next.gameConfig,
-            players: clonePlayers(next.gameConfig.players),
-            companies: cloneCompanies(next.gameConfig.companies),
-          },
-          stockRoundSnapshot: cloneStockRoundState(next.stockRoundState),
-          operatingResultsSnapshot:
-            cloneOperatingResults({
-              [cycleKey]: next.operatingResults[cycleKey] || {},
-            })[cycleKey] || {},
-        },
-      ];
-      next.session = {
-        currentCycleNo: nextCycleNo,
-        mode: 'stockRound',
-      };
-      carryForwardFinalORResults(next, cycleNo, nextCycleNo);
-      next.operatingState = {
-        companyOrder: syncCompanyOrder(next.operatingState.companyOrder, getCompanyIds(next)),
-        currentOR: 1,
-        completedCompanyIdsByOR: buildEmptyCompletedByOR(next.gameConfig.numORs),
-        selectedCompanyId: getFirstEstablishedCompanyId(
-          next.operatingState.companyOrder,
-          next.stockRoundState.companyStates,
-          getCompanyIds(next)
-        ),
-      };
-      next.stockRoundState.validation = {};
+      next.session.mode = 'mergerRound';
       return next;
     }
+
+    case 'MR_MERGE_COMMIT': {
+      const next = cloneState(state);
+      const {
+        sourceCompanyIds,
+        targetCompanyId,
+        stockHoldings,
+        treasuryStockPercentage,
+        bankPoolPercentage,
+        periodicIncome,
+        trains,
+      } = action.payload;
+
+      if (!Array.isArray(sourceCompanyIds) || sourceCompanyIds.length !== 2) return state;
+      const uniqueSources = [...new Set(sourceCompanyIds)];
+      if (uniqueSources.length !== 2) return state;
+
+      const sourceCompanies = uniqueSources.map((companyId) => getCompanyById(next, companyId));
+      const targetCompany = getCompanyById(next, targetCompanyId);
+      if (sourceCompanies.some((company) => !company) || !targetCompany) return state;
+
+      const sourceStates = uniqueSources.map(
+        (companyId) => next.stockRoundState.companyStates?.[companyId]
+      );
+      const targetState = next.stockRoundState.companyStates?.[targetCompanyId];
+      const areSourcesEligible = sourceCompanies.every(
+        (company, index) =>
+          company.companyType === 'minor' &&
+          sourceStates[index] &&
+          isCompanyActive(sourceStates[index])
+      );
+      const isTargetEligible =
+        targetCompany.companyType === 'major' && targetState?.companyStatus === 'available';
+      if (!areSourcesEligible || !isTargetEligible) return state;
+
+      const mergedStockHoldings = (stockHoldings || [])
+        .map((holding) => ({
+          playerId: holding.playerId,
+          percentage: parsePercent(holding.percentage),
+        }))
+        .filter((holding) => typeof holding.playerId === 'string' && holding.percentage > 0);
+      const presidentPlayerId = getMergedPresidentPlayerId({
+        stockHoldings: mergedStockHoldings,
+        sourceCompanyIds: uniqueSources,
+        targetCompanyId,
+        state,
+      });
+
+      next.stockRoundState.companyStates[targetCompanyId] = {
+        ...targetState,
+        companyStatus: 'active',
+        stockHoldings: mergedStockHoldings,
+        presidentPlayerId,
+        isUnestablished: false,
+        treasuryStockPercentage: parsePercent(treasuryStockPercentage || 0),
+        bankPoolPercentage: parsePercent(bankPoolPercentage || 0),
+        periodicIncome: Math.max(0, Number.parseInt(periodicIncome, 10) || 0),
+        trains: (trains || []).map((train) => ({
+          ...train,
+          stops: [...(train.stops || [])],
+        })),
+      };
+
+      uniqueSources.forEach((companyId) => {
+        next.stockRoundState.companyStates[companyId] = {
+          ...next.stockRoundState.companyStates[companyId],
+          companyStatus: 'retired',
+          stockHoldings: [],
+          presidentPlayerId: null,
+          isUnestablished: true,
+          treasuryStockPercentage: 0,
+          bankPoolPercentage: 0,
+          periodicIncome: 0,
+          trains: [],
+        };
+      });
+
+      const currentOrder = syncCompanyOrder(next.operatingState.companyOrder, getCompanyIds(next));
+      const insertionIndex = Math.min(
+        ...uniqueSources.map((companyId) => currentOrder.indexOf(companyId))
+      );
+      const filteredOrder = currentOrder.filter(
+        (companyId) => !uniqueSources.includes(companyId) && companyId !== targetCompanyId
+      );
+      filteredOrder.splice(Math.max(0, insertionIndex), 0, targetCompanyId);
+      next.operatingState.companyOrder = filteredOrder;
+      next.operatingState.selectedCompanyId = getFirstEstablishedCompanyId(
+        next.operatingState.companyOrder,
+        next.stockRoundState.companyStates,
+        getCompanyIds(next)
+      );
+      next.stockRoundState.validation = buildStockValidationMap(
+        next.gameConfig,
+        next.stockRoundState
+      );
+      return next;
+    }
+
+    case 'MR_COMPLETE_AND_START_NEXT_SR':
+      return completeCycleAndStartNextSR(state, action.payload);
+
+    case 'CYCLE_CLOSE_AND_START_NEXT_SR':
+      return completeCycleAndStartNextSR(state, action.payload);
 
     case 'APP_LOAD':
       return normalizeAppState(action.payload);

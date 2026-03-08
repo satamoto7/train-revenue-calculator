@@ -24,12 +24,14 @@ const baseProps = () => ({
       isUnestablished: false,
     },
   ],
+  numORs: 2,
   hasIpoShares: true,
   validation: {},
   handleStockChange: vi.fn(),
   handlePresidentChange: vi.fn(),
   handleUnestablishedChange: vi.fn(),
   handleValidate: vi.fn(),
+  handleSetNumORs: vi.fn(),
   handleComplete: vi.fn(),
   handlePlayerPeriodicIncomeChange: vi.fn(),
   handleCompanyPeriodicIncomeChange: vi.fn(),
@@ -127,5 +129,15 @@ describe('StockRoundView committed number inputs', () => {
       'border-l-4',
       'border-l-rose-300'
     );
+  });
+
+  test('SR完了後の OR 数を変更できる', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<StockRoundView {...props} />);
+
+    await user.selectOptions(screen.getByLabelText('SR完了後の OR 数'), '3');
+
+    expect(props.handleSetNumORs).toHaveBeenCalledWith(3);
   });
 });

@@ -2,7 +2,7 @@ import { normalizeAppState } from '../state/appState';
 
 export const LEGACY_APP_STORAGE_KEY = 'trainRevenue_18xx_data';
 export const APP_STORAGE_KEY_PREFIX = 'trainRevenue_18xx_game_';
-export const APP_SCHEMA_VERSION = 6;
+export const APP_SCHEMA_VERSION = 7;
 
 const createPayload = (state) => ({
   schemaVersion: APP_SCHEMA_VERSION,
