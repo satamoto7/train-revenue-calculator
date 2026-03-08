@@ -224,12 +224,26 @@ function App() {
     );
   };
 
+  const handleEditCompanyType = (companyId, companyType) => {
+    dispatch({
+      type: 'CONFIG_SET_COMPANY_TYPE',
+      payload: {
+        companyId,
+        companyType,
+      },
+    });
+  };
+
   const handleSetNumORs = (numORs) => {
     dispatch({ type: 'CONFIG_SET_NUM_ORS', payload: numORs });
   };
 
   const handleSetHasIpoShares = (hasIpoShares) => {
     dispatch({ type: 'CONFIG_SET_HAS_IPO_SHARES', payload: hasIpoShares });
+  };
+
+  const handleSetMergerRoundEnabled = (enabled) => {
+    dispatch({ type: 'CONFIG_SET_MERGER_ROUND_ENABLED', payload: enabled });
   };
 
   const handleSetBankPoolDividendRecipient = (recipient) => {
@@ -296,6 +310,10 @@ function App() {
     setWorkspace('board');
   };
 
+  const handleGreenTrainTriggeredChange = (checked) => {
+    dispatch({ type: 'GREEN_TRAIN_TRIGGER_SET', payload: checked });
+  };
+
   const handleMoveOrderUp = (companyId) => {
     dispatch({ type: 'OR_ORDER_MOVE_UP', payload: companyId });
   };
@@ -336,7 +354,11 @@ function App() {
     }
 
     if (nextCount >= establishedCompanyIds.length && currentOR === board.flow.numORs) {
-      setModalMessage('最終ORが完了しました。「次SR開始」で次サイクルへ進めます。');
+      setModalMessage(
+        board.flow.shouldEnterMergerRound
+          ? '最終ORが完了しました。「Merger Roundへ」で合併処理へ進めます。'
+          : '最終ORが完了しました。「次SR開始」で次サイクルへ進めます。'
+      );
     }
   };
 
@@ -459,6 +481,28 @@ function App() {
       setConfirmAction(null);
     });
     setModalMessage('現在サイクルを確定し、次SRへ進みますか？');
+  };
+
+  const handleEnterMergerRound = () => {
+    dispatch({ type: 'OR_ENTER_MERGER_ROUND' });
+    setWorkspace('board');
+  };
+
+  const handleCommitMerger = (payload) => {
+    dispatch({ type: 'MR_MERGE_COMMIT', payload });
+    setModalMessage(
+      '合併を反映しました。続けて次の合併を行うか、Merger Round を終了してください。'
+    );
+  };
+
+  const handleCompleteMergerRound = () => {
+    setConfirmAction(() => () => {
+      dispatch({ type: 'MR_COMPLETE_AND_START_NEXT_SR', payload: new Date().toISOString() });
+      setWorkspace('board');
+      setModalMessage('');
+      setConfirmAction(null);
+    });
+    setModalMessage('Merger Round を終了し、次SRへ進みますか？');
   };
 
   const handleResetApp = () => {
@@ -592,6 +636,7 @@ function App() {
         {workspace === 'board' ? (
           <BoardView
             board={board}
+            handleGreenTrainTriggeredChange={handleGreenTrainTriggeredChange}
             handleStockChange={handleStockChange}
             handlePresidentChange={handlePresidentChange}
             handleUnestablishedChange={handleUnestablishedChange}
@@ -599,6 +644,7 @@ function App() {
             handleCompleteStockRound={handleCompleteStockRound}
             handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
             handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
+            handleSetNumORs={handleSetNumORs}
             handleMoveOrderUp={handleMoveOrderUp}
             handleMoveOrderDown={handleMoveOrderDown}
             handleRebalanceRemaining={handleRebalanceRemaining}
@@ -610,7 +656,10 @@ function App() {
             handleDeleteTrain={handleDeleteTrain}
             handleSetTrainRevenueToCurrentOR={handleSetTrainRevenueToCurrentOR}
             handleSetORDividendMode={handleSetORDividendMode}
+            handleEnterMergerRound={handleEnterMergerRound}
             handleStartNextCycle={handleStartNextCycle}
+            handleCommitMerger={handleCommitMerger}
+            handleCompleteMergerRound={handleCompleteMergerRound}
           />
         ) : null}
 
@@ -620,6 +669,7 @@ function App() {
             companies={appState.gameConfig.companies}
             numORs={appState.gameConfig.numORs}
             hasIpoShares={appState.gameConfig.hasIpoShares}
+            mergerRoundEnabled={appState.gameConfig.mergerRoundEnabled}
             setupLocked={appState.gameConfig.setupLocked}
             bankPoolDividendRecipient={appState.gameConfig.bankPoolDividendRecipient}
             handleAddMultiplePlayers={handleAddMultiplePlayers}
@@ -632,16 +682,16 @@ function App() {
             handleEditCompanyName={handleEditCompanyName}
             handleEditCompanySymbol={handleEditCompanySymbol}
             handleEditCompanyColor={handleEditCompanyColor}
+            handleEditCompanyType={handleEditCompanyType}
             handleSetNumORs={handleSetNumORs}
             handleSetHasIpoShares={handleSetHasIpoShares}
+            handleSetMergerRoundEnabled={handleSetMergerRoundEnabled}
             handleSetBankPoolDividendRecipient={handleSetBankPoolDividendRecipient}
             handleStartGame={handleStartGame}
           />
         ) : null}
 
-        {workspace === 'history' ? (
-          <HistoryView cycles={historyCycles} numORs={appState.gameConfig.numORs} />
-        ) : null}
+        {workspace === 'history' ? <HistoryView cycles={historyCycles} /> : null}
       </div>
 
       <footer className="mx-auto mt-12 max-w-6xl border-t border-border-subtle py-4 text-center">

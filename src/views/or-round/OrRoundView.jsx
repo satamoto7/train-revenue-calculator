@@ -33,6 +33,7 @@ const OrRoundView = ({
   handleDeleteTrain,
   handleSetTrainRevenueToCurrentOR,
   handleStartNextCycle,
+  handleEnterMergerRound,
   handlePlayerPeriodicIncomeChange,
   handleCompanyPeriodicIncomeChange,
   handleSetORDividendMode,
@@ -62,6 +63,7 @@ const OrRoundView = ({
   const remainingCompanyIds = establishedCompanyOrder.filter(
     (companyId) => !completed.includes(companyId)
   );
+  const selectableCompanyIds = establishedCompanyOrder;
   const hasEstablishedCompanies = establishedCompanyOrder.length > 0;
   const orderLocked = completed.length > 0;
   const finalORCompleted =
@@ -79,9 +81,7 @@ const OrRoundView = ({
 
   const [rebalanceMode, setRebalanceMode] = useState(false);
   const [draftRemaining, setDraftRemaining] = useState([]);
-  const [localSelectedCompanyId, setLocalSelectedCompanyId] = useState(
-    preferredLocalSelectedCompanyId
-  );
+  const [manualSelectedCompanyId, setManualSelectedCompanyId] = useState(null);
   const previousCurrentORRef = useRef(currentOR);
 
   useEffect(() => {
@@ -94,12 +94,12 @@ const OrRoundView = ({
     const isRoundChanged = previousCurrentORRef.current !== currentOR;
     previousCurrentORRef.current = currentOR;
 
-    setLocalSelectedCompanyId((current) => {
-      if (isRoundChanged) return preferredLocalSelectedCompanyId;
-      if (current && remainingCompanyIds.includes(current)) return current;
-      return preferredLocalSelectedCompanyId;
+    setManualSelectedCompanyId((current) => {
+      if (isRoundChanged) return null;
+      if (current && selectableCompanyIds.includes(current)) return current;
+      return null;
     });
-  }, [currentOR, preferredLocalSelectedCompanyId, remainingCompanyIds]);
+  }, [currentOR, selectableCompanyIds]);
 
   const moveDraft = (targetCompanyId, direction) => {
     setDraftRemaining((prev) => {
@@ -128,10 +128,15 @@ const OrRoundView = ({
     );
   }
 
-  const activeCompanyId = remainingCompanyIds.includes(localSelectedCompanyId)
-    ? localSelectedCompanyId
-    : remainingCompanyIds[0] || null;
+  const activeCompanyId = selectableCompanyIds.includes(manualSelectedCompanyId)
+    ? manualSelectedCompanyId
+    : preferredLocalSelectedCompanyId;
   const activeCompany = activeCompanyId ? companiesById.get(activeCompanyId) : null;
+
+  const handleMarkSelectedCompanyDone = (companyId) => {
+    setManualSelectedCompanyId((current) => (current === companyId ? null : current));
+    handleMarkCompanyDone(companyId);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -280,7 +285,7 @@ const OrRoundView = ({
           establishedCount={establishedCompanyOrder.length}
           isDone={completed.includes(activeCompany.id)}
           finalORCompleted={finalORCompleted}
-          handleMarkCompanyDone={handleMarkCompanyDone}
+          handleMarkCompanyDone={handleMarkSelectedCompanyDone}
           handleORRevenueChange={handleORRevenueChange}
           handleSetORDividendMode={handleSetORDividendMode}
           handleAddTrain={handleAddTrain}
@@ -332,7 +337,7 @@ const OrRoundView = ({
                 establishedCompanyOrder={establishedCompanyOrder}
                 handleMoveOrderUp={handleMoveOrderUp}
                 handleMoveOrderDown={handleMoveOrderDown}
-                onSelect={() => setLocalSelectedCompanyId(companyId)}
+                onSelect={() => setManualSelectedCompanyId(companyId)}
               />
             );
           })}
@@ -341,8 +346,12 @@ const OrRoundView = ({
 
       {finalORCompleted ? (
         <div className="mt-6 flex justify-end">
-          <Button type="button" size="lg" onClick={handleStartNextCycle}>
-            次SR開始
+          <Button
+            type="button"
+            size="lg"
+            onClick={flow.shouldEnterMergerRound ? handleEnterMergerRound : handleStartNextCycle}
+          >
+            {flow.shouldEnterMergerRound ? 'Merger Roundへ' : '次SR開始'}
           </Button>
         </div>
       ) : null}
