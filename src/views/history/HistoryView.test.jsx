@@ -7,7 +7,6 @@ const buildCycle = () => ({
   cycleNo: 1,
   isCompleted: false,
   gameConfigSnapshot: {
-    numORs: 2,
     bankPoolDividendRecipient: 'market',
     players: [
       {
@@ -72,7 +71,6 @@ const buildSecondCycle = () => ({
   cycleNo: 2,
   isCompleted: true,
   gameConfigSnapshot: {
-    numORs: 2,
     bankPoolDividendRecipient: 'company',
     players: [
       {
@@ -122,76 +120,10 @@ const buildSecondCycle = () => ({
   },
 });
 
-const buildThirdCycle = () => ({
-  cycleNo: 3,
-  isCompleted: true,
-  gameConfigSnapshot: {
-    numORs: 3,
-    bankPoolDividendRecipient: 'market',
-    players: [
-      {
-        id: 'p1',
-        displayName: 'Alice',
-        name: 'Alice',
-        color: '緑',
-        symbol: '●',
-        periodicIncome: 5,
-      },
-    ],
-    companies: [
-      {
-        id: 'c1',
-        displayName: '会社A',
-        name: 'Co1',
-        color: '赤',
-        symbol: '○',
-      },
-    ],
-  },
-  operatingResultsSnapshot: {
-    1: {
-      c1: {
-        companyId: 'c1',
-        orNum: 1,
-        revenue: 90,
-        dividendMode: 'full',
-        distributableRevenue: 90,
-        companyAmount: 0,
-        marketAmount: 0,
-        playerPayouts: [{ playerId: 'p1', percentage: 60, amount: 54 }],
-      },
-    },
-    2: {
-      c1: {
-        companyId: 'c1',
-        orNum: 2,
-        revenue: 100,
-        dividendMode: 'full',
-        distributableRevenue: 100,
-        companyAmount: 0,
-        marketAmount: 0,
-        playerPayouts: [{ playerId: 'p1', percentage: 60, amount: 60 }],
-      },
-    },
-    3: {
-      c1: {
-        companyId: 'c1',
-        orNum: 3,
-        revenue: 110,
-        dividendMode: 'full',
-        distributableRevenue: 110,
-        companyAmount: 0,
-        marketAmount: 0,
-        playerPayouts: [{ playerId: 'p1', percentage: 60, amount: 66 }],
-      },
-    },
-  },
-});
-
 describe('HistoryView', () => {
   test('Cycle 合計と OR 単位の表示対象を切り替えられる', async () => {
     const user = userEvent.setup();
-    render(<HistoryView cycles={[buildCycle()]} />);
+    render(<HistoryView cycles={[buildCycle()]} numORs={2} />);
 
     expect(screen.getByLabelText('表示対象')).toHaveDisplayValue('Cycle 1');
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
@@ -208,7 +140,7 @@ describe('HistoryView', () => {
 
   test('スプレッドシート表示で全サイクルの OR 履歴を横持ち表示できる', async () => {
     const user = userEvent.setup();
-    render(<HistoryView cycles={[buildCycle(), buildSecondCycle()]} />);
+    render(<HistoryView cycles={[buildCycle(), buildSecondCycle()]} numORs={2} />);
 
     await user.click(screen.getByRole('button', { name: 'スプレッドシート表示' }));
 
@@ -235,23 +167,5 @@ describe('HistoryView', () => {
 
     expect(screen.getByRole('heading', { name: 'プレイヤー受取詳細' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '企業受取詳細' })).toBeInTheDocument();
-  });
-
-  test('サイクルごとに異なる OR 数を表示対象とスプレッドシートへ反映する', async () => {
-    const user = userEvent.setup();
-    render(<HistoryView cycles={[buildCycle(), buildThirdCycle()]} />);
-
-    await user.selectOptions(screen.getByLabelText('表示対象'), '3-total');
-
-    expect(screen.getByLabelText('表示対象')).toHaveDisplayValue('Cycle 3');
-    expect(screen.getByText(/配当 180 \/ 定期 15/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'スプレッドシート表示' }));
-
-    const table = screen.getByRole('table');
-    expect(within(table).getByRole('columnheader', { name: '3.1' })).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: '3.2' })).toBeInTheDocument();
-    expect(within(table).getByRole('columnheader', { name: '3.3' })).toBeInTheDocument();
-    expect(screen.getByLabelText('表示対象')).toHaveDisplayValue('Cycle 3');
   });
 });

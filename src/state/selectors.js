@@ -22,11 +22,7 @@ export const selectMaterializedCompanies = (state, cycleNo = state.session.curre
   const cycleEntries = getCycleEntries(state.operatingResults, cycleNo);
   return state.gameConfig.companies.map((company) => {
     const companyState =
-      state.stockRoundState.companyStates?.[company.id] ||
-      createCompanyRoundState({
-        companyType: company.companyType,
-        mergerRoundEnabled: state.gameConfig.mergerRoundEnabled,
-      });
+      state.stockRoundState.companyStates?.[company.id] || createCompanyRoundState();
 
     return {
       ...company,
@@ -40,8 +36,6 @@ export const selectMaterializedCompanies = (state, cycleNo = state.session.curre
         ...train,
         stops: [...(train.stops || [])],
       })),
-      companyStatus: companyState.companyStatus || 'active',
-      companyType: company.companyType || 'minor',
       orRevenues: Array.from({ length: state.gameConfig.numORs }, (_, index) => {
         const orNum = index + 1;
         const result = getCompanyResultForOR(cycleEntries, orNum, company.id);
@@ -64,64 +58,43 @@ export const selectMaterializedCompanies = (state, cycleNo = state.session.curre
 
 export const selectBoardViewModel = (state) => {
   const players = selectMaterializedPlayers(state);
-  const allCompanies = selectMaterializedCompanies(state);
-  const activeCompanies = allCompanies.filter((company) => company.companyStatus === 'active');
-  const activeCompanyIds = activeCompanies.map((company) => company.id);
+  const companies = selectMaterializedCompanies(state);
+  const companyIds = companies.map((company) => company.id);
   const companyStates = state.stockRoundState.companyStates || {};
   const operatingState = state.operatingState || {
-    companyOrder: activeCompanyIds,
+    companyOrder: companyIds,
     currentOR: 1,
     completedCompanyIdsByOR: buildEmptyCompletedByOR(state.gameConfig.numORs),
     selectedCompanyId: null,
   };
-  const activeCompanyOrder = (operatingState.companyOrder || []).filter((companyId) =>
-    activeCompanyIds.includes(companyId)
-  );
   const { establishedIds } = splitCompanyOrderByEstablishment(
-    activeCompanyOrder,
+    operatingState.companyOrder,
     companyStates,
-    activeCompanyIds
+    companyIds
   );
   const completedForCurrentOR = (
     operatingState.completedCompanyIdsByOR?.[operatingState.currentOR] || []
   ).filter((companyId) => establishedIds.includes(companyId));
-  const mergerMinorCandidates = allCompanies.filter(
-    (company) => company.companyStatus === 'active' && company.companyType === 'minor'
-  );
-  const mergerMajorCandidates = allCompanies.filter(
-    (company) => company.companyStatus === 'available' && company.companyType === 'major'
-  );
 
   return {
     players,
-    companies: activeCompanies,
+    companies,
     validation: state.stockRoundState.validation || {},
     flow: {
       numORs: state.gameConfig.numORs,
       hasIpoShares: state.gameConfig.hasIpoShares,
       bankPoolDividendRecipient: state.gameConfig.bankPoolDividendRecipient,
-      mergerRoundEnabled: state.gameConfig.mergerRoundEnabled,
-      greenTrainTriggered: Boolean(state.session.greenTrainTriggered),
       setupLocked: state.gameConfig.setupLocked,
-      shouldEnterMergerRound:
-        state.gameConfig.mergerRoundEnabled && Boolean(state.session.greenTrainTriggered),
     },
     activeCycle: {
       cycleNo: state.session.currentCycleNo,
-      companyOrder: activeCompanyOrder,
+      companyOrder: operatingState.companyOrder,
       currentOR: operatingState.currentOR,
-      selectedCompanyId: activeCompanyIds.includes(operatingState.selectedCompanyId)
-        ? operatingState.selectedCompanyId
-        : getEstablishedCompanyIds(activeCompanyOrder, companyStates, activeCompanyIds)[0] || null,
+      selectedCompanyId:
+        operatingState.selectedCompanyId ||
+        getEstablishedCompanyIds(operatingState.companyOrder, companyStates, companyIds)[0] ||
+        null,
       completedCompanyIdsByOR: operatingState.completedCompanyIdsByOR,
-    },
-    merger: {
-      minorCandidates: mergerMinorCandidates,
-      majorCandidates: mergerMajorCandidates,
-      canRun:
-        state.gameConfig.mergerRoundEnabled &&
-        mergerMinorCandidates.length >= 2 &&
-        mergerMajorCandidates.length >= 1,
     },
     status: {
       mode: state.session.mode,
@@ -129,10 +102,9 @@ export const selectBoardViewModel = (state) => {
       establishedCount: establishedIds.length,
       completedCount: completedForCurrentOR.length,
       remainingCount: Math.max(0, establishedIds.length - completedForCurrentOR.length),
-      invalidCount: activeCompanies.reduce((count, company) => {
-        const entry = state.stockRoundState.validation?.[company.id];
-        return entry?.invalid ? count + 1 : count;
-      }, 0),
+      invalidCount: Object.values(state.stockRoundState.validation || {}).filter(
+        (entry) => entry?.invalid
+      ).length,
     },
   };
 };
@@ -162,11 +134,7 @@ export const selectHistoryCycles = (state) => {
       })),
       companies: entry.gameConfigSnapshot.companies.map((company) => {
         const companyState =
-          entry.stockRoundSnapshot.companyStates?.[company.id] ||
-          createCompanyRoundState({
-            companyType: company.companyType,
-            mergerRoundEnabled: entry.gameConfigSnapshot.mergerRoundEnabled,
-          });
+          entry.stockRoundSnapshot.companyStates?.[company.id] || createCompanyRoundState();
         return {
           ...company,
           stockHoldings: (companyState.stockHoldings || []).map((holding) => ({ ...holding })),
@@ -182,8 +150,6 @@ export const selectHistoryCycles = (state) => {
             ...train,
             stops: [...(train.stops || [])],
           })),
-          companyStatus: companyState.companyStatus || 'active',
-          companyType: company.companyType || 'minor',
         };
       }),
     },

@@ -39,12 +39,7 @@ const OrRoundQueueCard = ({
   const totalRevenue =
     calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs) +
     (company.periodicIncome ?? 0) * flow.numORs;
-  const canOpen = !isUnestablished;
-  const openLabel = isUnestablished
-    ? '未設立'
-    : isDone || finalORCompleted
-      ? '完了済みを開く'
-      : 'この会社を開く';
+  const canOpen = !isUnestablished && !isDone && !finalORCompleted;
 
   return (
     <article
@@ -133,7 +128,7 @@ const OrRoundQueueCard = ({
               disabled={!canOpen}
               onClick={onSelect}
             >
-              {openLabel}
+              {isUnestablished ? '未設立' : isDone ? '完了済み' : 'この会社を開く'}
             </Button>
           )}
         </div>

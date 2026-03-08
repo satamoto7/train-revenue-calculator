@@ -25,13 +25,9 @@ const CycleStatusHeader = ({
   completedCount,
   remainingCount,
   invalidCount,
-  mergerRoundEnabled,
-  greenTrainTriggered,
-  onGreenTrainTriggeredChange,
   onCompleteStockRound,
 }) => {
   const isStockRound = mode === 'stockRound';
-  const isMergerRound = mode === 'mergerRound';
 
   return (
     <section className="mb-6 rounded-xl border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.16),_transparent_28%),linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-6 shadow-ui-lg">
@@ -41,75 +37,48 @@ const CycleStatusHeader = ({
             Cycle Board
           </p>
           <h2 className="mt-3 text-2xl font-semibold text-white">
-            Cycle {cycleNo} /{' '}
-            {isStockRound ? 'SR モード' : isMergerRound ? 'MR モード' : 'OR モード'}
+            Cycle {cycleNo} / {isStockRound ? 'SR モード' : 'OR モード'}
           </h2>
           <p className="mt-2 text-sm text-slate-300">
             {isStockRound
               ? '株式配分と定期収入を確認して、このサイクルの運営準備を整えます。'
-              : isMergerRound
-                ? 'minor 同士の合併を処理して、次の SR に引き継ぐ会社構成を確定します。'
-                : '現在の実行企業を処理しながら、ORごとの収益と配分を確定します。'}
+              : '現在の実行企業を処理しながら、ORごとの収益と配分を確定します。'}
           </p>
         </div>
-        <div className="flex flex-col items-start gap-3 lg:items-end">
-          {mergerRoundEnabled ? (
-            <label className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
-              <input
-                type="checkbox"
-                checked={greenTrainTriggered}
-                onChange={(event) => onGreenTrainTriggeredChange(event.target.checked)}
-                aria-label="緑列車条件達成"
-                className="h-5 w-5 rounded border-border-subtle text-brand-primary focus:ring-brand-accent"
-              />
-              緑列車条件達成
-            </label>
-          ) : null}
-          {isStockRound ? (
-            <Button type="button" size="lg" onClick={onCompleteStockRound}>
-              SR完了してORへ
-            </Button>
-          ) : null}
-        </div>
+        {isStockRound ? (
+          <Button type="button" size="lg" onClick={onCompleteStockRound}>
+            SR完了してORへ
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="サイクル" value={`第${cycleNo}サイクル`} />
         <StatCard
           label="現在ラウンド"
-          value={isStockRound ? 'SR' : isMergerRound ? 'MR' : `OR${currentOR} / OR${numORs}`}
+          value={isStockRound ? 'SR' : `OR${currentOR} / OR${numORs}`}
         />
         <StatCard
-          label={isStockRound ? '警告企業数' : isMergerRound ? '合併準備' : '完了 / 残り'}
+          label={isStockRound ? '警告企業数' : '完了 / 残り'}
           value={
-            isStockRound
-              ? `${invalidCount}社`
-              : isMergerRound
-                ? 'major 登場待ち'
-                : `${completedCount}社完了 / ${remainingCount}社残り`
+            isStockRound ? `${invalidCount}社` : `${completedCount}社完了 / ${remainingCount}社残り`
           }
           tone={isStockRound && invalidCount > 0 ? 'warning' : 'default'}
         />
         <StatCard
-          label={isStockRound ? 'OR開始条件' : isMergerRound ? '次の目安' : '次の目安'}
+          label={isStockRound ? 'OR開始条件' : '次の目安'}
           value={
             isStockRound
               ? invalidCount > 0
                 ? '警告を確認してから進行'
                 : '準備完了'
-              : isMergerRound
-                ? '合併確定後に次SRへ'
-                : remainingCount > 0
-                  ? '未処理企業を順に消化'
-                  : currentOR >= numORs
-                    ? '次フェーズへ進行可能'
-                    : '次ORへ進行可能'
+              : remainingCount > 0
+                ? '未処理企業を順に消化'
+                : currentOR >= numORs
+                  ? '次SRへ進行可能'
+                  : '次ORへ進行可能'
           }
-          tone={
-            (!isStockRound && !isMergerRound && remainingCount === 0) || isMergerRound
-              ? 'success'
-              : 'default'
-          }
+          tone={!isStockRound && remainingCount === 0 ? 'success' : 'default'}
         />
       </div>
     </section>
