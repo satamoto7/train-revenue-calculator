@@ -217,6 +217,36 @@ describe('appReducer', () => {
     expect(next.stockRoundState.companyStates.c1.presidentPlayerId).toBe('p1');
   });
 
+  test('setupLocked 後でも SR 中なら OR 数を変更できる', () => {
+    let state = buildConfiguredState();
+    state = appReducer(state, { type: 'SETUP_LOCK', payload: true });
+
+    const next = appReducer(state, {
+      type: 'CONFIG_SET_NUM_ORS',
+      payload: 3,
+    });
+
+    expect(next.gameConfig.numORs).toBe(3);
+    expect(next.operatingState.completedCompanyIdsByOR).toEqual({
+      1: [],
+      2: [],
+      3: [],
+    });
+  });
+
+  test('OR 中は OR 数を変更できない', () => {
+    let state = buildConfiguredState();
+    state = appReducer(state, { type: 'SETUP_LOCK', payload: true });
+    state = appReducer(state, { type: 'SR_COMPLETE' });
+
+    const next = appReducer(state, {
+      type: 'CONFIG_SET_NUM_ORS',
+      payload: 3,
+    });
+
+    expect(next).toBe(state);
+  });
+
   test('PLAYER_PERIODIC_INCOME_SET で対象プレイヤーの定期収入だけ更新する', () => {
     const initial = buildConfiguredState();
     const next = appReducer(initial, {

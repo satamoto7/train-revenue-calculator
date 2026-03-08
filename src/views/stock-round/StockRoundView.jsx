@@ -327,12 +327,14 @@ const StockRoundView = ({
   embedded = false,
   players,
   companies,
+  numORs,
   hasIpoShares,
   validation,
   handleStockChange,
   handlePresidentChange,
   handleUnestablishedChange,
   handleValidate,
+  handleSetNumORs,
   handleComplete,
   handlePlayerPeriodicIncomeChange,
   handleCompanyPeriodicIncomeChange,
@@ -358,27 +360,61 @@ const StockRoundView = ({
       ) : null}
 
       <section className="mb-5 rounded-xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">
-        <p className="mb-3 text-sm font-medium text-text-primary">プレイヤー定期収入（ORごと）</p>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {players.map((player) => (
-            <div
-              key={player.id}
-              className={`rounded-lg border border-border-subtle bg-surface-muted p-3 border-l-4 ${getPlayerAccentEdgeClass(
-                getPlayerColor(player)
-              )}`}
-            >
-              <p className="mb-2 text-sm font-medium text-text-primary">
-                {getPlayerSymbol(player)} {getPlayerDisplayName(player)}
-              </p>
-              <CommittedNumberInput
-                min="0"
-                value={player.periodicIncome || 0}
-                onCommit={(normalized) => handlePlayerPeriodicIncomeChange(player.id, normalized)}
-                className="min-h-11 w-full text-center text-base"
-                aria-label={`${getPlayerDisplayName(player)}の定期収入`}
-              />
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1">
+            <p className="mb-3 text-sm font-medium text-text-primary">
+              プレイヤー定期収入（ORごと）
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {players.map((player) => (
+                <div
+                  key={player.id}
+                  className={`rounded-lg border border-border-subtle bg-surface-muted p-3 border-l-4 ${getPlayerAccentEdgeClass(
+                    getPlayerColor(player)
+                  )}`}
+                >
+                  <p className="mb-2 text-sm font-medium text-text-primary">
+                    {getPlayerSymbol(player)} {getPlayerDisplayName(player)}
+                  </p>
+                  <CommittedNumberInput
+                    min="0"
+                    value={player.periodicIncome || 0}
+                    onCommit={(normalized) =>
+                      handlePlayerPeriodicIncomeChange(player.id, normalized)
+                    }
+                    className="min-h-11 w-full text-center text-base"
+                    aria-label={`${getPlayerDisplayName(player)}の定期収入`}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {typeof handleSetNumORs === 'function' ? (
+            <div className="w-full rounded-lg border border-brand-accent/15 bg-brand-accent-soft/40 p-4 lg:w-72">
+              <label
+                className="flex flex-col gap-2 text-sm text-text-secondary"
+                htmlFor="stock-round-num-ors"
+              >
+                <span className="font-medium text-text-primary">SR完了後の OR 数</span>
+                <select
+                  id="stock-round-num-ors"
+                  value={numORs}
+                  onChange={(event) => handleSetNumORs(Number.parseInt(event.target.value, 10))}
+                  className="ui-select"
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <option key={value} value={value}>
+                      {value}回
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-2 text-xs text-text-muted">
+                OR セットの途中では変えず、この SR が終わった直後の本数だけを調整します。
+              </p>
+            </div>
+          ) : null}
         </div>
       </section>
 

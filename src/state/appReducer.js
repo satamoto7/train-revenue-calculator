@@ -243,6 +243,18 @@ const syncOperatingState = (state) => {
   return next;
 };
 
+const trimCurrentCycleOperatingResults = (operatingResults, cycleNo, numORs) => {
+  const cycleKey = toCycleKey(cycleNo);
+  const cycleEntries = operatingResults?.[cycleKey];
+  if (!cycleEntries) return;
+
+  Object.keys(cycleEntries).forEach((orKey) => {
+    if (Number.parseInt(orKey, 10) > numORs) {
+      delete cycleEntries[orKey];
+    }
+  });
+};
+
 const completeCycleAndStartNextSR = (state, completedAt) => {
   const next = cloneState(state);
   const cycleNo = next.session.currentCycleNo;
@@ -360,11 +372,16 @@ export function appReducer(state, action) {
     }
 
     case 'CONFIG_SET_NUM_ORS': {
-      if (state.gameConfig.setupLocked) return state;
+      if (state.gameConfig.setupLocked && state.session.mode !== 'stockRound') return state;
       const next = cloneState(state);
       next.gameConfig.numORs = action.payload;
       next.operatingState.currentOR = Math.min(next.operatingState.currentOR, action.payload);
       next.operatingState.completedCompanyIdsByOR = buildEmptyCompletedByOR(action.payload);
+      trimCurrentCycleOperatingResults(
+        next.operatingResults,
+        next.session.currentCycleNo,
+        action.payload
+      );
       return next;
     }
 

@@ -644,6 +644,7 @@ function App() {
             handleCompleteStockRound={handleCompleteStockRound}
             handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
             handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
+            handleSetNumORs={handleSetNumORs}
             handleMoveOrderUp={handleMoveOrderUp}
             handleMoveOrderDown={handleMoveOrderDown}
             handleRebalanceRemaining={handleRebalanceRemaining}
@@ -690,9 +691,7 @@ function App() {
           />
         ) : null}
 
-        {workspace === 'history' ? (
-          <HistoryView cycles={historyCycles} numORs={appState.gameConfig.numORs} />
-        ) : null}
+        {workspace === 'history' ? <HistoryView cycles={historyCycles} /> : null}
       </div>
 
       <footer className="mx-auto mt-12 max-w-6xl border-t border-border-subtle py-4 text-center">

@@ -54,7 +54,12 @@ const getRetainedRevenue = (result) => {
   return 0;
 };
 
-const buildViewOptions = (cycles, numORs) =>
+const getCycleNumORs = (cycle) => {
+  const parsed = Number.parseInt(cycle?.gameConfigSnapshot?.numORs, 10);
+  return Number.isNaN(parsed) ? 1 : Math.max(1, parsed);
+};
+
+const buildViewOptions = (cycles) =>
   cycles.flatMap((cycle) => [
     {
       key: `${cycle.cycleNo}-total`,
@@ -62,7 +67,7 @@ const buildViewOptions = (cycles, numORs) =>
       orNum: null,
       label: `Cycle ${cycle.cycleNo}`,
     },
-    ...Array.from({ length: numORs }, (_, idx) => ({
+    ...Array.from({ length: getCycleNumORs(cycle) }, (_, idx) => ({
       key: `${cycle.cycleNo}-${idx + 1}`,
       cycleNo: cycle.cycleNo,
       orNum: idx + 1,
@@ -70,9 +75,9 @@ const buildViewOptions = (cycles, numORs) =>
     })),
   ]);
 
-const buildSheetColumns = (cycles, numORs) =>
+const buildSheetColumns = (cycles) =>
   cycles.flatMap((cycle) =>
-    Array.from({ length: numORs }, (_, index) => ({
+    Array.from({ length: getCycleNumORs(cycle) }, (_, index) => ({
       key: `${cycle.cycleNo}-${index + 1}`,
       cycleNo: cycle.cycleNo,
       orNum: index + 1,
@@ -80,32 +85,27 @@ const buildSheetColumns = (cycles, numORs) =>
     }))
   );
 
-const getRelevantResults = (selectedCycle, company, numORs, isTotalView, selectedOrNum) =>
-  Array.from({ length: numORs }, (_, index) => {
+const getRelevantResults = (selectedCycle, company, isTotalView, selectedOrNum) =>
+  Array.from({ length: getCycleNumORs(selectedCycle) }, (_, index) => {
     const orNum = index + 1;
     if (!isTotalView && selectedOrNum !== orNum) return null;
     return selectedCycle.operatingResultsSnapshot?.[`${orNum}`]?.[company.id] || null;
   }).filter(Boolean);
 
-const buildPlayerEntries = (
-  players,
-  companies,
-  selectedCycle,
-  numORs,
-  isTotalView,
-  selectedOrNum
-) =>
+const buildPlayerEntries = (players, companies, selectedCycle, isTotalView, selectedOrNum) =>
   players.map((player) => {
     const periodicIncome = player.periodicIncome || 0;
     const relevantResults = companies.flatMap((company) =>
-      getRelevantResults(selectedCycle, company, numORs, isTotalView, selectedOrNum)
+      getRelevantResults(selectedCycle, company, isTotalView, selectedOrNum)
     );
 
     const dividendReceived = relevantResults.reduce((sum, result) => {
       const payout = (result.playerPayouts || []).find((entry) => entry.playerId === player.id);
       return sum + (payout?.amount || 0);
     }, 0);
-    const periodicIncomeReceived = isTotalView ? periodicIncome * numORs : periodicIncome;
+    const periodicIncomeReceived = isTotalView
+      ? periodicIncome * getCycleNumORs(selectedCycle)
+      : periodicIncome;
 
     return {
       player,
@@ -115,15 +115,9 @@ const buildPlayerEntries = (
     };
   });
 
-const buildCompanyEntries = (companies, selectedCycle, numORs, isTotalView, selectedOrNum) =>
+const buildCompanyEntries = (companies, selectedCycle, isTotalView, selectedOrNum) =>
   companies.map((company) => {
-    const relevantResults = getRelevantResults(
-      selectedCycle,
-      company,
-      numORs,
-      isTotalView,
-      selectedOrNum
-    );
+    const relevantResults = getRelevantResults(selectedCycle, company, isTotalView, selectedOrNum);
 
     const companyReceived = relevantResults.reduce(
       (sum, result) => sum + (result.companyAmount || 0),
@@ -155,11 +149,11 @@ const buildCompanyEntries = (companies, selectedCycle, numORs, isTotalView, sele
     };
   });
 
-const buildSheetRows = (companies, cycles, numORs) =>
+const buildSheetRows = (companies, cycles) =>
   companies.map((company) => ({
     company,
     cells: cycles.flatMap((cycle) =>
-      Array.from({ length: numORs }, (_, index) => {
+      Array.from({ length: getCycleNumORs(cycle) }, (_, index) => {
         const orNum = index + 1;
         return {
           key: `${cycle.cycleNo}-${orNum}-${company.id}`,
@@ -174,17 +168,13 @@ const buildSheetRows = (companies, cycles, numORs) =>
 const SpreadsheetView = ({
   companies,
   cycles,
-  numORs,
   selectedView,
   selectedCycle,
   playerEntries,
   companyEntries,
 }) => {
-  const columns = useMemo(() => buildSheetColumns(cycles, numORs), [cycles, numORs]);
-  const rows = useMemo(
-    () => buildSheetRows(companies, cycles, numORs),
-    [companies, cycles, numORs]
-  );
+  const columns = useMemo(() => buildSheetColumns(cycles), [cycles]);
+  const rows = useMemo(() => buildSheetRows(companies, cycles), [companies, cycles]);
   const playersByCycle = useMemo(
     () => new Map(cycles.map((cycle) => [cycle.cycleNo, cycle.gameConfigSnapshot?.players || []])),
     [cycles]
@@ -455,8 +445,8 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
   </div>
 );
 
-const HistoryView = ({ cycles, numORs }) => {
-  const viewOptions = useMemo(() => buildViewOptions(cycles, numORs), [cycles, numORs]);
+const HistoryView = ({ cycles }) => {
+  const viewOptions = useMemo(() => buildViewOptions(cycles), [cycles]);
   const [selectedViewKey, setSelectedViewKey] = useState(viewOptions[0]?.key || '');
   const [displayMode, setDisplayMode] = useState('summary');
 
@@ -488,14 +478,12 @@ const HistoryView = ({ cycles, numORs }) => {
     players,
     companies,
     selectedCycle,
-    numORs,
     isTotalView,
     selectedView.orNum
   );
   const companyEntries = buildCompanyEntries(
     companies,
     selectedCycle,
-    numORs,
     isTotalView,
     selectedView.orNum
   );
@@ -566,7 +554,6 @@ const HistoryView = ({ cycles, numORs }) => {
         <SpreadsheetView
           companies={companies}
           cycles={cycles}
-          numORs={numORs}
           selectedView={selectedView}
           selectedCycle={selectedCycle}
           playerEntries={playerEntries}

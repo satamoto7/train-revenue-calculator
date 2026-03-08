@@ -51,7 +51,7 @@ const SetupView = ({
 
       {setupLocked && (
         <p className="ui-note-warning mb-4">
-          SR開始後は設定変更を禁止しています。次SR以降も同じ設定で進行します。
+          SR開始後は設定画面からの変更を禁止しています。OR数だけは盤面のSR画面で調整できます。
         </p>
       )}
 

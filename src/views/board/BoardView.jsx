@@ -14,6 +14,7 @@ const BoardView = ({
   handleCompleteStockRound,
   handlePlayerPeriodicIncomeChange,
   handleCompanyPeriodicIncomeChange,
+  handleSetNumORs,
   handleMoveOrderUp,
   handleMoveOrderDown,
   handleRebalanceRemaining,
@@ -53,12 +54,14 @@ const BoardView = ({
           embedded
           players={players}
           companies={companies}
+          numORs={flow.numORs}
           hasIpoShares={flow.hasIpoShares}
           validation={validation}
           handleStockChange={handleStockChange}
           handlePresidentChange={handlePresidentChange}
           handleUnestablishedChange={handleUnestablishedChange}
           handleValidate={handleValidate}
+          handleSetNumORs={handleSetNumORs}
           handleComplete={handleCompleteStockRound}
           handlePlayerPeriodicIncomeChange={handlePlayerPeriodicIncomeChange}
           handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
