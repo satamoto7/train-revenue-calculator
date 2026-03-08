@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   calculateCompanyTrainRevenue,
   calculateCompanyTotalORRevenue,
@@ -520,18 +520,10 @@ const SupplementalDetails = ({
   company,
   currentOR,
   flow,
-  isCorrectionMode,
   handleORRevenueChange,
-  handleSetORDividendMode,
   handleCompanyPeriodicIncomeChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    if (isCorrectionMode) {
-      setIsOpen(true);
-    }
-  }, [company.id, isCorrectionMode]);
 
   return (
     <details
@@ -540,14 +532,9 @@ const SupplementalDetails = ({
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
       <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-brand-primary [&::-webkit-details-marker]:hidden">
-        {isCorrectionMode ? '補助設定 / 詳細（前OR修正はこちら）' : '補助設定 / 詳細'}
+        補助設定 / 詳細
       </summary>
       <div className="space-y-5 border-t border-border-subtle px-5 pb-5 pt-4">
-        {isCorrectionMode ? (
-          <div className="rounded-lg border border-status-warning/20 bg-status-warning/10 px-4 py-3 text-sm text-text-primary">
-            このサイクル内の前OR分は、下の「全OR入力」から修正できます。
-          </div>
-        ) : null}
         <section>
           <h4 className="text-base font-semibold text-text-primary">企業定期収入</h4>
           <p className="mt-1 text-sm text-text-secondary">
@@ -589,23 +576,6 @@ const SupplementalDetails = ({
                     inputIdPrefix="or-detail"
                     handleORRevenueChange={handleORRevenueChange}
                   />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {DIVIDEND_PATTERNS.map((pattern) => (
-                      <Button
-                        key={`${orNum}-${pattern.key}`}
-                        type="button"
-                        variant={
-                          getEntryDividendMode(company, orNum) === pattern.key
-                            ? 'primary'
-                            : 'secondary'
-                        }
-                        className="min-h-[2.25rem] px-3 py-1.5 text-xs"
-                        onClick={() => handleSetORDividendMode(company.id, orNum, pattern.key)}
-                      >
-                        OR{orNum} {pattern.label}
-                      </Button>
-                    ))}
-                  </div>
                 </div>
               );
             })}
@@ -641,7 +611,6 @@ const OrRoundActivePanel = ({
   const totalRevenue =
     calculateCompanyTotalORRevenue(company.orRevenues, flow.numORs) +
     (company.periodicIncome ?? 0) * flow.numORs;
-  const isCorrectionMode = isDone || finalORCompleted || queuePosition <= 0;
 
   return (
     <article
@@ -661,9 +630,7 @@ const OrRoundActivePanel = ({
             <div>
               <h3 className="text-2xl font-semibold text-text-primary">{companyName}</h3>
               <p className="text-sm text-text-secondary">
-                {isCorrectionMode
-                  ? `このサイクル中なら、OR${currentOR} を含む既存入力を修正できます。前OR分は下の補助設定から直せます。`
-                  : `OR${currentOR} の収益と配当方式をこの順で確定します。`}
+                OR{currentOR} の収益と配当方式をこの順で確定します。
               </p>
             </div>
           </div>
@@ -671,15 +638,9 @@ const OrRoundActivePanel = ({
             <StatusBadge className="border-brand-accent/20 bg-brand-accent-soft text-brand-primary">
               OR{currentOR}
             </StatusBadge>
-            {isCorrectionMode ? (
-              <StatusBadge className="border-status-warning/20 bg-status-warning/10 text-text-primary">
-                完了済みを修正中
-              </StatusBadge>
-            ) : (
-              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
-                残り順 {queuePosition} / {queueLength}
-              </StatusBadge>
-            )}
+            <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+              残り順 {queuePosition} / {queueLength}
+            </StatusBadge>
             <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
               全体順 {establishedPosition} / {establishedCount}
             </StatusBadge>
@@ -694,7 +655,7 @@ const OrRoundActivePanel = ({
             disabled={isDone || finalORCompleted}
             onClick={() => handleMarkCompanyDone(company.id)}
           >
-            {isDone || finalORCompleted ? '完了済み' : 'この企業を完了'}
+            この企業を完了
           </Button>
         </div>
       </div>
@@ -725,9 +686,7 @@ const OrRoundActivePanel = ({
           company={company}
           currentOR={currentOR}
           flow={flow}
-          isCorrectionMode={isCorrectionMode}
           handleORRevenueChange={handleORRevenueChange}
-          handleSetORDividendMode={handleSetORDividendMode}
           handleCompanyPeriodicIncomeChange={handleCompanyPeriodicIncomeChange}
         />
       </div>

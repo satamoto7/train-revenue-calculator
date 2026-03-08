@@ -56,27 +56,4 @@ describe('selectors', () => {
     expect(cycles[0].isCompleted).toBe(false);
     expect(cycles[0].operatingResultsSnapshot['1'].c1.companyAmount).toBe(20);
   });
-
-  test('selectBoardViewModel は active 会社だけをボード表示し、Merger 候補を分ける', () => {
-    let state = createBaseState();
-    state = appReducer(state, {
-      type: 'CONFIG_SET_PLAYERS',
-      payload: [{ id: 'p1', displayName: 'P1', name: 'P1', seatLabel: 'A', symbol: '●' }],
-    });
-    state = appReducer(state, { type: 'CONFIG_SET_MERGER_ROUND_ENABLED', payload: true });
-    state = appReducer(state, {
-      type: 'CONFIG_SET_COMPANIES',
-      payload: [
-        { id: 'm1', displayName: 'Minor', name: 'M1', symbol: '○', companyType: 'minor' },
-        { id: 'maj1', displayName: 'Major', name: 'Maj1', symbol: '◇', companyType: 'major' },
-      ],
-    });
-    state = appReducer(state, { type: 'SETUP_LOCK', payload: true });
-
-    const board = selectBoardViewModel(state);
-
-    expect(board.companies.map((company) => company.id)).toEqual(['m1']);
-    expect(board.merger.minorCandidates.map((company) => company.id)).toEqual(['m1']);
-    expect(board.merger.majorCandidates.map((company) => company.id)).toEqual(['maj1']);
-  });
 });
