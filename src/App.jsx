@@ -4,6 +4,11 @@ import Modal from './components/ui/Modal';
 import SyncStatusBar from './components/ui/SyncStatusBar';
 import { useCollaborativeGame } from './hooks/useCollaborativeGame';
 import { calculateCompanyTrainRevenue } from './lib/calc';
+import {
+  buildCompaniesFromTemplate,
+  GAME_TEMPLATE_OPTIONS,
+  templateRequiresMergerRound,
+} from './lib/gameTemplates';
 import { getPlayerDisplayName } from './lib/labels';
 import {
   WORKSPACE_CONFIG,
@@ -205,6 +210,38 @@ function App() {
       appState.gameConfig.companies.map((company) =>
         company.id === companyId ? { ...company, displayName } : company
       )
+    );
+  };
+
+  const applyCompanyTemplate = (templateId) => {
+    const nextCompanies = buildCompaniesFromTemplate(templateId);
+    if (nextCompanies.length === 0) return;
+    if (templateRequiresMergerRound(templateId)) {
+      dispatch({ type: 'CONFIG_SET_MERGER_ROUND_ENABLED', payload: true });
+    }
+    setCompanies(nextCompanies);
+  };
+
+  const handleApplyCompanyTemplate = (templateId) => {
+    const template = GAME_TEMPLATE_OPTIONS.find((entry) => entry.id === templateId);
+    if (!template) return;
+
+    if (appState.gameConfig.companies.length === 0) {
+      applyCompanyTemplate(templateId);
+      return;
+    }
+
+    setConfirmAction(() => () => {
+      applyCompanyTemplate(templateId);
+      setModalMessage('');
+      setConfirmAction(null);
+    });
+    setModalMessage(
+      `「${template.label}」の企業テンプレートを適用しますか？\n既存の企業一覧・株式入力・OR結果・進行順は新しい企業セットに置き換わります。${
+        templateRequiresMergerRound(templateId)
+          ? '\nこのテンプレートは Merger Round も有効化します。'
+          : ''
+      }`
     );
   };
 
@@ -678,6 +715,7 @@ function App() {
             handleEditPlayerSymbol={handleEditPlayerSymbol}
             handleEditPlayerColor={handleEditPlayerColor}
             handleAddMultipleCompanies={handleAddMultipleCompanies}
+            handleApplyCompanyTemplate={handleApplyCompanyTemplate}
             handleDeleteCompany={handleDeleteCompany}
             handleEditCompanyName={handleEditCompanyName}
             handleEditCompanySymbol={handleEditCompanySymbol}

@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
+import CompanyColorPreview from '../../components/ui/CompanyColorPreview';
 import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
+import { GAME_TEMPLATE_OPTIONS, templateRequiresMergerRound } from '../../lib/gameTemplates';
 import {
-  COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
   PLAYER_COLOR_OPTIONS,
   PLAYER_SYMBOL_OPTIONS,
+  getCompanyColorOptions,
   getCompanyDisplayName,
   getPlayerDisplayName,
+  normalizeHexColor,
 } from '../../lib/labels';
 
 const panelClass = 'rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui';
 const rowClass =
-  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_auto_auto_auto_auto]';
+  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_repeat(6,auto)]';
 
 const SetupView = ({
   players,
@@ -29,6 +32,7 @@ const SetupView = ({
   handleEditPlayerSymbol,
   handleEditPlayerColor,
   handleAddMultipleCompanies,
+  handleApplyCompanyTemplate,
   handleDeleteCompany,
   handleEditCompanyName,
   handleEditCompanySymbol,
@@ -42,6 +46,8 @@ const SetupView = ({
 }) => {
   const [numPlayersToAdd, setNumPlayersToAdd] = useState(2);
   const [numCompaniesToAdd, setNumCompaniesToAdd] = useState(4);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(GAME_TEMPLATE_OPTIONS[0]?.id || '');
+  const selectedTemplateEnablesMergerRound = templateRequiresMergerRound(selectedTemplateId);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -54,6 +60,49 @@ const SetupView = ({
           SR開始後は設定画面からの変更を禁止しています。OR数だけは盤面のSR画面で調整できます。
         </p>
       )}
+
+      <section className={`mb-6 ${panelClass}`}>
+        <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
+          タイトルテンプレート
+        </SectionHeader>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <label
+            className="flex flex-col gap-2 text-sm text-text-secondary"
+            htmlFor="companyTemplate"
+          >
+            <span className="font-medium">企業テンプレート</span>
+            <select
+              id="companyTemplate"
+              disabled={setupLocked}
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              className="ui-select min-w-[16rem]"
+            >
+              {GAME_TEMPLATE_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            disabled={setupLocked || !selectedTemplateId}
+            onClick={() => handleApplyCompanyTemplate(selectedTemplateId)}
+            className="py-2 text-sm disabled:opacity-50"
+          >
+            企業テンプレートを適用
+          </Button>
+        </div>
+        <p className="mt-4 text-sm text-text-secondary">
+          公開会社セットだけをまとめて投入します。プレイヤー人数や OR 数は変更しません。
+        </p>
+        {selectedTemplateEnablesMergerRound ? (
+          <p className="mt-2 text-sm text-text-secondary">
+            このテンプレートは major を含むため、適用時に Merger Round も自動で有効化します。
+          </p>
+        ) : null}
+      </section>
 
       <section className={`mb-6 ${panelClass}`}>
         <SectionHeader size="section" as="h3" className="mb-4 text-brand-primary">
@@ -269,17 +318,18 @@ const SetupView = ({
               </select>
               <select
                 value={company.color || '赤'}
-                disabled={setupLocked}
+                disabled={setupLocked || Boolean(normalizeHexColor(company.color))}
                 onChange={(e) => handleEditCompanyColor(company.id, e.target.value)}
                 className="ui-select"
                 aria-label={`企業「${getCompanyDisplayName(company)}」の色`}
               >
-                {COMPANY_COLOR_OPTIONS.map((color) => (
-                  <option key={color} value={color}>
-                    {color}
+                {getCompanyColorOptions(company.color).map((option) => (
+                  <option key={option.value} value={option.value} disabled={option.disabled}>
+                    {option.label}
                   </option>
                 ))}
               </select>
+              <CompanyColorPreview company={company} />
               {mergerRoundEnabled ? (
                 <select
                   value={company.companyType || 'minor'}

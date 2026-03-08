@@ -4,7 +4,9 @@ import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getCompanyAccentEdgeClass,
+  getCompanyAccentEdgeStyle,
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -224,9 +226,13 @@ const OrRoundView = ({
                     className={`flex items-center justify-between rounded-lg border border-border-subtle bg-surface-elevated p-3 border-l-4 ${getCompanyAccentEdgeClass(
                       getCompanyColor(company)
                     )}`}
+                    style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
                   >
                     <span className="text-sm text-text-primary">
-                      <span className={getColorTextClass(getCompanyColor(company))}>
+                      <span
+                        className={getColorTextClass(getCompanyColor(company))}
+                        style={getColorTextStyle(getCompanyColor(company))}
+                      >
                         {getCompanySymbol(company)}
                       </span>{' '}
                       {getCompanyDisplayName(company)}

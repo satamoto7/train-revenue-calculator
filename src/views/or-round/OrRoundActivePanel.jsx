@@ -9,7 +9,9 @@ import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import {
   getCompanyAccentEdgeClass,
+  getCompanyAccentEdgeStyle,
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -648,6 +650,7 @@ const OrRoundActivePanel = ({
       className={`mb-6 rounded-2xl border border-l-4 p-6 shadow-ui-lg ${getCompanyAccentEdgeClass(
         getCompanyColor(company)
       )} bg-surface-elevated`}
+      style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -655,7 +658,10 @@ const OrRoundActivePanel = ({
             現在操作中の企業
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className={`text-2xl ${getColorTextClass(getCompanyColor(company))}`}>
+            <span
+              className={`text-2xl ${getColorTextClass(getCompanyColor(company))}`}
+              style={getColorTextStyle(getCompanyColor(company))}
+            >
               {getCompanySymbol(company)}
             </span>
             <div>

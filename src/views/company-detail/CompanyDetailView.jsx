@@ -6,17 +6,20 @@ import {
   calculateDividend,
 } from '../../lib/calc';
 import Button from '../../components/ui/Button';
+import CompanyColorPreview from '../../components/ui/CompanyColorPreview';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
-  COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
+  getCompanyColorOptions,
   getCompanyDisplayName,
   getCompanySymbol,
   getPlayerDisplayName,
+  normalizeHexColor,
 } from '../../lib/labels';
 
 const RevenueStopEditor = ({
@@ -460,6 +463,7 @@ const CompanyDetailView = ({
                   <span className="inline-flex items-center gap-1">
                     <span
                       className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
+                      style={getColorTextStyle(getCompanyColor(company))}
                     >
                       {getCompanySymbol(company)}
                     </span>
@@ -514,6 +518,7 @@ const CompanyDetailView = ({
                 <span className="inline-flex items-center gap-1">
                   <span
                     className={`text-base leading-none ${getColorTextClass(getCompanyColor(c))}`}
+                    style={getColorTextStyle(getCompanyColor(c))}
                   >
                     {getCompanySymbol(c)}
                   </span>
@@ -596,6 +601,7 @@ const CompanyDetailView = ({
               <h2 className="text-2xl font-semibold text-brand-primary flex items-center gap-2">
                 <span
                   className={`text-xl leading-none ${getColorTextClass(getCompanyColor(selectedCompany))}`}
+                  style={getColorTextStyle(getCompanyColor(selectedCompany))}
                   aria-hidden="true"
                 >
                   {getCompanySymbol(selectedCompany)}
@@ -645,15 +651,17 @@ const CompanyDetailView = ({
                 <select
                   id="company-color"
                   value={selectedCompany.color || '赤'}
+                  disabled={Boolean(normalizeHexColor(selectedCompany.color))}
                   onChange={(e) => handleEditCompanyColor(selectedCompany.id, e.target.value)}
                   className="rounded border border-border-subtle bg-surface-elevated px-2 py-1 text-sm"
                 >
-                  {COMPANY_COLOR_OPTIONS.map((color) => (
-                    <option key={color} value={color}>
-                      {color}
+                  {getCompanyColorOptions(selectedCompany.color).map((option) => (
+                    <option key={option.value} value={option.value} disabled={option.disabled}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
+                <CompanyColorPreview company={selectedCompany} />
               </div>
             </div>
             <p className="text-sm text-text-secondary mt-1">

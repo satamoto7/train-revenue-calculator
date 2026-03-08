@@ -31,6 +31,29 @@ describe('appStorage (collab cache)', () => {
     expect(loaded.session.mode).toBe('stockRound');
   });
 
+  test('HEX 会社色を含むテンプレート企業も保存・取得できる', () => {
+    const state = {
+      ...createBaseState(),
+      gameConfig: {
+        ...createBaseState().gameConfig,
+        companies: [
+          {
+            id: 'c1',
+            name: 'Pennsylvania Railroad',
+            displayName: 'PRR',
+            color: '#32763F',
+            symbol: '○',
+          },
+        ],
+      },
+    };
+
+    save(gameId, state);
+    const loaded = load(gameId);
+
+    expect(loaded.gameConfig.companies[0].color).toBe('#32763f');
+  });
+
   test('schemaVersion 不一致は null を返す', () => {
     localStorage.setItem(
       getGameStorageKey(gameId),

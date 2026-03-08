@@ -4,6 +4,7 @@ import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getCompanyAccentEdgeClass,
+  getCompanyAccentEdgeStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -29,6 +30,7 @@ const CompanySummaryCard = ({ company, players }) => (
     className={`rounded-xl border border-l-4 bg-surface-elevated p-4 shadow-ui ${getCompanyAccentEdgeClass(
       getCompanyColor(company)
     )}`}
+    style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
   >
     <h3 className="text-base font-semibold text-text-primary">
       <span className="mr-2">{getCompanySymbol(company)}</span>

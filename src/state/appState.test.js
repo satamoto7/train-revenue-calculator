@@ -43,6 +43,34 @@ describe('appState normalization', () => {
     expect(state.session.mode).toBe('stockRound');
   });
 
+  test('HEX 会社色を正規化して保持する', () => {
+    const next = normalizeAppState({
+      gameConfig: {
+        players: [],
+        companies: [
+          {
+            id: 'c1',
+            name: 'Pennsylvania Railroad',
+            displayName: 'PRR',
+            color: '#FF0000',
+          },
+        ],
+        numORs: 2,
+        hasIpoShares: true,
+        bankPoolDividendRecipient: 'market',
+        mergerRoundEnabled: false,
+        setupLocked: false,
+      },
+      stockRoundState: {
+        playerPeriodicIncomes: {},
+        companyStates: {},
+        validation: {},
+      },
+    });
+
+    expect(next.gameConfig.companies[0].color).toBe('#ff0000');
+  });
+
   test('配分結果レコードを現在の株式設定から構築できる', () => {
     const record = buildOperatingResultRecord({
       cycleNo: 1,

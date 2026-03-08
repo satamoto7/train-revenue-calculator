@@ -26,6 +26,7 @@ const baseProps = (overrides = {}) => ({
   handleEditPlayerSymbol: vi.fn(),
   handleEditPlayerColor: vi.fn(),
   handleAddMultipleCompanies: vi.fn(),
+  handleApplyCompanyTemplate: vi.fn(),
   handleDeleteCompany: vi.fn(),
   handleEditCompanyName: vi.fn(),
   handleEditCompanySymbol: vi.fn(),
@@ -67,6 +68,31 @@ describe('SetupView committed inputs', () => {
     expect(props.handleSetBankPoolDividendRecipient).toHaveBeenCalledWith('company');
   });
 
+  test('企業テンプレートを選んで適用できる', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<SetupView {...props} />);
+
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), '1830');
+    await user.click(screen.getByRole('button', { name: '企業テンプレートを適用' }));
+
+    expect(props.handleApplyCompanyTemplate).toHaveBeenCalledWith('1830');
+  });
+
+  test('major を含むテンプレート選択時は Merger Round 自動有効化の案内を出す', async () => {
+    const user = userEvent.setup();
+    const props = baseProps();
+    render(<SetupView {...props} />);
+
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), 'lost-atlas');
+
+    expect(
+      screen.getByText(
+        'このテンプレートは major を含むため、適用時に Merger Round も自動で有効化します。'
+      )
+    ).toBeInTheDocument();
+  });
+
   test('会社名は blur まで commit されない', async () => {
     const user = userEvent.setup();
     const props = baseProps();
@@ -99,5 +125,32 @@ describe('SetupView committed inputs', () => {
     await user.selectOptions(screen.getByLabelText('Merger Round'), 'enabled');
 
     expect(props.handleSetMergerRoundEnabled).toHaveBeenCalledWith(true);
+  });
+
+  test('setupLocked では企業テンプレート適用UIも無効化する', () => {
+    const props = baseProps({ setupLocked: true });
+    render(<SetupView {...props} />);
+
+    expect(screen.getByLabelText('企業テンプレート')).toBeDisabled();
+    expect(screen.getByRole('button', { name: '企業テンプレートを適用' })).toBeDisabled();
+  });
+
+  test('HEX のテンプレート色はマーカー風プレビューを表示する', () => {
+    const props = baseProps({
+      companies: [
+        {
+          id: 'c1',
+          displayName: '会社A',
+          name: 'Co1',
+          symbol: '○',
+          color: '#32763f',
+        },
+      ],
+    });
+    render(<SetupView {...props} />);
+
+    expect(screen.getByLabelText('会社A のテンプレート色プレビュー')).toBeInTheDocument();
+    expect(screen.getByLabelText('企業「会社A」の色')).toBeDisabled();
+    expect(screen.getByRole('option', { name: 'テンプレート色 (保持のみ)' })).toBeDisabled();
   });
 });

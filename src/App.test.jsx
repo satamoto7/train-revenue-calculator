@@ -42,6 +42,21 @@ const baseHookState = () => ({
   },
 });
 
+const buildJoinedState = () => {
+  const state = baseHookState();
+  state.isLobbyVisible = false;
+  state.syncMeta = {
+    gameId: 'game-1',
+    joinCode: '123456',
+    syncStatus: 'synced',
+    syncError: '',
+    participants: [{ userId: 'u1', nickname: 'P1' }],
+    hasUnsyncedDraft: false,
+    shareUrl: 'https://example.com/?game=game-1',
+  };
+  return state;
+};
+
 describe('App (collab mode)', () => {
   beforeEach(() => {
     mockUseCollaborativeGame.mockReset();
@@ -68,17 +83,7 @@ describe('App (collab mode)', () => {
   });
 
   test('ゲーム参加後は同期ステータスバーと通常ビューを表示する', () => {
-    const state = baseHookState();
-    state.isLobbyVisible = false;
-    state.syncMeta = {
-      gameId: 'game-1',
-      joinCode: '123456',
-      syncStatus: 'synced',
-      syncError: '',
-      participants: [{ userId: 'u1', nickname: 'P1' }],
-      hasUnsyncedDraft: false,
-      shareUrl: 'https://example.com/?game=game-1',
-    };
+    const state = buildJoinedState();
     mockUseCollaborativeGame.mockReturnValue(state);
 
     render(<App />);
@@ -96,17 +101,7 @@ describe('App (collab mode)', () => {
 
   test('共有ボタン押下で shareRoom を呼ぶ', async () => {
     const user = userEvent.setup();
-    const state = baseHookState();
-    state.isLobbyVisible = false;
-    state.syncMeta = {
-      gameId: 'game-1',
-      joinCode: '123456',
-      syncStatus: 'synced',
-      syncError: '',
-      participants: [{ userId: 'u1', nickname: 'P1' }],
-      hasUnsyncedDraft: false,
-      shareUrl: 'https://example.com/?game=game-1',
-    };
+    const state = buildJoinedState();
     mockUseCollaborativeGame.mockReturnValue(state);
 
     render(<App />);
@@ -117,8 +112,7 @@ describe('App (collab mode)', () => {
 
   test('未同期下書きがある場合に再送ボタンを押せる', async () => {
     const user = userEvent.setup();
-    const state = baseHookState();
-    state.isLobbyVisible = false;
+    const state = buildJoinedState();
     state.syncMeta = {
       gameId: 'game-1',
       joinCode: '123456',
@@ -134,5 +128,110 @@ describe('App (collab mode)', () => {
     await user.click(screen.getByRole('button', { name: '下書きを再送' }));
 
     expect(state.actions.resendUnsyncedDraft).toHaveBeenCalled();
+  });
+
+  test('企業未登録ならテンプレート適用で即座に企業一覧を置き換える', async () => {
+    const user = userEvent.setup();
+    const state = buildJoinedState();
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), '1830');
+    await user.click(screen.getByRole('button', { name: '企業テンプレートを適用' }));
+
+    expect(state.dispatch).toHaveBeenCalledTimes(1);
+    expect(state.dispatch.mock.calls[0][0].type).toBe('CONFIG_SET_COMPANIES');
+    expect(state.dispatch.mock.calls[0][0].payload).toHaveLength(8);
+    expect(state.dispatch.mock.calls[0][0].payload[0]).toMatchObject({
+      displayName: 'PRR',
+      name: 'Pennsylvania Railroad',
+      color: '#32763f',
+    });
+  });
+
+  test('major を含むテンプレート適用時は Merger Round も有効化する', async () => {
+    const user = userEvent.setup();
+    const state = buildJoinedState();
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), 'lost-atlas');
+    await user.click(screen.getByRole('button', { name: '企業テンプレートを適用' }));
+
+    expect(state.dispatch).toHaveBeenCalledTimes(2);
+    expect(state.dispatch.mock.calls[0][0]).toEqual({
+      type: 'CONFIG_SET_MERGER_ROUND_ENABLED',
+      payload: true,
+    });
+    expect(state.dispatch.mock.calls[1][0].type).toBe('CONFIG_SET_COMPANIES');
+    expect(state.dispatch.mock.calls[1][0].payload).toHaveLength(18);
+    expect(state.dispatch.mock.calls[1][0].payload[12]).toMatchObject({
+      displayName: 'Consortium',
+      companyType: 'major',
+    });
+  });
+
+  test('企業登録済みならテンプレート適用前に確認モーダルを出す', async () => {
+    const user = userEvent.setup();
+    const state = buildJoinedState();
+    state.appState = {
+      ...createBaseState(),
+      gameConfig: {
+        ...createBaseState().gameConfig,
+        companies: [{ id: 'c1', name: 'Co1', displayName: '会社A', color: '赤', symbol: '○' }],
+      },
+    };
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), '1846');
+    await user.click(screen.getByRole('button', { name: '企業テンプレートを適用' }));
+
+    expect(
+      screen.getByText(
+        /既存の企業一覧・株式入力・OR結果・進行順は新しい企業セットに置き換わります。/
+      )
+    ).toBeInTheDocument();
+    expect(state.dispatch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+
+    expect(state.dispatch).toHaveBeenCalledTimes(1);
+    expect(state.dispatch.mock.calls[0][0].type).toBe('CONFIG_SET_COMPANIES');
+    expect(state.dispatch.mock.calls[0][0].payload).toHaveLength(7);
+  });
+
+  test('major を含むテンプレートを上書き適用する前は追加説明つきで確認する', async () => {
+    const user = userEvent.setup();
+    const state = buildJoinedState();
+    state.appState = {
+      ...createBaseState(),
+      gameConfig: {
+        ...createBaseState().gameConfig,
+        companies: [{ id: 'c1', name: 'Co1', displayName: '会社A', color: '赤', symbol: '○' }],
+      },
+    };
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.selectOptions(screen.getByLabelText('企業テンプレート'), 'lost-atlas');
+    await user.click(screen.getByRole('button', { name: '企業テンプレートを適用' }));
+
+    expect(
+      screen.getByText((content) =>
+        content.includes('このテンプレートは Merger Round も有効化します。')
+      )
+    ).toBeInTheDocument();
+    expect(state.dispatch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+
+    expect(state.dispatch).toHaveBeenCalledTimes(2);
+    expect(state.dispatch.mock.calls[0][0]).toEqual({
+      type: 'CONFIG_SET_MERGER_ROUND_ENABLED',
+      payload: true,
+    });
+    expect(state.dispatch.mock.calls[1][0].type).toBe('CONFIG_SET_COMPANIES');
+    expect(state.dispatch.mock.calls[1][0].payload).toHaveLength(18);
   });
 });

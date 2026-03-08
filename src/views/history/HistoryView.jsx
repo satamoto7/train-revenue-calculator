@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -236,6 +237,7 @@ const SpreadsheetView = ({
                         className={`text-base leading-none ${getColorTextClass(
                           getCompanyColor(row.company)
                         )}`}
+                        style={getColorTextStyle(getCompanyColor(row.company))}
                       >
                         {getCompanySymbol(row.company)}
                       </span>
@@ -352,6 +354,7 @@ const SpreadsheetView = ({
                       className={`text-base leading-none ${getColorTextClass(
                         getCompanyColor(entry.company)
                       )}`}
+                      style={getColorTextStyle(getCompanyColor(entry.company))}
                     >
                       {getCompanySymbol(entry.company)}
                     </span>
@@ -425,6 +428,7 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
                   className={`text-base leading-none ${getColorTextClass(
                     getCompanyColor(entry.company)
                   )}`}
+                  style={getColorTextStyle(getCompanyColor(entry.company))}
                 >
                   {getCompanySymbol(entry.company)}
                 </span>

@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -275,6 +276,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
                         className={`text-base leading-none ${getColorTextClass(
                           getCompanyColor(entry.company)
                         )}`}
+                        style={getColorTextStyle(getCompanyColor(entry.company))}
                       >
                         {getCompanySymbol(entry.company)}
                       </span>

@@ -6,6 +6,7 @@ import {
   getSeatLabel,
   isKnownCompanyColor,
   isKnownPlayerColor,
+  normalizeHexColor,
 } from '../lib/labels';
 import { calculateORRevenueDistribution } from '../lib/calc';
 import { hasAnyStockInput, inferIsUnestablished } from '../lib/companyStatus';
@@ -182,13 +183,17 @@ const normalizePlayer = (player, index) => {
 
 const normalizeCompany = (company, index) => {
   const genericIndex = Number.isInteger(company?.genericIndex) ? company.genericIndex : index + 1;
+  const normalizedColor = normalizeHexColor(company?.color);
+
   return {
     ...company,
     id: company?.id || createFallbackId('company', index),
     genericIndex,
     name: company?.name || `Co${genericIndex}`,
     displayName: company?.displayName || '',
-    color: isKnownCompanyColor(company?.color) ? company.color : getDefaultCompanyColor(index),
+    color: isKnownCompanyColor(company?.color)
+      ? normalizedColor || company.color
+      : getDefaultCompanyColor(index),
     symbol: company?.symbol || getDefaultCompanySymbol(index),
     companyType: normalizeCompanyType(company?.companyType),
   };

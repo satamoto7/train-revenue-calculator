@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
+import CompanyColorPreview from '../../components/ui/CompanyColorPreview';
 import CommittedTextInput from '../../components/ui/CommittedTextInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
-  COMPANY_COLOR_OPTIONS,
   COMPANY_SYMBOL_OPTIONS,
   PLAYER_COLOR_OPTIONS,
   PLAYER_SYMBOL_OPTIONS,
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
+  getCompanyColorOptions,
   getCompanyDisplayName,
   getCompanySymbol,
   getPlayerDisplayName,
   getPlayerShortLabel,
+  normalizeHexColor,
 } from '../../lib/labels';
 
 const ManagementView = ({
@@ -262,6 +265,7 @@ const ManagementView = ({
                     <span className="inline-flex items-center gap-1">
                       <span
                         className={`text-base leading-none ${getColorTextClass(getCompanyColor(company))}`}
+                        style={getColorTextStyle(getCompanyColor(company))}
                       >
                         {getCompanySymbol(company)}
                       </span>
@@ -285,16 +289,18 @@ const ManagementView = ({
                   </select>
                   <select
                     value={company.color || '赤'}
+                    disabled={Boolean(normalizeHexColor(company.color))}
                     onChange={(e) => handleEditCompanyColor(company.id, e.target.value)}
                     className="rounded border border-border-subtle bg-surface-elevated px-1 py-1 text-sm"
                     aria-label={`企業「${getCompanyDisplayName(company)}」の色`}
                   >
-                    {COMPANY_COLOR_OPTIONS.map((color) => (
-                      <option key={color} value={color}>
-                        {color}
+                    {getCompanyColorOptions(company.color).map((option) => (
+                      <option key={option.value} value={option.value} disabled={option.disabled}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
+                  <CompanyColorPreview company={company} />
                   <Button
                     type="button"
                     onClick={() => handleDeleteCompany(company.id)}

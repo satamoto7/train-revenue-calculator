@@ -2,6 +2,7 @@ const PLAYER_COLORS = ['赤', '青', '緑', '黄', '紫', '橙'];
 const PLAYER_SYMBOLS = ['●', '▲', '■', '◆', '★', '✚'];
 const COMPANY_COLORS = ['赤', '青', '緑', '黄', '黒', '白', '橙', '紫', '桃', '茶', '空', '灰'];
 const COMPANY_SYMBOLS = ['○', '△', '◇', '□', '☆', '◯', '◈', '⬟', '⬢', '⬣', '✦', '✧'];
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 const COLOR_STYLE_MAP = {
   赤: 'bg-red-100 text-red-800 border-red-300',
@@ -72,6 +73,49 @@ export const COMPANY_SYMBOL_OPTIONS = COMPANY_SYMBOLS;
 export const PLAYER_COLOR_OPTIONS = PLAYER_COLORS;
 export const COMPANY_COLOR_OPTIONS = COMPANY_COLORS;
 
+export const normalizeHexColor = (color) => {
+  if (typeof color !== 'string') return null;
+  const trimmed = color.trim();
+  return HEX_COLOR_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
+};
+
+const hexToRgba = (color, alpha) => {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) return null;
+
+  const hex =
+    normalized.length === 4
+      ? normalized
+          .slice(1)
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : normalized.slice(1);
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const isLightHexColor = (color) => {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) return false;
+
+  const hex =
+    normalized.length === 4
+      ? normalized
+          .slice(1)
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : normalized.slice(1);
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+  return luminance >= 0.7;
+};
+
 export const getSeatLabel = (index) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   if (index < alphabet.length) return alphabet[index];
@@ -84,14 +128,67 @@ export const getDefaultCompanyColor = (index) => COMPANY_COLORS[index % COMPANY_
 export const getDefaultCompanySymbol = (index) => COMPANY_SYMBOLS[index % COMPANY_SYMBOLS.length];
 
 export const isKnownPlayerColor = (color) => PLAYER_COLORS.includes(color);
-export const isKnownCompanyColor = (color) => COMPANY_COLORS.includes(color);
+export const isKnownCompanyColor = (color) =>
+  COMPANY_COLORS.includes(color) || Boolean(normalizeHexColor(color));
 
 export const getColorStyleClass = (color) => COLOR_STYLE_MAP[color] || COLOR_STYLE_MAP.無色;
 export const getColorTextClass = (color) => COLOR_TEXT_MAP[color] || COLOR_TEXT_MAP.無色;
+export const getColorTextStyle = (color) => {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) return undefined;
+
+  return {
+    color: normalized,
+    ...(isLightHexColor(normalized)
+      ? {
+          textShadow: '0 0 0.4px rgba(15, 23, 42, 0.9), 0 0 0.8px rgba(15, 23, 42, 0.65)',
+        }
+      : {}),
+  };
+};
 export const getCompanyAccentEdgeClass = (color) =>
   COMPANY_ACCENT_EDGE_MAP[color] || COMPANY_ACCENT_EDGE_MAP.無色;
+export const getCompanyAccentEdgeStyle = (color) => {
+  const normalized = normalizeHexColor(color);
+  return normalized ? { borderLeftColor: normalized } : undefined;
+};
+export const getMarkerHighlightStyle = (color) => {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) return undefined;
+
+  const markerFill = hexToRgba(normalized, 0.34);
+  const markerEdge = hexToRgba(normalized, 0.16);
+
+  return {
+    backgroundImage: `linear-gradient(transparent 28%, ${markerFill} 28%, ${markerFill} 80%, transparent 80%)`,
+    boxShadow: `inset 0 -0.1em 0 ${markerEdge}`,
+    ...getColorTextStyle(normalized),
+  };
+};
 export const getPlayerAccentEdgeClass = (color) =>
   PLAYER_ACCENT_EDGE_MAP[color] || PLAYER_ACCENT_EDGE_MAP.無色;
+
+export const getCompanyColorOptions = (currentColor) => {
+  const normalized = normalizeHexColor(currentColor);
+  const presetOptions = COMPANY_COLORS.map((color) => ({
+    value: color,
+    label: color,
+    disabled: false,
+  }));
+
+  if (!normalized || COMPANY_COLORS.includes(currentColor)) {
+    return presetOptions;
+  }
+
+  return [
+    {
+      value: normalized,
+      label: 'テンプレート色 (保持のみ)',
+      disabled: true,
+    },
+    ...presetOptions,
+  ];
+};
 
 export const getPlayerDisplayName = (player) =>
   player?.displayName ||
@@ -112,7 +209,8 @@ export const getCompanyDisplayName = (company) => {
 };
 
 export const getCompanySymbol = (company) => company?.symbol || '○';
-export const getCompanyColor = (company) => company?.color || '無色';
+export const getCompanyColor = (company) =>
+  normalizeHexColor(company?.color) || company?.color || '無色';
 
 export const getCompanyBadge = (company) => {
   const symbol = getCompanySymbol(company);

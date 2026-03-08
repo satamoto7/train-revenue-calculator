@@ -4,7 +4,9 @@ import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getCompanyAccentEdgeClass,
+  getCompanyAccentEdgeStyle,
   getColorTextClass,
+  getColorTextStyle,
   getCompanyColor,
   getCompanyDisplayName,
   getCompanySymbol,
@@ -101,11 +103,15 @@ const CompanyCard = ({
           ? 'border-status-danger/20 bg-status-danger/5'
           : 'border-border-subtle bg-surface-elevated'
       } border-l-4 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
+      style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`text-lg ${getColorTextClass(getCompanyColor(company))}`}>
+            <span
+              className={`text-lg ${getColorTextClass(getCompanyColor(company))}`}
+              style={getColorTextStyle(getCompanyColor(company))}
+            >
               {getCompanySymbol(company)}
             </span>
             <h2 className="text-lg font-semibold text-text-primary">
