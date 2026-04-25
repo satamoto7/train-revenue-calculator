@@ -3,6 +3,7 @@ import {
   LEGACY_APP_STORAGE_KEY,
   clear,
   getGameStorageKey,
+  hasLegacyCache,
   load,
   save,
 } from './appStorage';
@@ -64,6 +65,15 @@ describe('appStorage (collab cache)', () => {
     );
 
     expect(load(gameId)).toBeNull();
+    expect(hasLegacyCache(gameId)).toBe(true);
+  });
+
+  test('save は schemaVersion 8 の payload を保存する', () => {
+    save(gameId, createBaseState());
+
+    const parsed = JSON.parse(localStorage.getItem(getGameStorageKey(gameId)));
+    expect(parsed.schemaVersion).toBe(8);
+    expect(parsed.state.schemaVersion).toBe(8);
   });
 
   test('legacy key は読み込まない', () => {

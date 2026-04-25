@@ -1,11 +1,7 @@
 import React from 'react';
 
 const Card = ({ className = '', children }) => (
-  <section
-    className={`rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui ${className}`}
-  >
-    {children}
-  </section>
+  <section className={`ui-panel p-5 sm:p-6 ${className}`}>{children}</section>
 );
 
 export default Card;

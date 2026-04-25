@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import MetricCard from '../../components/ui/MetricCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getColorTextClass,
@@ -313,7 +314,7 @@ const SpreadsheetView = ({
             {playerEntries.map((entry) => (
               <li
                 key={entry.player.id}
-                className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+                className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -326,7 +327,7 @@ const SpreadsheetView = ({
                     </span>
                     <span>{getPlayerDisplayName(entry.player)}</span>
                   </span>
-                  <span className="text-lg font-semibold text-brand-primary">
+                  <span className="text-2xl font-semibold text-brand-primary">
                     {entry.totalReceived}
                   </span>
                 </div>
@@ -346,7 +347,7 @@ const SpreadsheetView = ({
             {companyEntries.map((entry) => (
               <li
                 key={entry.company.id}
-                className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+                className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -360,7 +361,7 @@ const SpreadsheetView = ({
                     </span>
                     <span>{getCompanyDisplayName(entry.company)}</span>
                   </span>
-                  <span className="text-lg font-semibold text-brand-primary">
+                  <span className="text-2xl font-semibold text-brand-primary">
                     {entry.companyReceived}
                   </span>
                 </div>
@@ -387,7 +388,7 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
         {playerEntries.map((entry) => (
           <li
             key={entry.player.id}
-            className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+            className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
           >
             <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -400,7 +401,7 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
                 </span>
                 <span>{getPlayerDisplayName(entry.player)}</span>
               </span>
-              <span className="text-lg font-semibold text-brand-primary">
+              <span className="text-2xl font-semibold text-brand-primary">
                 {entry.totalReceived}
               </span>
             </div>
@@ -420,7 +421,7 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
         {companyEntries.map((entry) => (
           <li
             key={entry.company.id}
-            className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+            className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
           >
             <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -434,7 +435,7 @@ const SummaryView = ({ playerEntries, companyEntries }) => (
                 </span>
                 <span>{getCompanyDisplayName(entry.company)}</span>
               </span>
-              <span className="text-lg font-semibold text-brand-primary">
+              <span className="text-2xl font-semibold text-brand-primary">
                 {entry.companyReceived}
               </span>
             </div>
@@ -494,11 +495,27 @@ const HistoryView = ({ cycles }) => {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
-        履歴
-      </SectionHeader>
+      <div className="mb-6">
+        <SectionHeader size="page" className="text-center text-text-primary sm:text-left">
+          履歴
+        </SectionHeader>
+        <p className="mt-2 text-center text-sm text-text-secondary sm:text-left">
+          サイクル単位の受取結果を、一覧とスプレッドシート表示で切り替えて確認します。
+        </p>
+      </div>
 
-      <div className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-5 shadow-ui">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="表示対象" value={selectedView.label} hint="選択中のサイクル/OR" />
+        <MetricCard
+          label="表示形式"
+          value={displayMode === 'sheet' ? '表形式' : '通常表示'}
+          hint="切替可能"
+        />
+        <MetricCard label="プレイヤー" value={`${playerEntries.length}名`} hint="受取一覧の件数" />
+        <MetricCard label="企業" value={`${companyEntries.length}社`} hint="会社別集計の件数" />
+      </div>
+
+      <div className="ui-panel mb-6 p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             <label
@@ -538,7 +555,7 @@ const HistoryView = ({ cycles }) => {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
             <p className="text-text-secondary">現在表示</p>
             <p className="font-semibold text-text-primary">
               {selectedView.label}

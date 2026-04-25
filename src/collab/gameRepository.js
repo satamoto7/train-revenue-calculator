@@ -1,4 +1,4 @@
-import { normalizeAppState } from '../state/appState';
+import { assertSupportedAppStatePayload, normalizeAppState } from '../state/appState';
 import { getSupabaseClient } from './supabaseClient';
 
 const unwrapRow = (data) => {
@@ -75,6 +75,7 @@ export async function joinGame({ gameId, joinCode, nickname }) {
   if (!row?.game_id) {
     throw new Error('join_game の戻り値が不正です。');
   }
+  assertSupportedAppStatePayload(row.state);
 
   return {
     gameId: row.game_id,
@@ -92,6 +93,7 @@ export async function loadGameState(gameId) {
     .single();
 
   if (error) throw error;
+  assertSupportedAppStatePayload(data?.state);
   return {
     state: normalizeAppState(data?.state),
     version: Number(data?.version || 1),
@@ -200,6 +202,7 @@ export async function subscribeGameState(gameId, onUpdate) {
     (payload) => {
       const next = payload?.new;
       if (!next) return;
+      assertSupportedAppStatePayload(next.state);
       onUpdate({
         state: normalizeAppState(next.state),
         version: Number(next.version || 0),

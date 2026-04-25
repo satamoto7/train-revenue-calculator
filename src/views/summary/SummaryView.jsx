@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { calculateCompanyTotalORRevenue, calculateORRevenueDistribution } from '../../lib/calc';
 import Card from '../../components/ui/Card';
+import MetricCard from '../../components/ui/MetricCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getColorTextClass,
@@ -181,11 +182,31 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <SectionHeader size="page" className="mb-8 text-center text-brand-primary">
-        サマリー
-      </SectionHeader>
+      <div className="mb-6">
+        <SectionHeader size="page" className="text-center text-text-primary sm:text-left">
+          サマリー
+        </SectionHeader>
+        <p className="mt-2 text-center text-sm text-text-secondary sm:text-left">
+          受取額をスマホではカード、必要なら横断表で確認します。
+        </p>
+      </div>
 
-      <div className="mb-6 rounded-xl border border-border-subtle bg-surface-elevated p-5 shadow-ui">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="表示対象"
+          value={isTotalView ? '合計表示' : '個別表示'}
+          hint={selectedLabel}
+        />
+        <MetricCard label="プレイヤー" value={`${playerEntries.length}名`} hint="受取一覧の件数" />
+        <MetricCard label="企業" value={`${companyEntries.length}社`} hint="会社別集計の件数" />
+        <MetricCard
+          label="市場株配当"
+          value={bankPoolDividendRecipient === 'company' ? '会社受取' : '市場受取'}
+          hint="市場株の受取先"
+        />
+      </div>
+
+      <div className="ui-panel mb-6 p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <label className="flex flex-col gap-2 text-sm text-text-secondary" htmlFor="summary-view">
             <span className="font-medium">表示対象</span>
@@ -209,9 +230,9 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
               ))}
             </select>
           </label>
-          <div className="rounded-lg border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-border-subtle bg-surface-muted px-4 py-3 text-sm">
             <p className="text-text-secondary">現在表示</p>
-            <p className="font-semibold text-text-primary">{selectedLabel}</p>
+            <div className="font-semibold text-text-primary">{selectedLabel}</div>
             <p className="mt-1 text-xs text-text-muted">
               市場株の配当受取先: {bankPoolDividendRecipient === 'company' ? '会社' : '市場'}
             </p>
@@ -231,7 +252,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
               {playerEntries.map((entry) => (
                 <li
                   key={entry.player.id}
-                  className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+                  className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -244,7 +265,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
                       </span>
                       <span>{getPlayerDisplayName(entry.player)}</span>
                     </span>
-                    <span className="text-lg font-semibold text-brand-primary">
+                    <span className="text-2xl font-semibold text-brand-primary">
                       {entry.totalReceived}
                     </span>
                   </div>
@@ -268,7 +289,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
               {companyEntries.map((entry) => (
                 <li
                   key={entry.company.id}
-                  className="rounded-lg border border-border-subtle bg-surface-muted p-4"
+                  className="rounded-2xl border border-border-subtle bg-surface-muted p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-1.5 font-medium text-text-primary">
@@ -282,7 +303,7 @@ const SummaryView = ({ cycles, selectedCycleNo, handleSelectCycle, numORs, flow 
                       </span>
                       <span>{getCompanyDisplayName(entry.company)}</span>
                     </span>
-                    <span className="text-lg font-semibold text-brand-primary">
+                    <span className="text-2xl font-semibold text-brand-primary">
                       {entry.companyReceived}
                     </span>
                   </div>
