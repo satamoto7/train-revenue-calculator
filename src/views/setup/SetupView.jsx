@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Button from '../../components/ui/Button';
 import CompanyColorPreview from '../../components/ui/CompanyColorPreview';
 import CommittedTextInput from '../../components/ui/CommittedTextInput';
+import MetricCard from '../../components/ui/MetricCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import { GAME_TEMPLATE_OPTIONS, templateRequiresMergerRound } from '../../lib/gameTemplates';
 import {
@@ -14,9 +15,9 @@ import {
   normalizeHexColor,
 } from '../../lib/labels';
 
-const panelClass = 'rounded-xl border border-border-subtle bg-surface-elevated p-6 shadow-ui';
+const panelClass = 'ui-panel p-5 sm:p-6';
 const rowClass =
-  'grid gap-3 rounded-lg border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[1fr_repeat(6,auto)]';
+  'grid gap-3 rounded-2xl border border-border-subtle bg-surface-muted p-4 sm:grid-cols-[minmax(0,1.6fr)_repeat(6,minmax(0,auto))]';
 
 const SetupView = ({
   players,
@@ -51,9 +52,26 @@ const SetupView = ({
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <SectionHeader size="page" className="mb-6 text-center text-brand-primary">
-        設定
-      </SectionHeader>
+      <div className="mb-6">
+        <SectionHeader size="page" className="text-center text-text-primary sm:text-left">
+          設定
+        </SectionHeader>
+        <p className="mt-2 text-center text-sm text-text-secondary sm:text-left">
+          参加者と会社構成を整えてから進行を開始します。スマホではカード感覚、PCでは一覧感覚で確認できます。
+        </p>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="プレイヤー" value={`${players.length}名`} hint="参加人数" />
+        <MetricCard label="企業" value={`${companies.length}社`} hint="運営対象" />
+        <MetricCard label="OR数" value={`${numORs}回`} hint="1サイクルの運営回数" />
+        <MetricCard
+          label="進行状態"
+          value={setupLocked ? '開始済み' : '準備中'}
+          hint={setupLocked ? '一部設定のみ変更可能' : 'まだ自由に編集可能'}
+          tone={setupLocked ? 'warning' : 'info'}
+        />
+      </div>
 
       {setupLocked && (
         <p className="ui-note-warning mb-4">
@@ -213,7 +231,7 @@ const SetupView = ({
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {players.map((player) => (
             <div key={player.id} className={rowClass}>
               <CommittedTextInput
@@ -259,7 +277,11 @@ const SetupView = ({
               </Button>
             </div>
           ))}
-          {players.length === 0 && <p className="text-sm text-text-muted">未登録です。</p>}
+          {players.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-border-subtle bg-surface-muted p-4 text-sm text-text-muted">
+              未登録です。
+            </p>
+          )}
         </div>
       </section>
 
@@ -294,7 +316,7 @@ const SetupView = ({
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {companies.map((company) => (
             <div key={company.id} className={rowClass}>
               <CommittedTextInput
@@ -353,7 +375,11 @@ const SetupView = ({
               </Button>
             </div>
           ))}
-          {companies.length === 0 && <p className="text-sm text-text-muted">未登録です。</p>}
+          {companies.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-border-subtle bg-surface-muted p-4 text-sm text-text-muted">
+              未登録です。
+            </p>
+          )}
         </div>
       </section>
 

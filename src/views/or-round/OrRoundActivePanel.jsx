@@ -7,6 +7,8 @@ import {
 } from '../../lib/calc';
 import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
+import MetricCard from '../../components/ui/MetricCard';
+import StickyContextBar from '../../components/ui/StickyContextBar';
 import {
   getCompanyAccentEdgeClass,
   getCompanyAccentEdgeStyle,
@@ -87,68 +89,84 @@ const CurrentRevenuePanel = ({ company, currentOR, handleORRevenueChange }) => {
   const revenueInputLabel = `${companyName}の現在OR${currentOR}収益`;
 
   return (
-    <section className="rounded-2xl border border-brand-accent/20 bg-surface-muted p-5 shadow-ui">
+    <section className="ui-panel p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary/80">
-            Step 1
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-muted">
+            Revenue Entry
           </p>
-          <h4 className="mt-1 text-lg font-semibold text-text-primary">現在OR収益を決める</h4>
+          <h4 className="mt-1 text-lg font-semibold text-text-primary">現在OR収益を確定する</h4>
           <p className="mt-1 text-sm text-text-secondary">
-            まず収益だけ確定します。列車計算は下で確認してから反映できます。
+            まず確定収益を入れ、必要なら下の地点リストで内訳を確認して反映します。
           </p>
         </div>
-        <StatusBadge className="border-border-subtle bg-surface-elevated text-text-secondary">
-          列車計算値 {trainRevenue}
-        </StatusBadge>
+        <div className="grid w-full gap-3 sm:max-w-md sm:grid-cols-2">
+          <MetricCard label="現在入力" value={currentRevenue} hint={`OR${currentOR} の確定値`} />
+          <MetricCard
+            label="地点合計"
+            value={trainRevenue}
+            hint="列車計算からの参考値"
+            tone={trainRevenue === currentRevenue ? 'success' : 'info'}
+          />
+        </div>
       </div>
 
       <div className="mt-4 space-y-3">
         {previousOR ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="min-h-11 px-4"
-              aria-label={`${companyName}の前回OR${previousOR}収益${previousRevenue}を現在OR${currentOR}へセット`}
-              onClick={() => handleORRevenueChange(company.id, currentOR, previousRevenue)}
-            >
-              前回OR{previousOR}: {previousRevenue}をセット
-            </Button>
-            <p className="text-sm text-text-secondary">
-              自動コピーはしません。必要なときだけ取り込みます。
-            </p>
+          <div className="rounded-2xl border border-border-subtle bg-surface-muted p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="min-h-11 px-4"
+                aria-label={`${companyName}の前回OR${previousOR}収益${previousRevenue}を現在OR${currentOR}へセット`}
+                onClick={() => handleORRevenueChange(company.id, currentOR, previousRevenue)}
+              >
+                前回OR{previousOR}: {previousRevenue}をセット
+              </Button>
+              <p className="text-sm text-text-secondary">
+                自動コピーはしません。必要なときだけ取り込みます。
+              </p>
+            </div>
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            {QUICK_REVENUE_ADJUSTMENTS.map((delta) => {
-              const nextValue = Math.max(0, currentRevenue + delta);
-              const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`;
-              return (
-                <Button
-                  key={delta}
-                  type="button"
-                  variant="secondary"
-                  className="min-h-11 px-3 py-1 text-sm"
-                  aria-label={`${revenueInputLabel}を${deltaLabel}`}
-                  onClick={() => handleORRevenueChange(company.id, currentOR, nextValue)}
-                >
-                  {deltaLabel}
-                </Button>
-              );
-            })}
+        <div className="rounded-3xl border border-brand-primary/15 bg-brand-soft/40 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-text-secondary">クイック調整</p>
+            <StatusBadge className="border-brand-primary/15 bg-surface-elevated text-brand-primary">
+              OR{currentOR} 収益
+            </StatusBadge>
           </div>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              {QUICK_REVENUE_ADJUSTMENTS.map((delta) => {
+                const nextValue = Math.max(0, currentRevenue + delta);
+                const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`;
+                return (
+                  <Button
+                    key={delta}
+                    type="button"
+                    variant="secondary"
+                    className="min-h-11 px-3 py-1 text-sm"
+                    aria-label={`${revenueInputLabel}を${deltaLabel}`}
+                    onClick={() => handleORRevenueChange(company.id, currentOR, nextValue)}
+                  >
+                    {deltaLabel}
+                  </Button>
+                );
+              })}
+            </div>
 
-          <CommittedNumberInput
-            min="0"
-            value={currentRevenue}
-            shouldCommit={(rawValue) => `${rawValue ?? ''}`.trim() !== ''}
-            onCommit={(nextValue) => handleORRevenueChange(company.id, currentOR, nextValue)}
-            className="min-h-12 w-full xl:max-w-sm text-center text-lg font-semibold"
-            aria-label={revenueInputLabel}
-          />
+            <CommittedNumberInput
+              min="0"
+              value={currentRevenue}
+              shouldCommit={(rawValue) => `${rawValue ?? ''}`.trim() !== ''}
+              onCommit={(nextValue) => handleORRevenueChange(company.id, currentOR, nextValue)}
+              className="min-h-14 w-full rounded-2xl bg-surface-elevated text-center text-2xl font-semibold xl:max-w-sm"
+              aria-label={revenueInputLabel}
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -196,10 +214,10 @@ const DistributionPreview = ({ company, currentOR, flow, players, handleSetORDiv
     .filter((row) => row.amount > 0);
 
   return (
-    <section className="rounded-2xl border border-border-subtle bg-surface-elevated p-5 shadow-ui">
+    <section className="ui-panel p-5">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary/80">
-          Step 2
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-muted">
+          Dividend Mode
         </p>
         <h4 className="mt-1 text-lg font-semibold text-text-primary">配当方式を選ぶ</h4>
         <p className="mt-1 text-sm text-text-secondary">
@@ -222,7 +240,7 @@ const DistributionPreview = ({ company, currentOR, flow, players, handleSetORDiv
       </div>
 
       <details
-        className="mt-4 rounded-xl border border-border-subtle bg-surface-muted"
+        className="mt-4 rounded-2xl border border-border-subtle bg-surface-muted"
         open={isOpen}
         onToggle={(event) => setIsOpen(event.currentTarget.open)}
       >
@@ -326,18 +344,23 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
   };
 
   return (
-    <div className="rounded-xl border border-brand-accent/20 bg-surface-elevated p-4 shadow-ui">
+    <div className="rounded-3xl border border-border-subtle bg-surface-elevated p-4 shadow-ui">
       <div className="mb-2 flex items-center justify-between">
-        <p className="font-medium text-text-primary">列車 {trainIndex + 1}</p>
+        <div>
+          <p className="font-medium text-text-primary">列車 {trainIndex + 1}</p>
+          <p className="text-xs text-text-muted">地点を 1 行ずつ足して合計します</p>
+        </div>
         <Button type="button" variant="danger" className="py-1 text-xs" onClick={onDelete}>
           削除
         </Button>
       </div>
       <div className="mb-3">
-        <p className="mb-1 text-xs font-medium text-text-secondary">経路プレビュー:</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-text-muted">
+          加算プレビュー
+        </p>
         {stops.length > 0 ? (
           <div className="overflow-x-auto pb-1">
-            <div className="inline-flex min-w-max items-center rounded-lg border border-border-subtle bg-surface-muted p-3">
+            <div className="inline-flex min-w-max items-center rounded-2xl border border-border-subtle bg-surface-muted p-3">
               {stops.map((stop, idx) => (
                 <React.Fragment key={`${train.id}-preview-${idx}`}>
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface-elevated text-sm font-semibold text-text-primary shadow-sm">
@@ -360,9 +383,12 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
         {stops.map((stop, idx) => (
           <div
             key={`${train.id}-${idx}`}
-            className="rounded-lg border border-border-subtle bg-surface-muted p-3"
+            className="rounded-2xl border border-border-subtle bg-surface-muted p-3"
           >
-            <p className="mb-1 text-xs font-medium text-text-secondary">地点 {idx + 1}</p>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-text-primary">地点 {idx + 1}</p>
+              <span className="text-lg font-semibold text-brand-primary">+{stop}</span>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
               <Button
                 type="button"
@@ -406,7 +432,8 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
           </div>
         ))}
       </div>
-      <div className="mb-4 rounded-lg border border-brand-accent/20 bg-brand-accent-soft/50 p-4">
+      <div className="mb-4 rounded-2xl border border-brand-primary/15 bg-brand-soft/40 p-4">
+        <p className="mb-2 text-sm font-medium text-text-primary">地点を追加</p>
         <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
           {QUICK_STOP_VALUES.map((value) => (
             <Button
@@ -450,10 +477,10 @@ const TrainEditor = ({ train, trainIndex, onUpdateStops, onClear, onDelete }) =>
           経路クリア
         </Button>
       </div>
-      <p className="mt-2 text-sm text-text-secondary">
-        列車収益:{' '}
-        <span className="font-semibold text-status-success">{calculateTrainRevenue(stops)}</span>
-      </p>
+      <div className="mt-3 rounded-2xl border border-border-subtle bg-surface-muted px-4 py-3">
+        <p className="text-sm text-text-secondary">列車収益</p>
+        <p className="text-2xl font-semibold text-status-success">{calculateTrainRevenue(stops)}</p>
+      </div>
     </div>
   );
 };
@@ -470,15 +497,15 @@ const TrainSection = ({
   const trainRevenue = calculateCompanyTrainRevenue(company.trains || []);
 
   return (
-    <section className="rounded-2xl border border-brand-accent/20 bg-surface-muted p-5 shadow-ui">
+    <section className="ui-panel p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary/80">
-            Step 3
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-muted">
+            Route Memo
           </p>
-          <h4 className="mt-1 text-lg font-semibold text-text-primary">必要なら列車計算で確認</h4>
+          <h4 className="mt-1 text-lg font-semibold text-text-primary">地点を足して確認する</h4>
           <p className="mt-1 text-sm text-text-secondary">
-            列車ごとの地点をメモしてから、必要なときだけ現在OR収益へ反映します。
+            列車ごとの地点を 1 行ずつ足して、必要なときだけ現在OR収益へ反映します。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -490,9 +517,14 @@ const TrainSection = ({
           </Button>
         </div>
       </div>
-      <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated px-4 py-3 text-sm">
-        <p className="text-text-secondary">列車計算合計</p>
-        <p className="font-semibold text-status-success">{trainRevenue}</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <MetricCard
+          label="地点合計"
+          value={trainRevenue}
+          hint="現在の列車収益合計"
+          tone="success"
+        />
+        <MetricCard label="反映先" value={`OR${currentOR}`} hint="確定収益へ転記可能" />
       </div>
       <div className="mt-4">
         {(company.trains || []).length === 0 ? (
@@ -537,7 +569,7 @@ const SupplementalDetails = ({
 
   return (
     <details
-      className="rounded-2xl border border-border-subtle bg-surface-elevated shadow-ui"
+      className="rounded-3xl border border-border-subtle bg-surface-elevated shadow-ui"
       open={isOpen}
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
@@ -647,65 +679,68 @@ const OrRoundActivePanel = ({
 
   return (
     <article
-      className={`mb-6 rounded-2xl border border-l-4 p-6 shadow-ui-lg ${getCompanyAccentEdgeClass(
-        getCompanyColor(company)
-      )} bg-surface-elevated`}
+      className={`mb-6 border-l-4 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
       style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-primary/80">
-            現在操作中の企業
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span
-              className={`text-2xl ${getColorTextClass(getCompanyColor(company))}`}
-              style={getColorTextStyle(getCompanyColor(company))}
-            >
-              {getCompanySymbol(company)}
-            </span>
-            <div>
-              <h3 className="text-2xl font-semibold text-text-primary">{companyName}</h3>
-              <p className="text-sm text-text-secondary">
-                {isCorrectionMode
-                  ? `このサイクル中なら、OR${currentOR} を含む既存入力を修正できます。前OR分は下の補助設定から直せます。`
-                  : `OR${currentOR} の収益と配当方式をこの順で確定します。`}
-              </p>
+      <StickyContextBar
+        className={`border-l-4 px-4 py-4 sm:px-5 ${getCompanyAccentEdgeClass(getCompanyColor(company))}`}
+        style={getCompanyAccentEdgeStyle(getCompanyColor(company))}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-text-muted">
+              現在操作中の企業
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span
+                className={`text-2xl ${getColorTextClass(getCompanyColor(company))}`}
+                style={getColorTextStyle(getCompanyColor(company))}
+              >
+                {getCompanySymbol(company)}
+              </span>
+              <div>
+                <h3 className="text-2xl font-semibold text-text-primary">{companyName}</h3>
+                <p className="text-sm text-text-secondary">
+                  {isCorrectionMode
+                    ? `このサイクル中なら、OR${currentOR} を含む既存入力を修正できます。前OR分は下の補助設定から直せます。`
+                    : `OR${currentOR} の収益と配当方式をこの順で確定します。`}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge className="border-brand-primary/20 bg-brand-soft text-brand-primary">
+                OR{currentOR}
+              </StatusBadge>
+              {isCorrectionMode ? (
+                <StatusBadge className="border-status-warning/20 bg-status-warning/10 text-text-primary">
+                  完了済みを修正中
+                </StatusBadge>
+              ) : (
+                <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+                  残り順 {queuePosition} / {queueLength}
+                </StatusBadge>
+              )}
+              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+                全体順 {establishedPosition} / {establishedCount}
+              </StatusBadge>
+              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
+                総収益 {totalRevenue}
+              </StatusBadge>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <StatusBadge className="border-brand-accent/20 bg-brand-accent-soft text-brand-primary">
-              OR{currentOR}
-            </StatusBadge>
-            {isCorrectionMode ? (
-              <StatusBadge className="border-status-warning/20 bg-status-warning/10 text-text-primary">
-                完了済みを修正中
-              </StatusBadge>
-            ) : (
-              <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
-                残り順 {queuePosition} / {queueLength}
-              </StatusBadge>
-            )}
-            <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
-              全体順 {establishedPosition} / {establishedCount}
-            </StatusBadge>
-            <StatusBadge className="border-border-subtle bg-surface-muted text-text-secondary">
-              総収益 {totalRevenue}
-            </StatusBadge>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={isDone || finalORCompleted}
+              onClick={() => handleMarkCompanyDone(company.id)}
+            >
+              {isDone || finalORCompleted ? '完了済み' : 'この企業を完了'}
+            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={isDone || finalORCompleted}
-            onClick={() => handleMarkCompanyDone(company.id)}
-          >
-            {isDone || finalORCompleted ? '完了済み' : 'この企業を完了'}
-          </Button>
-        </div>
-      </div>
+      </StickyContextBar>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-5 space-y-5">
         <CurrentRevenuePanel
           company={company}
           currentOR={currentOR}

@@ -13,8 +13,16 @@ import {
 } from '../collab/gameRepository';
 import { hasSupabaseEnv } from '../collab/supabaseClient';
 import { appReducer } from '../state/appReducer';
-import { createBaseState, normalizeAppState } from '../state/appState';
-import { load as loadLocalCache, save as saveLocalCache } from '../storage/appStorage';
+import {
+  UNSUPPORTED_STATE_SCHEMA_MESSAGE,
+  createBaseState,
+  normalizeAppState,
+} from '../state/appState';
+import {
+  hasLegacyCache,
+  load as loadLocalCache,
+  save as saveLocalCache,
+} from '../storage/appStorage';
 import {
   clearUnsyncedDraft,
   hasUnsyncedDraft,
@@ -248,6 +256,9 @@ export function useCollaborativeGame() {
             throw error;
           }
           const cached = loadLocalCache(targetGameId);
+          if (!cached && hasLegacyCache(targetGameId)) {
+            throw new Error(UNSUPPORTED_STATE_SCHEMA_MESSAGE);
+          }
           if (!cached) {
             throw error;
           }
@@ -539,9 +550,11 @@ export function useCollaborativeGame() {
     autoJoinAttemptedRef.current.add(autoJoinGameId);
     connectToGame({
       targetGameId: autoJoinGameId,
-    }).catch(() => {
+    }).catch((error) => {
       setLobbyError(
-        'URLのゲームに自動参加できませんでした。参加コードを入力して参加してください。'
+        error?.message === UNSUPPORTED_STATE_SCHEMA_MESSAGE
+          ? UNSUPPORTED_STATE_SCHEMA_MESSAGE
+          : 'URLのゲームに自動参加できませんでした。参加コードを入力して参加してください。'
       );
     });
   }, [authStatus, connectToGame, gameId]);

@@ -3,6 +3,17 @@
 18xx 向けの収益計算補助アプリです。React + Vite + Tailwind CSS で構築されています。  
 Supabase 匿名認証 + Realtime による共同編集（同一ゲームの同時アクセス）に対応しています。
 
+## Current App Flow
+
+正式入口は本線アプリのみです。
+
+1. ロビーで共同ゲームを作成または参加
+2. 設定でプレイヤー、企業テンプレート、OR数、IPO株、市場株配当先を決定
+3. ボードで SR / OR / Merger Round を現在サイクルの作業画面として進行
+4. 履歴で確定済みサイクルを確認
+
+保存 state は schema v8 です。旧 schema の localStorage cache / 共同ゲーム state は自動移行せず、新規ゲーム作成へ誘導します。
+
 ## Scripts
 
 - `npm run dev` / `npm start`: 開発サーバーを起動（デフォルト: http://localhost:5173）

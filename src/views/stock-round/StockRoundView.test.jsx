@@ -38,12 +38,16 @@ const baseProps = () => ({
 });
 
 describe('StockRoundView committed number inputs', () => {
+  const openUtilityPanel = async (user) => {
+    await user.click(screen.getByText('補助設定: プレイヤー定期収入 / OR数'));
+  };
+
   test('株式割合は blur まで commit されない', async () => {
     const user = userEvent.setup();
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
-    await user.click(screen.getByRole('button', { name: '詳細を開く' }));
+    await user.click(screen.getByRole('button', { name: '編集' }));
     const input = screen.getByLabelText('会社AのPlayer A保有率');
     await user.clear(input);
     await user.type(input, '55');
@@ -64,7 +68,7 @@ describe('StockRoundView committed number inputs', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
-    await user.click(screen.getByRole('button', { name: '詳細を開く' }));
+    await user.click(screen.getByRole('button', { name: '編集' }));
     const input = screen.getByLabelText('会社AのPlayer A保有率');
     await user.clear(input);
     await user.type(input, '120');
@@ -82,7 +86,7 @@ describe('StockRoundView committed number inputs', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
-    await user.click(screen.getByRole('button', { name: '詳細を開く' }));
+    await user.click(screen.getByRole('button', { name: '編集' }));
     await user.click(screen.getByLabelText('会社AのPlayer Bを社長にする'));
 
     expect(props.handlePresidentChange).toHaveBeenCalledWith('c1', 'p2');
@@ -93,6 +97,7 @@ describe('StockRoundView committed number inputs', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
+    await openUtilityPanel(user);
     const input = screen.getByLabelText('Player Aの定期収入');
     await user.clear(input);
     await user.type(input, '35');
@@ -109,6 +114,7 @@ describe('StockRoundView committed number inputs', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
+    await user.click(screen.getByRole('button', { name: '編集' }));
     const input = screen.getByLabelText('会社Aの企業定期収入');
     await user.clear(input);
     await user.tab();
@@ -125,10 +131,7 @@ describe('StockRoundView committed number inputs', () => {
       'border-l-red-500'
     );
     const accentBlocks = screen.getAllByText('● Player A');
-    expect(accentBlocks[0].closest('div.rounded-lg')).toHaveClass(
-      'border-l-4',
-      'border-l-rose-300'
-    );
+    expect(accentBlocks[0].closest('.border-l-4')).toHaveClass('border-l-4', 'border-l-rose-300');
   });
 
   test('SR完了後の OR 数を変更できる', async () => {
@@ -136,6 +139,7 @@ describe('StockRoundView committed number inputs', () => {
     const props = baseProps();
     render(<StockRoundView {...props} />);
 
+    await openUtilityPanel(user);
     await user.selectOptions(screen.getByLabelText('SR完了後の OR 数'), '3');
 
     expect(props.handleSetNumORs).toHaveBeenCalledWith(3);

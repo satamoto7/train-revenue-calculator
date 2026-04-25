@@ -8,6 +8,7 @@ import {
   saveGameState,
   subscribeGameState,
 } from './gameRepository';
+import { UNSUPPORTED_STATE_SCHEMA_MESSAGE, createBaseState } from '../state/appState';
 
 let mockSupabase;
 
@@ -35,13 +36,13 @@ describe('gameRepository', () => {
         game_id: 'game-1',
         join_code: '123456',
         version: 1,
-        state: { players: [] },
+        state: createBaseState(),
       },
       error: null,
     });
 
     const result = await createGame({
-      initialState: { players: [] },
+      initialState: createBaseState(),
       nickname: 'P1',
     });
 
@@ -68,7 +69,7 @@ describe('gameRepository', () => {
   test('loadGameState は game_states を読み込む', async () => {
     const single = vi.fn().mockResolvedValue({
       data: {
-        state: { players: [] },
+        state: createBaseState(),
         version: 3,
         updated_at: '2026-01-01T00:00:00.000Z',
         updated_by: 'user-1',
@@ -113,7 +114,7 @@ describe('gameRepository', () => {
       error: null,
     });
 
-    const result = await saveGameState('game-1', { players: [] });
+    const result = await saveGameState('game-1', createBaseState());
 
     expect(result.version).toBe(4);
     expect(mockSupabase.rpc).toHaveBeenCalledWith('save_game_state', {
@@ -141,7 +142,7 @@ describe('gameRepository', () => {
     const update = vi.fn().mockReturnValue({ eq });
     mockSupabase.from.mockReturnValue({ update });
 
-    const result = await saveGameState('game-1', { players: [] });
+    const result = await saveGameState('game-1', createBaseState());
     expect(result.version).toBe(5);
     expect(update).toHaveBeenCalled();
   });
@@ -167,7 +168,7 @@ describe('gameRepository', () => {
 
     updateHandler({
       new: {
-        state: { players: [] },
+        state: createBaseState(),
         version: 7,
         updated_at: '2026-01-01T00:00:03.000Z',
         updated_by: 'user-1',
@@ -203,5 +204,20 @@ describe('gameRepository', () => {
     const members = await listGameMembers('game-1');
     expect(members[0].userId).toBe('u1');
     expect(members[0].nickname).toBe('P1');
+  });
+
+  test('loadGameState は旧 schema の state を拒否する', async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        state: { schemaVersion: 7, players: [] },
+        version: 3,
+      },
+      error: null,
+    });
+    const eq = vi.fn().mockReturnValue({ single });
+    const select = vi.fn().mockReturnValue({ eq });
+    mockSupabase.from.mockReturnValue({ select });
+
+    await expect(loadGameState('game-1')).rejects.toThrow(UNSUPPORTED_STATE_SCHEMA_MESSAGE);
   });
 });

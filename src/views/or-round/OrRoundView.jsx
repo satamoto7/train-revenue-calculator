@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../../components/ui/Button';
 import CommittedNumberInput from '../../components/ui/CommittedNumberInput';
+import MetricCard from '../../components/ui/MetricCard';
 import SectionHeader from '../../components/ui/SectionHeader';
 import {
   getCompanyAccentEdgeClass,
@@ -148,12 +149,12 @@ const OrRoundView = ({
         </SectionHeader>
       ) : null}
 
-      <section className="mb-6 rounded-xl border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,_rgba(182,138,61,0.16),_transparent_28%),linear-gradient(135deg,_rgba(16,32,51,0.98),_rgba(27,47,69,0.98))] p-6 shadow-ui-lg">
-        <details className="rounded-xl border border-white/10 bg-white/5 shadow-ui">
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+      <section className="ui-panel mb-6 p-5">
+        <details className="rounded-2xl border border-border-subtle bg-surface-muted shadow-ui">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
             補助設定: プレイヤー定期収入
           </summary>
-          <div className="grid gap-3 border-t border-white/10 px-4 pb-4 pt-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 border-t border-border-subtle px-4 pb-4 pt-3 sm:grid-cols-2 xl:grid-cols-3">
             {players.map((player) => (
               <div
                 key={player.id}
@@ -176,31 +177,26 @@ const OrRoundView = ({
           </div>
         </details>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">
-              現在ラウンド
-            </p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              OR{currentOR} / OR{flow.numORs}
-            </p>
-          </div>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">進捗</p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {completed.length} / {establishedCompanyOrder.length}
-            </p>
-          </div>
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-accent/90">
-              未処理企業
-            </p>
-            <p className="mt-2 text-sm font-semibold text-white">{remainingCompanyIds.length}</p>
-          </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <MetricCard
+            label="現在ラウンド"
+            value={`OR${currentOR} / OR${flow.numORs}`}
+            hint="この画面で処理するOR"
+          />
+          <MetricCard
+            label="進捗"
+            value={`${completed.length} / ${establishedCompanyOrder.length}`}
+            hint="完了済み / 対象企業"
+          />
+          <MetricCard
+            label="未処理企業"
+            value={remainingCompanyIds.length}
+            hint="まだ処理していない会社数"
+          />
         </div>
 
         {!hasEstablishedCompanies ? (
-          <p className="mt-4 rounded-xl border border-status-warning/25 bg-status-warning/10 px-4 py-3 text-sm text-slate-100">
+          <p className="mt-4 rounded-2xl border border-status-warning/25 bg-status-warning/10 px-4 py-3 text-sm text-text-primary">
             OR対象企業がありません。SRで未設立を解除してください。
           </p>
         ) : null}

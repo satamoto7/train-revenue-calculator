@@ -14,6 +14,9 @@ import { hasAnyStockInput, inferIsUnestablished } from '../lib/companyStatus';
 export const DEFAULT_NUM_ORS = 2;
 export const MAX_ORS = 5;
 export const DEFAULT_DIVIDEND_MODE = 'full';
+export const APP_STATE_SCHEMA_VERSION = 8;
+export const UNSUPPORTED_STATE_SCHEMA_MESSAGE =
+  '旧形式のゲームデータです。新しいゲームを作成してください。';
 export const WORKSPACE_CONFIG = [
   { key: 'board', label: 'ボード' },
   { key: 'setup', label: '設定' },
@@ -361,6 +364,7 @@ const normalizeHistoryEntry = (entry) => {
 };
 
 export const createBaseState = () => ({
+  schemaVersion: APP_STATE_SCHEMA_VERSION,
   gameConfig: {
     players: [],
     companies: [],
@@ -421,6 +425,10 @@ export const normalizeStockRoundState = (stockRoundState, gameConfig) => {
 };
 
 export const normalizeAppState = (saved) => {
+  if (saved && typeof saved === 'object' && saved.schemaVersion !== APP_STATE_SCHEMA_VERSION) {
+    return createBaseState();
+  }
+
   if (!saved || typeof saved !== 'object' || !saved.gameConfig || !saved.stockRoundState) {
     return createBaseState();
   }
@@ -450,6 +458,7 @@ export const normalizeAppState = (saved) => {
     : [];
 
   return {
+    schemaVersion: APP_STATE_SCHEMA_VERSION,
     gameConfig,
     session: {
       ...session,
@@ -464,6 +473,12 @@ export const normalizeAppState = (saved) => {
     operatingResults,
     history,
   };
+};
+
+export const assertSupportedAppStatePayload = (saved) => {
+  if (!saved || typeof saved !== 'object') return;
+  if (saved.schemaVersion === APP_STATE_SCHEMA_VERSION) return;
+  throw new Error(UNSUPPORTED_STATE_SCHEMA_MESSAGE);
 };
 
 export const resolveBankPoolPercentage = (companyState, hasIpoShares) => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  APP_STATE_SCHEMA_VERSION,
   buildOperatingResultRecord,
   createBaseState,
   normalizeAppState,
@@ -38,6 +39,7 @@ describe('appState normalization', () => {
   test('createBaseState は mergerRound 関連既定値を含む', () => {
     const state = createBaseState();
 
+    expect(state.schemaVersion).toBe(APP_STATE_SCHEMA_VERSION);
     expect(state.gameConfig.mergerRoundEnabled).toBe(false);
     expect(state.session.greenTrainTriggered).toBe(false);
     expect(state.session.mode).toBe('stockRound');
@@ -45,6 +47,7 @@ describe('appState normalization', () => {
 
   test('HEX 会社色を正規化して保持する', () => {
     const next = normalizeAppState({
+      schemaVersion: APP_STATE_SCHEMA_VERSION,
       gameConfig: {
         players: [],
         companies: [

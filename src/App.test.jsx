@@ -99,6 +99,25 @@ describe('App (collab mode)', () => {
     expect(screen.getByRole('tab', { name: '履歴' })).toBeInTheDocument();
   });
 
+  test('設定完了後にゲーム開始でボード進行へ入る action を dispatch する', async () => {
+    const user = userEvent.setup();
+    const state = buildJoinedState();
+    state.appState = {
+      ...createBaseState(),
+      gameConfig: {
+        ...createBaseState().gameConfig,
+        players: [{ id: 'p1', seatLabel: 'A', displayName: 'Player A', name: 'Player A' }],
+        companies: [{ id: 'c1', displayName: '会社A', name: 'Co1', symbol: '○', color: '赤' }],
+      },
+    };
+    mockUseCollaborativeGame.mockReturnValue(state);
+
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'ゲーム開始（SRへ）' }));
+
+    expect(state.dispatch).toHaveBeenCalledWith({ type: 'SETUP_LOCK', payload: true });
+  });
+
   test('共有ボタン押下で shareRoom を呼ぶ', async () => {
     const user = userEvent.setup();
     const state = buildJoinedState();
